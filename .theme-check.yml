@@ -1,0 +1,23 @@
+extends: theme-check:recommended
+ignore:
+  - node_modules/**
+  - .harness/**
+  - dev/**
+  - docs/**
+  - scripts/**
+AssetSizeCSS:
+  enabled: true
+  severity: error
+  thresholdInBytes: 60000
+AssetSizeJavaScript:
+  enabled: true
+  severity: error
+  thresholdInBytes: 15000
+RemoteAsset:
+  severity: error
+ParserBlockingScript:
+  severity: error
+ImgWidthAndHeight:
+  severity: error
+UnusedAssign:
+  severity: error

@@ -1,0 +1,7 @@
+node_modules/
+.harness/
+dev/
+.shopify/
+*.zip
+.DS_Store
+docs/STATUS.local.md

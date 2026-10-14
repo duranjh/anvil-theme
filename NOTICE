@@ -1,0 +1,11 @@
+Anvil — a Shopify theme. Copyright (c) 2026 Jhoalen Duran, Duran Venture Ecom LLC. MIT License (see LICENSE).
+
+Anvil is original code written against Shopify's public developer documentation.
+It contains no code from Shopify's Dawn, Horizon or Skeleton themes, nor from any
+commercial theme or section library.
+
+Third-party material bundled with attribution:
+- Lucide icons (https://lucide.dev) — ISC License, Copyright (c) Lucide Contributors.
+  A subset is inlined as SVG paths in snippets/anvil-icon.liquid.
+
+Anvil is not affiliated with Shopify Inc., Shrine Solutions Ltd, or the "Anvil – Product Options" app.
