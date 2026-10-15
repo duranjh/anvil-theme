@@ -223,8 +223,8 @@ def check_hygiene(path, text, body, rep, slug=None, want_selector_prefix=False):
         asset_abs = os.path.join(ROOT_DIR, asset_rel)
         sheets = []
         if os.path.isfile(asset_abs):
-            if f"'anvil-sec-{name}.css' | asset_url | stylesheet_tag" not in text:
-                rep.err(path, 1, f"{asset_rel} exists but the section does not load it with stylesheet_tag")
+            if f"file: 'anvil-sec-{name}.css'" not in text and f"'anvil-sec-{name}.css' | asset_url | stylesheet_tag" not in text:
+                rep.err(path, 1, f"{asset_rel} exists but the section does not load it (render 'anvil-stylesheet', file: 'anvil-sec-{name}.css', section: section)")
             css_path, css_text = asset_rel, "{% stylesheet %}" + open(asset_abs, encoding="utf-8").read() + "{% endstylesheet %}"
             sheets = list(STYLESHEET_RE.finditer(css_text))
     elif len(sheets) > 1:

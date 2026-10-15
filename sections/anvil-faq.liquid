@@ -1,4 +1,4 @@
-{{ 'anvil-sec-faq.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-faq.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign untitled_label = 'anvil.faq.untitled_question' | t
@@ -53,7 +53,7 @@
     {%- if section.blocks.size > 0 -%}
       {%- assign fallback = 'anvil.faq.heading' | t -%}
       {% render 'anvil-section-head', section: section, fallback: fallback %}
-      {{ 'anvil-accordion.css' | asset_url | stylesheet_tag }}
+      {% render 'anvil-stylesheet', file: 'anvil-accordion.css', section: section %}
       <anvil-collapsible class="{{ faq_class }}"{% if s.single_open %} single{% endif %}>
         {%- for block in section.blocks -%}
           {%- liquid

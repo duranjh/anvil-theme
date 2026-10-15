@@ -1,4 +1,4 @@
-{{ 'anvil-sec-product-videos.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-product-videos.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -96,7 +96,7 @@
               assign arrows = 'all'
             endif
           -%}
-          {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+          {% render 'anvil-stylesheet', file: 'anvil-slider.css', section: section %}
           <anvil-slider {% render 'anvil-slider-attrs', count: section.blocks.size, per_view: cols_m, per_view_tablet: cols_t, per_view_desktop: cols_d, peek: 'auto', arrows: arrows, dots: s.show_dots, label: list_label, class: 'av-product-videos__slider' %}>
             <div class="av-product-videos__track" data-slider-track>
         {%- else -%}

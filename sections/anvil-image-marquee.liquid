@@ -1,4 +1,4 @@
-{{ 'anvil-sec-image-marquee.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-image-marquee.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign total = section.blocks.size
@@ -193,7 +193,7 @@
           assign label_1 = 'anvil.image_marquee.label' | t
         endif
       -%}
-      {{ 'anvil-marquee.css' | asset_url | stylesheet_tag }}
+      {% render 'anvil-stylesheet', file: 'anvil-marquee.css', section: section %}
       <div class="{{ wrap_class }}" style="{{ wrap_style }}">
         <anvil-marquee class="av-image-marquee__row" role="group" aria-label="{{ label_1 }}" speed="{{ speed }}" direction="{{ dir_1 }}"{% if s.pause_hover %} pause-on-hover{% endif %} style="--av-marquee-gap: {{ gap }}px;">
           <ul class="av-image-marquee__track" role="list" data-marquee-track>

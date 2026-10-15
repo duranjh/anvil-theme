@@ -1,0 +1,33 @@
+{% doc %}
+  Loads one stylesheet for a section, blocking only where the first screen needs it (DECISIONS: render-blocking CSS).
+  Blocking (a plain stylesheet_tag): the online store editor, header-group sections, template sections in the first
+  two positions, and any section Shopify gives no index (Section Rendering API responses). Non-blocking (fetched with
+  media="print" and switched to all on load, with a <noscript> fallback): template sections from the third position
+  on, footer and custom groups (the overlay widgets), and static sections such as the cart drawer, which starts
+  closed. A below-the-fold section therefore never holds back the first paint.
+
+  @param {string} file - Asset file name, e.g. 'anvil-sec-faq.css'
+  @param {object} section - The section object
+
+  @example
+  {% render 'anvil-stylesheet', file: 'anvil-sec-faq.css', section: section %}
+{% enddoc %}
+{%- liquid
+  assign css_defer = false
+  unless request.design_mode
+    assign css_loc = section.location | default: 'template'
+    if css_loc == 'template' or css_loc == 'content_for_index'
+      if section.index != nil and section.index > 2
+        assign css_defer = true
+      endif
+    elsif css_loc != 'header'
+      assign css_defer = true
+    endif
+  endunless
+-%}
+{%- if css_defer -%}
+  <link rel="stylesheet" href="{{ file | asset_url }}" media="print" onload="this.media='all'">
+  <noscript>{{ file | asset_url | stylesheet_tag }}</noscript>
+{%- else -%}
+  {{ file | asset_url | stylesheet_tag }}
+{%- endif -%}

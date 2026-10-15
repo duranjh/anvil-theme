@@ -1,4 +1,4 @@
-{{ 'anvil-sec-pricing.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-pricing.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -44,7 +44,7 @@
         assign wrap_tag = 'div'
       endif
     -%}
-    {%- if swipe -%}{{ 'anvil-slider.css' | asset_url | stylesheet_tag }}{%- endif -%}
+    {%- if swipe -%}{% render 'anvil-stylesheet', file: 'anvil-slider.css', section: section %}{%- endif -%}
     <{{ wrap_tag }}
       {%- if swipe %} {% render 'anvil-slider-attrs', count: plan_count, per_view: 1, per_view_tablet: plan_count, per_view_desktop: plan_count, peek: 'auto', dots: true, label: list_label, class: 'av-pricing__slider' %}{% else %} class="av-pricing__static"{% endif -%}
     >

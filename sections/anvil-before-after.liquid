@@ -1,4 +1,4 @@
-{{ 'anvil-sec-before-after.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-before-after.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -180,7 +180,7 @@
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-before-after' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
-    {{ 'anvil-compare.css' | asset_url | stylesheet_tag }}
+    {% render 'anvil-stylesheet', file: 'anvil-compare.css', section: section %}
     <figure class="av-before-after" style="--av-before-after-r: {{ ratio }};{% if ratio_m != '' %} --av-before-after-r-m: {{ ratio_m }};{% endif %}">
       <anvil-compare class="av-before-after__compare av-enhance"{% if s.vertical %} vertical{% endif %} style="--av-compare-pos: {{ start }}%;">
         {%- comment -%}

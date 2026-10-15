@@ -1,4 +1,4 @@
-{{ 'anvil-sec-review-wall.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-review-wall.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -290,7 +290,7 @@
         {%- endif -%}
       </anvil-review-wall>
       {%- if lines > 0 -%}
-        {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+        {% render 'anvil-stylesheet', file: 'anvil-dialog.css', section: section %}
       {%- endif -%}
       {%- if lines > 0 or extra_count > 0 -%}
         <script type="module" src="{{ 'anvil-review-wall.js' | asset_url }}"></script>

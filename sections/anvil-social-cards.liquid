@@ -1,4 +1,4 @@
-{{ 'anvil-sec-social-cards.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-social-cards.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -168,7 +168,7 @@
     {% render 'anvil-section-head', section: section %}
     {%- if card_count > 0 -%}
       {%- if is_slider -%}
-        {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+        {% render 'anvil-stylesheet', file: 'anvil-slider.css', section: section %}
         <anvil-slider {% render 'anvil-slider-attrs', count: card_count, per_view: 1, per_view_tablet: cols_t, per_view_desktop: cols, peek: 'auto', arrows: arrows, gutter: true, dots: s.show_dots, autoplay: autoplay, label: slider_label, class: root_class %}>
         <div class="av-social-cards__track" data-slider-track>
       {%- else -%}

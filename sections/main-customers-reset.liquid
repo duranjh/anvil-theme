@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-customers-reset.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-customers-reset.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign reset_label = 'anvil.customer.reset.submit' | t

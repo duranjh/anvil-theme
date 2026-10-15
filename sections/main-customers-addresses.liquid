@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-customers-addresses.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-customers-addresses.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign add_label = 'anvil.customer.addresses.add' | t

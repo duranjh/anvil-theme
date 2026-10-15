@@ -1,4 +1,4 @@
-{{ 'anvil-sec-logo-list.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-logo-list.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign total = section.blocks.size
@@ -168,7 +168,7 @@
       {%- endcapture -%}
       <div class="{{ root_class }}" style="{{ root_style }}">
         {%- if is_marquee -%}
-          {{ 'anvil-marquee.css' | asset_url | stylesheet_tag }}
+          {% render 'anvil-stylesheet', file: 'anvil-marquee.css', section: section %}
           <anvil-marquee class="av-logo-list__strip" speed="{{ speed }}" direction="{{ direction }}"{% if s.pause_hover %} pause-on-hover{% endif %} style="--av-marquee-gap: {{ gap }}px;">
             <ul class="av-logo-list__track" role="list" data-marquee-track>
               {{- items -}}

@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-list-collections.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-list-collections.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign card_ratio = settings.collection_card_image_ratio | default: '1:1'

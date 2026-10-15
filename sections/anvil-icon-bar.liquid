@@ -1,4 +1,4 @@
-{{ 'anvil-sec-icon-bar.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-icon-bar.css', section: section %}
 {%- liquid
   assign s = section.settings
 

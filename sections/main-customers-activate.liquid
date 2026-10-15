@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-customers-activate.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-customers-activate.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign activate_label = 'anvil.customer.activate.submit' | t

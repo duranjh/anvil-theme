@@ -1,4 +1,4 @@
-{{ 'anvil-sec-shoppable-image.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-shoppable-image.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -83,7 +83,7 @@
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-shoppable-image' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
-    {{ 'anvil-hotspots.css' | asset_url | stylesheet_tag }}
+    {% render 'anvil-stylesheet', file: 'anvil-hotspots.css', section: section %}
     <div class="{{ root_class }}" style="--av-si-w: {{ img_w }}%;">
       <anvil-hotspots class="av-shoppable-image__stage av-enhance">
         {%- render 'anvil-media',

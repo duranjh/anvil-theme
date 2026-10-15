@@ -1,4 +1,4 @@
-{{ 'anvil-sec-stories.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-stories.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign total = section.blocks.size
@@ -57,7 +57,7 @@
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
     {%- if total > 0 -%}
-      {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+      {% render 'anvil-stylesheet', file: 'anvil-dialog.css', section: section %}
       <anvil-stories class="{{ root_class }}"{% if s.auto_advance %} auto{% endif %} style="--av-stories-d: {{ size }}px; --av-stories-ring: {{ ring }}; --av-stories-ring-w: {{ ring_w }}px;">
         <ul class="av-stories__list" role="list">
           {%- for block in section.blocks -%}

@@ -1,4 +1,4 @@
-{{ 'anvil-sec-collapsible.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-collapsible.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign untitled_label = 'anvil.collapsible.untitled_row' | t
@@ -158,9 +158,9 @@
       endif
     -%}
     {% render 'anvil-section-head', section: section, fallback: fallback %}
-    {{ 'anvil-accordion.css' | asset_url | stylesheet_tag }}
+    {% render 'anvil-stylesheet', file: 'anvil-accordion.css', section: section %}
     {%- if has_page -%}
-      {{ 'anvil-prose.css' | asset_url | stylesheet_tag }}
+      {% render 'anvil-stylesheet', file: 'anvil-prose.css', section: section %}
     {%- endif -%}
     <div class="{{ wrap_class }}" style="--av-collapsible-media: {{ media_w }}%; --av-collapsible-icon: {{ icon_px }}px;">
       {%- if layout == 'image' -%}

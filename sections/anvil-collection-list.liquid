@@ -1,4 +1,4 @@
-{{ 'anvil-sec-collection-list.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-collection-list.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -140,7 +140,7 @@
     {%- if total > 0 -%}
       {% render 'anvil-section-head', section: section, fallback: list_label %}
       {%- if slider -%}
-        {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+        {% render 'anvil-stylesheet', file: 'anvil-slider.css', section: section %}
       {%- endif -%}
       <{{ wrap_tag }} {{ wrap_attrs }}>
         <{{ list_tag }} class="{{ list_class }}"{% if slider %} data-slider-track{% else %} role="list"{% endif %}>

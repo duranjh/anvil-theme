@@ -9,7 +9,8 @@ downloads only the CSS of the sections it shows. Theme blocks and snippets keep 
 For each sections/*.liquid with a {% stylesheet %} block:
   * the CSS is written verbatim to assets/anvil-sec-<name>.css (<name> = file name without the anvil- prefix),
   * the {% stylesheet %} block is removed,
-  * a load line {{ 'anvil-sec-<name>.css' | asset_url | stylesheet_tag }} is put at the top of the file.
+  * a load line {% render 'anvil-stylesheet', file: 'anvil-sec-<name>.css', section: section %} is put at the top
+    of the file (blocking above the fold, non-blocking below it; snippets/anvil-stylesheet.liquid).
 Idempotent: a section without {% stylesheet %} is left alone. --check exits 1 if any section still has one.
 """
 import glob, os, re, sys
@@ -35,8 +36,8 @@ for path in sorted(glob.glob(os.path.join(root, 'sections', '*.liquid'))):
     with open(os.path.join(root, 'assets', asset), 'w', encoding='utf-8') as fh:
         fh.write(header + css)
     out = BLOCK.sub('\n', src)
-    load = "{{ '%s' | asset_url | stylesheet_tag }}\n" % asset
-    if load.strip() not in out:
+    load = "{% render 'anvil-stylesheet', file: '" + asset + "', section: section %}\n"
+    if f"file: '{asset}'" not in out:
         out = load + out
     out = re.sub(r'\n{3,}', '\n\n', out)
     with open(path, 'w', encoding='utf-8') as fh:

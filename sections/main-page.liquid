@@ -1,10 +1,10 @@
-{{ 'anvil-sec-main-page.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-page.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign table_label = 'anvil.a11y.scroll_table' | t
   assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
 -%}
-{{ 'anvil-prose.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-prose.css', section: section %}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-page' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}

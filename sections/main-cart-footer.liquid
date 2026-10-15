@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-cart-footer.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-cart-footer.css', section: section %}
 {%- comment -%}
   Cart page summary: order note, discount field (enhanced only, DECISIONS 37), the shared totals
   (snippets/anvil-cart-totals.liquid: subtotal, order discounts, savings from Shopify discounts and compare-at prices,
@@ -15,7 +15,7 @@
   assign apply_label = 'anvil.cart.apply' | t
   assign terms_default = 'anvil.cart.terms_default' | t
 -%}
-{{ 'anvil-cart-drawer.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-cart-drawer.css', section: section %}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-cart-footer' %}>
   <div class="av-section__inner" data-anvil-cart-render="{{ section.id }}">
     {%- comment -%}

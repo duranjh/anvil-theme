@@ -1,4 +1,4 @@
-{{ 'anvil-sec-related-products.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-related-products.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -66,9 +66,9 @@
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section, fallback: list_label %}
     {%- unless recommendations.performed? -%}
-      {{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+      {% render 'anvil-stylesheet', file: 'anvil-card.css', section: section %}
       {%- if s.layout == 'slider' -%}
-        {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+        {% render 'anvil-stylesheet', file: 'anvil-slider.css', section: section %}
       {%- endif -%}
     {%- endunless -%}
     <anvil-related-products class="av-related-products"{% if rec_urls != '' %} data-anvil-urls="{{ rec_urls | escape }}"{% endif %}>

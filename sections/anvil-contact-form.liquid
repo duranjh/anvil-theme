@@ -1,4 +1,4 @@
-{{ 'anvil-sec-contact-form.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-contact-form.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign form_id = 'anvil-contact-' | append: section.id

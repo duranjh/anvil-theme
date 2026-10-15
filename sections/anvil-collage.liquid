@@ -1,4 +1,4 @@
-{{ 'anvil-sec-collage.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-collage.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign total = section.blocks.size | at_most: 5
@@ -90,10 +90,10 @@
     {% render 'anvil-section-head', section: section, fallback: fallback %}
     {%- if total > 0 -%}
       {%- if need_card -%}
-        {{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+        {% render 'anvil-stylesheet', file: 'anvil-card.css', section: section %}
       {%- endif -%}
       {%- if need_video -%}
-        {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+        {% render 'anvil-stylesheet', file: 'anvil-dialog.css', section: section %}
       {%- endif -%}
       <ul class="{{ root_class }}" style="--av-collage-gap: {{ gap }}px;">
         {%- for block in section.blocks -%}

@@ -100,7 +100,7 @@
     endif
   endif
 -%}
-{{ 'anvil-header.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-header.css', section: section %}
 {%- if s.sticky != 'never' or transparent -%}
   {% style %}
     #shopify-section-{{ section.id }} {

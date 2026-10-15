@@ -1,4 +1,4 @@
-{{ 'anvil-sec-announcement-bar.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-announcement-bar.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign multi = false
@@ -97,7 +97,7 @@
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-announcement-bar' %}>
   <div class="av-section__inner">
     {%- if multi -%}
-      {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      {% render 'anvil-stylesheet', file: 'anvil-slider.css', section: section %}
       {%- liquid
         assign bar_class = 'av-announcement-bar__bar av-announcement-bar--size-' | append: s.text_size | append: ' av-announcement-bar--multi av-slider--inline'
         assign arrows = 'none'

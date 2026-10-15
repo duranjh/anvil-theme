@@ -533,7 +533,7 @@
     endif
   -%}
 {%- endfor -%}
-{{ 'anvil-cart-drawer.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-cart-drawer.css', section: section %}
 <anvil-cart-drawer
   id="anvil-cart-drawer"
   class="av-cart-drawer"
@@ -585,7 +585,7 @@
   <script type="module" src="{{ 'anvil-gifts.js' | asset_url }}"></script>
 {%- endif -%}
 {%- if n_upsells > 0 -%}
-  {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+  {% render 'anvil-stylesheet', file: 'anvil-pb-commerce.css', section: section %}
   <script type="module" src="{{ 'anvil-commerce.js' | asset_url }}"></script>
 {%- endif -%}
 {% schema %}

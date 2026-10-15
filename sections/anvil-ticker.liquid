@@ -1,4 +1,4 @@
-{{ 'anvil-sec-ticker.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-ticker.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -260,7 +260,7 @@
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
     {%- if items != blank -%}
-      {{ 'anvil-marquee.css' | asset_url | stylesheet_tag }}
+      {% render 'anvil-stylesheet', file: 'anvil-marquee.css', section: section %}
       <div class="{{ ticker_class }}" style="--av-ticker-icon: {{ icon_px }}px; --av-ticker-img: {{ img_h }}px;">
         <anvil-marquee class="av-ticker__strip" speed="{{ s.speed | default: 40 }}" direction="{{ s.direction | default: 'left' }}"{% if s.pause_hover %} pause-on-hover{% endif %} style="--av-marquee-gap: {{ s.gap | default: 32 }}px;">
           <ul class="av-ticker__track" role="list" data-marquee-track>

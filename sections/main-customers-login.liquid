@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-customers-login.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-customers-login.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign login_label = 'anvil.customer.login.submit' | t

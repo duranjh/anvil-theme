@@ -1,4 +1,4 @@
-{{ 'anvil-sec-track-order.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-track-order.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign mode = s.mode | default: 'account'

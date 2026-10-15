@@ -1,4 +1,4 @@
-{{ 'anvil-sec-multicolumn.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-multicolumn.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -159,7 +159,7 @@
       -%}
       {% render 'anvil-section-head', section: section, fallback: fallback %}
       {%- if swipe -%}
-        {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+        {% render 'anvil-stylesheet', file: 'anvil-slider.css', section: section %}
       {%- endif -%}
       <{{ wrap_tag }} {{ wrap_attrs }}>
         <{{ list_tag }} class="{{ list_class }}" style="{{ wrap_style }}"{% if swipe %} data-slider-track{% else %} role="list"{% endif %}>

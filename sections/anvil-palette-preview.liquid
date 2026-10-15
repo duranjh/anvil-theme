@@ -43,7 +43,7 @@
   {%- capture verdict_ui -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--pass">{{ icon_check }}{{ 'anvil.palette_preview.level_ui' | t }}</span>{%- endcapture -%}
   {%- capture verdict_ui_fail -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--fail">{{ icon_x }}{{ 'anvil.palette_preview.level_ui_fail' | t }}</span>{%- endcapture -%}
   {%- capture verdict_check -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--warn">{{ icon_warn }}{{ 'anvil.palette_preview.level_check' | t }}</span>{%- endcapture -%}
-  {{ 'anvil-palette-preview.css' | asset_url | stylesheet_tag }}
+  {% render 'anvil-stylesheet', file: 'anvil-palette-preview.css', section: section %}
   <div {% render 'anvil-section-attrs', section: section, type: 'anvil-palette-preview' %}>
     <div class="av-section__inner">
       {%- comment -%} The hidden heading comes first so a subheading never precedes it in reading order. {%- endcomment -%}

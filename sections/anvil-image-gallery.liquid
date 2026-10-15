@@ -1,4 +1,4 @@
-{{ 'anvil-sec-image-gallery.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-image-gallery.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -106,7 +106,7 @@
             endif
             assign slider_style = '--av-slider-gap: ' | append: gap | append: 'px;'
           -%}
-          {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+          {% render 'anvil-stylesheet', file: 'anvil-slider.css', section: section %}
           <anvil-slider {% render 'anvil-slider-attrs', count: section.blocks.size, per_view: cols_m, per_view_tablet: cols_t, per_view_desktop: cols_d, peek: 'auto', arrows: arrows, dots: s.show_dots, autoplay: autoplay, label: list_label, class: 'av-image-gallery__slider', style: slider_style %}>
             <div class="av-image-gallery__track" data-slider-track>
         {%- else -%}
@@ -176,7 +176,7 @@
         {%- endif -%}
 
         {%- if lightbox_on -%}
-          {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+          {% render 'anvil-stylesheet', file: 'anvil-dialog.css', section: section %}
           <anvil-dialog id="anvil-image-gallery-lb-{{ section.id }}" class="av-image-gallery__lb-host" data-anvil-lb-host>
             <dialog class="av-image-gallery__lb" aria-label="{{ 'anvil.image_gallery.viewer' | t }}">
               <button type="button" class="av-image-gallery__lb-close" data-anvil-close autofocus aria-label="{{ 'anvil.a11y.close' | t }}">

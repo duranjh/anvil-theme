@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-collection-banner.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-collection-banner.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign banner_sizes = '100vw'

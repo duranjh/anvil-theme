@@ -62,7 +62,7 @@
   assign add_label = 'anvil.product.add_to_cart' | t
   assign form_done = false
 -%}
-{{ 'anvil-product.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-product.css', section: section %}
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-featured-product' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}

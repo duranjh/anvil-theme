@@ -1,4 +1,4 @@
-{{ 'anvil-sec-popup.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-popup.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -68,7 +68,7 @@
   assign dismiss_label = s.dismiss_label | strip | escape
 -%}
 {%- if show_here -%}
-  {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+  {% render 'anvil-stylesheet', file: 'anvil-dialog.css', section: section %}
   {%- capture form_html -%}
     {% content_for 'block', type: '_anvil-popup-newsletter', id: 'newsletter' %}
   {%- endcapture -%}

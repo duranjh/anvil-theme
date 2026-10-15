@@ -1,4 +1,4 @@
-{{ 'anvil-sec-hero-slideshow.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-hero-slideshow.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign slide_count = section.blocks.size
@@ -106,7 +106,7 @@
       <div class="av-hero-slideshow__head{% if s.width == 'full' %} av-hero-slideshow__head--bleed{% endif %}">{{ head_html }}</div>
     {%- endif -%}
     {%- if slide_count > 0 -%}
-      {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      {% render 'anvil-stylesheet', file: 'anvil-slider.css', section: section %}
       {%- capture slider_style -%}--av-slider-gap: 0px; --av-hero-slideshow-ar-m: {{ ar_m }}; --av-hero-slideshow-ar-d: {{ ar_d }}; --av-hero-slideshow-min-m: {{ min_m }}; --av-hero-slideshow-min-d: {{ min_d }};{%- endcapture -%}
       <anvil-slider {% render 'anvil-slider-attrs', count: slide_count, per_view: 1, arrows: arrows, dots: show_dots, autoplay: autoplay, loop: true, label: slider_label, class: root_class, style: slider_style %}>
         <div class="av-hero-slideshow__track" data-slider-track>

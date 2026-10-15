@@ -1,4 +1,4 @@
-{{ 'anvil-sec-footer.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-footer.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign show_country = false
@@ -50,7 +50,7 @@
   endfor
 -%}
 {%- if has_cards -%}
-  {{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+  {% render 'anvil-stylesheet', file: 'anvil-card.css', section: section %}
 {%- endif -%}
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-footer' %}>
   <div class="av-section__inner">

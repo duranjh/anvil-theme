@@ -1,4 +1,4 @@
-{{ 'anvil-sec-tabs.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-tabs.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -82,7 +82,7 @@
         {% render 'anvil-editor-empty' %}
       {%- endif -%}
       {%- if tabs_html != blank -%}
-        {{ 'anvil-tabs.css' | asset_url | stylesheet_tag }}
+        {% render 'anvil-stylesheet', file: 'anvil-tabs.css', section: section %}
       {%- endif -%}
       <div class="{{ wrap_class }}" style="--av-tabs-icon: {{ icon_px }}px;">
         <anvil-tabs{% if s.hash_sync %} hash-sync{% endif %}>

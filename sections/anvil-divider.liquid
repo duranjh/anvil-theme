@@ -1,4 +1,4 @@
-{{ 'anvil-sec-divider.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-divider.css', section: section %}
 {%- liquid
   assign s = section.settings
 

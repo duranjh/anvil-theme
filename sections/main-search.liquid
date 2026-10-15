@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-search.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-search.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign search_terms = search.terms | escape
@@ -14,7 +14,7 @@
     assign above_fold = true
   endif
 -%}
-{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-card.css', section: section %}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-search' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}

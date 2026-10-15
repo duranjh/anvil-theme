@@ -1,4 +1,4 @@
-{{ 'anvil-sec-timeline.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-timeline.css', section: section %}
 {%- liquid
   assign s = section.settings
 

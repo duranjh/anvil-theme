@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-collection.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-collection.css', section: section %}
 {%- liquid
   assign s = section.settings
   assign sort_by = collection.sort_by | default: collection.default_sort_by
@@ -26,7 +26,7 @@
     assign clear_url = collection.url | append: '?sort_by=' | append: collection.sort_by
   endif
 -%}
-{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-card.css', section: section %}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-collection' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}

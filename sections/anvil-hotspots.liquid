@@ -1,4 +1,4 @@
-{{ 'anvil-sec-hotspots.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-hotspots.css', section: section %}
 {%- liquid
   assign s = section.settings
 
@@ -183,7 +183,7 @@
       endif
     -%}
     {% render 'anvil-section-head', section: section, fallback: fallback %}
-    {{ 'anvil-hotspots.css' | asset_url | stylesheet_tag }}
+    {% render 'anvil-stylesheet', file: 'anvil-hotspots.css', section: section %}
     <div class="{{ root_class }}" style="--av-hotspots-media: {{ img_w }}%;">
       <div class="av-hotspots__figure">
         <anvil-hotspots class="av-hotspots__stage av-enhance">

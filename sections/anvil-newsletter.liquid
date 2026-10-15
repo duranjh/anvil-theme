@@ -1,4 +1,4 @@
-{{ 'anvil-sec-newsletter.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-newsletter.css', section: section %}
 {%- liquid
   assign s = section.settings
 

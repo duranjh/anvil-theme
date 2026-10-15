@@ -1,4 +1,4 @@
-{{ 'anvil-sec-compare-table.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-compare-table.css', section: section %}
 {%- liquid
   assign s = section.settings
 

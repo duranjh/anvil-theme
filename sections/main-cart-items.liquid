@@ -1,4 +1,4 @@
-{{ 'anvil-sec-main-cart-items.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-main-cart-items.css', section: section %}
 {%- comment -%}
   Cart page lines. Each line is snippets/anvil-cart-line.liquid, the same markup the cart drawer uses, inside a plain
   <form> that posts updates[<line key>] to the cart, so the page works without JavaScript; <anvil-cart-form
@@ -22,7 +22,7 @@
     endif
   endfor
 -%}
-{{ 'anvil-cart-drawer.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-cart-drawer.css', section: section %}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-cart-items' %}>
   <div class="av-section__inner" data-anvil-cart-render="{{ section.id }}">
     {% render 'anvil-section-head', section: section %}

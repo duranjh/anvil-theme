@@ -1,4 +1,4 @@
-{{ 'anvil-sec-guarantees.css' | asset_url | stylesheet_tag }}
+{% render 'anvil-stylesheet', file: 'anvil-sec-guarantees.css', section: section %}
 {%- liquid
   assign s = section.settings
 
