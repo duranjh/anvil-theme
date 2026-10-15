@@ -4,37 +4,90 @@
   if section.blocks.size > 1
     assign multi = true
   endif
+
+  comment
+    Which templates show the bar. Outside the editor nothing renders on the others.
+  endcomment
+  assign tpl = template.name
+  assign show_here = true
+  case s.pages
+    when 'home'
+      if tpl != 'index'
+        assign show_here = false
+      endif
+    when 'product'
+      if tpl != 'product'
+        assign show_here = false
+      endif
+    when 'collection'
+      if tpl != 'collection' and tpl != 'list-collections'
+        assign show_here = false
+      endif
+    when 'home_product'
+      if tpl != 'index' and tpl != 'product'
+        assign show_here = false
+      endif
+    when 'custom'
+      assign wanted = s.pages_custom | downcase | remove: ' ' | split: ','
+      unless wanted contains tpl
+        assign show_here = false
+      endunless
+  endcase
+  if request.design_mode
+    assign show_here = true
+  endif
+
+  assign has_code = false
+  for block in section.blocks
+    if block.type == 'code' and block.settings.code != blank
+      assign has_code = true
+    endif
+  endfor
+
+  assign root_url = routes.root_url
+  assign root_last = root_url | slice: -1
+  if root_last != '/'
+    assign root_url = root_url | append: '/'
+  endif
+  assign copy_fallback = 'anvil.announcement.copy' | t
+  assign copied_fallback = 'anvil.a11y.copied' | t
+  assign apply_fallback = 'anvil.announcement.apply' | t
+  assign applied_fallback = 'anvil.cart.code_applied' | t
 -%}
+{%- if show_here -%}
 {%- capture items -%}
   {%- for block in section.blocks -%}
-    <div class="av-announcement__item" data-slider-slide role="group" aria-roledescription="slide" aria-label="{{ forloop.index }} / {{ forloop.length }}" {{ block.shopify_attributes }}>
+    <div class="av-announcement-bar__item" data-slider-slide {{ block.shopify_attributes }}>
       {%- case block.type -%}
         {%- when 'text' -%}
           {%- if block.settings.link != blank -%}
-            <a class="av-announcement__text av-announcement__link" href="{{ block.settings.link }}">{{ block.settings.text }}</a>
+            <a class="av-announcement-bar__text av-announcement-bar__link" href="{{ block.settings.link }}">{{ block.settings.text }}</a>
           {%- else -%}
-            <div class="av-announcement__text">{{ block.settings.text }}</div>
+            <div class="av-announcement-bar__text">{{ block.settings.text }}</div>
           {%- endif -%}
         {%- when 'code' -%}
           {%- if block.settings.code != blank -%}
-            <div class="av-announcement__offer">
-              {%- if block.settings.text != blank -%}<span class="av-announcement__offer-text">{{ block.settings.text | escape }}</span>{%- endif -%}
-              <code class="av-announcement__code">{{ block.settings.code | escape }}</code>
-              <button type="button" class="av-announcement__copy av-js-only" data-anvil-copy="{{ block.settings.code | escape }}" data-anvil-copied="{{ block.settings.copied_label | escape }}">
-                <span class="av-announcement__copy-label">{{ block.settings.copy_label | escape }}</span>
-              </button>
-              <span class="av-visually-hidden" role="status" aria-live="polite" data-anvil-copy-status></span>
+            {%- liquid
+              assign code = block.settings.code | strip
+              assign copy_label = block.settings.copy_label | default: copy_fallback
+              assign copied_label = block.settings.copied_label | default: copied_fallback
+              assign apply_label = block.settings.apply_label | default: apply_fallback
+            -%}
+            <div class="av-announcement-bar__offer" data-anvil-code-scope>
+              {%- if block.settings.text != blank -%}<span class="av-announcement-bar__offer-text">{{ block.settings.text | escape }}</span>{%- endif -%}
+              <code class="av-announcement-bar__code">{{ code | escape }}</code>
+              {%- if block.settings.mode == 'apply' -%}
+                <a class="av-announcement-bar__copy" href="{{ root_url }}discount/{{ code | url_encode }}?redirect={{ request.path | url_encode }}" data-anvil-apply="{{ code | escape }}" data-anvil-applied="{{ applied_fallback | escape }}">{{ apply_label | escape }}</a>
+              {%- else -%}
+                <button type="button" class="av-announcement-bar__copy av-js-only" data-anvil-copy="{{ code | escape }}" data-anvil-copied="{{ copied_label | escape }}">{{ copy_label | escape }}</button>
+              {%- endif -%}
+              <span class="av-visually-hidden" role="status" aria-live="polite" data-anvil-code-status></span>
             </div>
           {%- endif -%}
         {%- when 'socials' -%}
-          <div class="av-announcement__socials">
-            {%- if block.settings.label != blank -%}<span class="av-announcement__offer-text">{{ block.settings.label | escape }}</span>{%- endif -%}
-            {%- if settings.social_instagram_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_instagram_url }}" rel="noopener">Instagram</a>{%- endif -%}
-            {%- if settings.social_tiktok_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_tiktok_url }}" rel="noopener">TikTok</a>{%- endif -%}
-            {%- if settings.social_facebook_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_facebook_url }}" rel="noopener">Facebook</a>{%- endif -%}
-            {%- if settings.social_youtube_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_youtube_url }}" rel="noopener">YouTube</a>{%- endif -%}
-            {%- if settings.social_x_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_x_url }}" rel="noopener">X</a>{%- endif -%}
-            {%- if settings.social_pinterest_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_pinterest_url }}" rel="noopener">Pinterest</a>{%- endif -%}
+          <div class="av-announcement-bar__socials">
+            {%- if block.settings.label != blank -%}<span class="av-announcement-bar__offer-text">{{ block.settings.label | escape }}</span>{%- endif -%}
+            {% render 'anvil-social-links', class: 'av-announcement-bar__social-list', label: block.settings.label %}
           </div>
       {%- endcase -%}
     </div>
@@ -42,79 +95,70 @@
 {%- endcapture -%}
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-announcement-bar' %}>
   <div class="av-section__inner">
-    {% render 'anvil-section-head', section: section %}
     {%- if multi -%}
       {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
-      <anvil-slider class="av-announcement av-announcement--size-{{ s.text_size }} av-announcement--multi{% if s.autoplay > 0 %} av-announcement--autoplay{% endif %}" per-view="1" per-view-desktop="1" peek="0" autoplay="{{ s.autoplay }}" loop{% if s.show_arrows %} arrows{% endif %}>
-        <div class="av-announcement__track" data-slider-track>
+      <anvil-slider class="av-announcement-bar__bar av-announcement-bar--size-{{ s.text_size }} av-announcement-bar--multi{% if s.autoplay > 0 %} av-announcement-bar--autoplay{% endif %}" per-view="1" per-view-desktop="1" peek="0" autoplay="{{ s.autoplay }}" loop{% if s.show_arrows %} arrows{% endif %} aria-label="{{ 'anvil.announcement.label' | t }}" style="--av-slider-per-view: 1; --av-slider-per-view-desktop: 1; --av-slider-peek: 0px;">
+        <div class="av-announcement-bar__track" data-slider-track>
           {{ items }}
         </div>
       </anvil-slider>
       <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
     {%- else -%}
-      <div class="av-announcement av-announcement--size-{{ s.text_size }}">
-        <div class="av-announcement__track">
+      <div class="av-announcement-bar__bar av-announcement-bar--size-{{ s.text_size }}">
+        <div class="av-announcement-bar__track">
           {{ items }}
         </div>
       </div>
     {%- endif -%}
+    {%- if has_code -%}
+      <script type="module" src="{{ 'anvil-code.js' | asset_url }}"></script>
+    {%- endif -%}
+    {%- if request.design_mode and s.pages != 'all' -%}
+      <p class="av-announcement-bar__note av-example-note">{{ 'anvil.editor.announcement_pages' | t }}</p>
+    {%- endif -%}
   </div>
 </div>
-{% javascript %}
-  document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-anvil-copy]');
-    if (!button || !navigator.clipboard) return;
-    const status = button.parentElement.querySelector('[data-anvil-copy-status]');
-    navigator.clipboard.writeText(button.dataset.anvilCopy).then(() => {
-      button.classList.add('is-copied');
-      if (status) status.textContent = button.dataset.anvilCopied || '';
-      window.setTimeout(() => {
-        button.classList.remove('is-copied');
-        if (status) status.textContent = '';
-      }, 2000);
-    });
-  });
-{% endjavascript %}
+{%- endif -%}
 {% stylesheet %}
-  .av-announcement {
+  .av-announcement-bar__bar {
     display: block;
     text-align: center;
     font-size: var(--av-text-sm);
     line-height: 1.4;
   }
-  .av-announcement--size-md {
+  .av-announcement-bar--size-md {
     font-size: var(--av-text-md);
   }
-  .av-announcement__track {
+  .av-announcement-bar__track {
     display: flex;
     gap: var(--av-space-4);
   }
-  .av-announcement--multi .av-announcement__track {
+  .av-announcement-bar--multi .av-announcement-bar__track {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
   }
-  .av-announcement--multi .av-announcement__track::-webkit-scrollbar {
+  .av-announcement-bar--multi .av-announcement-bar__track::-webkit-scrollbar {
     display: none;
   }
-  .av-announcement--multi {
+  .av-announcement-bar--multi {
     --av-slider-arrow: 28px;
     padding-inline: 40px;
   }
-  .av-announcement--autoplay {
+  .av-announcement-bar--autoplay {
     padding-inline-end: 76px;
   }
-  .av-announcement--multi.is-static {
+  .av-announcement-bar--multi.av-is-static {
     padding-inline: 0;
   }
-  .av-announcement--multi .av-slider__arrow,
-  .av-announcement--multi .av-slider__pause {
+  .av-announcement-bar--multi .av-slider__arrow,
+  .av-announcement-bar--multi .av-slider__pause {
     border: 0;
     background: none;
     box-shadow: none;
     color: inherit;
   }
-  .av-announcement--multi .av-slider__pause {
+  .av-announcement-bar--multi .av-slider__pause {
     top: 50%;
     inset-block-end: auto;
     inset-inline-end: 40px;
@@ -122,7 +166,7 @@
     height: 28px;
     translate: 0 -50%;
   }
-  .av-announcement__item {
+  .av-announcement-bar__item {
     flex: 0 0 100%;
     scroll-snap-align: start;
     display: flex;
@@ -132,26 +176,24 @@
     min-height: 1.5em;
     padding-inline: var(--av-space-2);
   }
-  .av-announcement__text p {
+  .av-announcement-bar__text p {
     margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    text-wrap: balance;
   }
-  .av-announcement__link {
-    color: inherit;
+  .av-announcement-bar__link {
     text-decoration: underline;
     text-underline-offset: 0.15em;
   }
-  .av-announcement__offer,
-  .av-announcement__socials {
+  .av-announcement-bar__offer,
+  .av-announcement-bar__socials {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     gap: var(--av-space-2);
   }
-  .av-announcement__code {
+  .av-announcement-bar__code {
     font-family: inherit;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -159,57 +201,64 @@
     border: var(--av-border-w-button) solid var(--av-border);
     border-radius: var(--av-radius-badge);
   }
-  .av-announcement__copy {
-    appearance: none;
+  .av-announcement-bar__copy {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0.2em var(--av-space-3);
+    font-size: var(--av-text-xs);
+    text-decoration: none;
     background: var(--av-btn-bg);
     color: var(--av-btn-fg);
     border: var(--av-border-w-button) solid var(--av-btn-border);
     border-radius: var(--av-radius-pill);
-    font: inherit;
-    font-size: var(--av-text-xs);
-    padding: 0.2em var(--av-space-3);
-    min-height: 24px;
-    cursor: pointer;
   }
-  .av-announcement__copy.is-copied {
+  .av-announcement-bar__copy.av-is-copied {
     background: var(--av-accent);
     color: var(--av-on-accent);
     border-color: var(--av-accent);
   }
-  .av-announcement__pill {
-    color: inherit;
-    text-decoration: none;
-    padding: 0.1em var(--av-space-3);
-    border: var(--av-border-w-button) solid var(--av-border);
-    border-radius: var(--av-radius-pill);
+  .av-announcement-bar__social-list .av-social__pill {
     min-height: 24px;
-    display: inline-flex;
-    align-items: center;
   }
-  .av-announcement__pill:hover {
-    text-decoration: underline;
+  .av-announcement-bar__note {
+    margin-top: var(--av-space-1);
+    text-align: center;
   }
 {% endstylesheet %}
 {% schema %}
 {
   "name": "Announcement bar",
   "settings": [
-    { "type": "header", "content": "Heading" },
-    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
-    { "type": "richtext", "id": "subheading", "label": "Subheading" },
-    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
-    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
-    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
     { "type": "header", "content": "Layout" },
     { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
-    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
     { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
     { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
     { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
-    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
     { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
-    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
     { "type": "header", "content": "Announcement bar" },
+    {
+      "type": "select",
+      "id": "pages",
+      "label": "Show on pages",
+      "options": [
+        { "value": "all", "label": "All pages" },
+        { "value": "home", "label": "Homepage only" },
+        { "value": "product", "label": "Product pages only" },
+        { "value": "collection", "label": "Collection pages only" },
+        { "value": "home_product", "label": "Homepage and product pages" },
+        { "value": "custom", "label": "Templates I list" }
+      ],
+      "default": "all"
+    },
+    {
+      "type": "text",
+      "id": "pages_custom",
+      "label": "Templates",
+      "placeholder": "index, product, collection, cart",
+      "info": "Template names separated by commas, for example index, product, collection, page, cart, search, blog, article.",
+      "visible_if": "{{ section.settings.pages == 'custom' }}"
+    },
     {
       "type": "select",
       "id": "text_size",
@@ -224,7 +273,7 @@
       "type": "range",
       "id": "autoplay",
       "label": "Rotate every",
-      "info": "Only applies with two or more bars. 0 turns rotation off.",
+      "info": "Only applies with two or more bars. 0 turns rotation off. Shoppers can pause it, and it starts paused for those who prefer reduced motion.",
       "min": 0,
       "max": 10,
       "step": 1,
@@ -248,6 +297,7 @@
           "type": "richtext",
           "id": "text",
           "label": "Text",
+          "info": "Only announce offers and deadlines that are real; a sale that ends tonight must end tonight.",
           "default": "<p>Example announcement — replace this with your own message</p>"
         },
         {
@@ -271,13 +321,24 @@
           "type": "text",
           "id": "code",
           "label": "Discount code",
-          "info": "Enter a code that exists under Discounts in your admin. The bar shows the code; it does not create or apply the discount.",
+          "info": "Enter a code that exists under Discounts in your admin. The bar never creates a discount; Shopify decides whether it applies.",
           "default": "EXAMPLECODE"
+        },
+        {
+          "type": "select",
+          "id": "mode",
+          "label": "Button",
+          "options": [
+            { "value": "copy", "label": "Copy the code" },
+            { "value": "apply", "label": "Apply the code to the cart" }
+          ],
+          "default": "copy"
         },
         {
           "type": "text",
           "id": "copy_label",
           "label": "Copy button label",
+          "info": "Leave empty for the default wording.",
           "default": "Copy"
         },
         {
@@ -285,6 +346,13 @@
           "id": "copied_label",
           "label": "Copied confirmation",
           "default": "Copied"
+        },
+        {
+          "type": "text",
+          "id": "apply_label",
+          "label": "Apply button label",
+          "info": "Leave empty for the default wording.",
+          "default": "Apply"
         }
       ]
     },
@@ -313,8 +381,7 @@
       "name": "Announcement bar",
       "settings": {
         "pad_top": 8,
-        "pad_bottom": 8,
-        "width": "full"
+        "pad_bottom": 8
       },
       "blocks": [
         { "type": "text" }

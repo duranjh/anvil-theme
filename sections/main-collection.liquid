@@ -5,157 +5,183 @@
   if s.show_filters and collection.filters.size > 0
     assign show_filters = true
   endif
-  assign card_sizes = '(min-width: 990px) 25vw, 50vw'
+  assign card_sizes = '(min-width: 990px) 25vw, (min-width: 750px) 33vw, 50vw'
   if s.columns_desktop == '3'
-    assign card_sizes = '(min-width: 990px) 33vw, 50vw'
+    assign card_sizes = '(min-width: 750px) 33vw, 50vw'
   elsif s.columns_desktop == '2'
-    assign card_sizes = '(min-width: 990px) 50vw, 50vw'
+    assign card_sizes = '(min-width: 990px) 50vw, (min-width: 750px) 33vw, 50vw'
+  endif
+  assign above_fold = false
+  if section.index == nil or section.index <= 2
+    assign above_fold = true
+  endif
+  assign apply_label = 'anvil.facets.apply' | t
+  assign clear_url = collection.url
+  if collection.sort_by != blank
+    assign clear_url = collection.url | append: '?sort_by=' | append: collection.sort_by
   endif
 -%}
-{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
 {{ 'anvil-card.css' | asset_url | stylesheet_tag }}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-collection' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
     {%- paginate collection.products by s.per_page -%}
-      <div class="av-collection{% if show_filters %} av-collection--has-filters{% endif %}">
+      <anvil-facets class="av-collection av-enhance{% if show_filters %} av-collection--has-filters{% endif %}" section-id="{{ section.id }}">
         {%- if show_filters or s.show_sort -%}
-          <form class="av-collection__facets" method="get" action="{{ collection.url }}" id="anvil-facets-{{ section.id }}" data-anvil-facets>
-            {%- if s.show_sort -%}
-              <div class="av-collection__sort av-field">
-                <label class="av-field__label" for="anvil-sort-{{ section.id }}">Sort by</label>
-                <div class="av-field__select">
-                  <select class="av-field__input" id="anvil-sort-{{ section.id }}" name="sort_by">
-                    {%- for option in collection.sort_options -%}
-                      <option value="{{ option.value | escape }}"{% if option.value == sort_by %} selected{% endif %}>{{ option.name | escape }}</option>
-                    {%- endfor -%}
-                  </select>
-                </div>
-              </div>
-            {%- elsif collection.sort_by != blank -%}
-              <input type="hidden" name="sort_by" value="{{ collection.sort_by | escape }}">
-            {%- endif -%}
-
-            {%- if show_filters -%}
-              <div class="av-collection__filters">
-                {%- assign active_count = 0 -%}
-                {%- for filter in collection.filters -%}
-                  {%- assign active_count = active_count | plus: filter.active_values.size -%}
-                  {%- if filter.type == 'price_range' -%}
-                    {%- if filter.min_value.value != nil or filter.max_value.value != nil -%}
-                      {%- assign active_count = active_count | plus: 1 -%}
-                    {%- endif -%}
-                  {%- endif -%}
-                {%- endfor -%}
-                {%- if active_count > 0 -%}
-                  <ul class="av-collection__active-list av-list-reset" aria-label="Active filters">
-                    {%- for filter in collection.filters -%}
-                      {%- for value in filter.active_values -%}
-                        <li><a class="av-collection__active" href="{{ value.url_to_remove }}">{{ filter.label | escape }}: {{ value.label | escape }} <span aria-hidden="true">&times;</span><span class="av-visually-hidden">(remove)</span></a></li>
+          <form class="av-collection__facets" method="get" action="{{ collection.url }}" id="anvil-facets-{{ section.id }}" data-anvil-facets-form>
+            <div class="av-collection__facets-body" data-anvil-section="{{ section.id }}-facets">
+              {%- if s.show_sort -%}
+                <div class="av-collection__sort av-field">
+                  <label class="av-field__label" for="anvil-sort-{{ section.id }}">{{ 'anvil.facets.sort_by' | t }}</label>
+                  <div class="av-field__select">
+                    <select class="av-field__input" id="anvil-sort-{{ section.id }}" name="sort_by" data-anvil-focus-key="sort">
+                      {%- for option in collection.sort_options -%}
+                        <option value="{{ option.value | escape }}"{% if option.value == sort_by %} selected{% endif %}>{{ option.name | escape }}</option>
                       {%- endfor -%}
-                      {%- if filter.type == 'price_range' -%}
-                        {%- if filter.min_value.value != nil or filter.max_value.value != nil -%}
-                          <li><a class="av-collection__active" href="{{ filter.url_to_remove }}">{{ filter.label | escape }}: {{ filter.min_value.value | default: 0 | money }} &ndash; {{ filter.max_value.value | default: filter.range_max | money }} <span aria-hidden="true">&times;</span><span class="av-visually-hidden">(remove)</span></a></li>
-                        {%- endif -%}
-                      {%- endif -%}
-                    {%- endfor -%}
-                    <li><a class="av-collection__clear av-link" href="{{ collection.url }}{% if collection.sort_by != blank %}?sort_by={{ collection.sort_by | escape }}{% endif %}">Clear all</a></li>
-                  </ul>
-                {%- endif -%}
+                    </select>
+                  </div>
+                </div>
+              {%- elsif collection.sort_by != blank -%}
+                <input type="hidden" name="sort_by" value="{{ collection.sort_by | escape }}">
+              {%- endif -%}
 
-                {%- for filter in collection.filters -%}
-                  <details class="av-collection__filter"{% if filter.active_values.size > 0 or filter.min_value.value != nil or filter.max_value.value != nil %} open{% endif %}>
-                    <summary class="av-collection__filter-summary">{{ filter.label | escape }}</summary>
-                    <div class="av-collection__filter-body">
-                      {%- case filter.type -%}
-                        {%- when 'list' -%}
-                          <ul class="av-collection__values av-list-reset">
-                            {%- for value in filter.values -%}
+              {%- if show_filters -%}
+                <div class="av-collection__filters">
+                  {%- assign active_count = 0 -%}
+                  {%- for filter in collection.filters -%}
+                    {%- assign active_count = active_count | plus: filter.active_values.size -%}
+                    {%- if filter.type == 'price_range' -%}
+                      {%- if filter.min_value.value != nil or filter.max_value.value != nil -%}
+                        {%- assign active_count = active_count | plus: 1 -%}
+                      {%- endif -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                  {%- if active_count > 0 -%}
+                    <ul class="av-collection__active-list av-list-reset" aria-label="{{ 'anvil.facets.active' | t }}">
+                      {%- for filter in collection.filters -%}
+                        {%- for value in filter.active_values -%}
+                          <li><a class="av-collection__active" href="{{ value.url_to_remove }}" data-anvil-facets-link>{{ filter.label | escape }}: {{ value.label | escape }} <span aria-hidden="true">&times;</span><span class="av-visually-hidden">{{ 'anvil.facets.remove' | t }}</span></a></li>
+                        {%- endfor -%}
+                        {%- if filter.type == 'price_range' -%}
+                          {%- if filter.min_value.value != nil or filter.max_value.value != nil -%}
+                            {%- assign price_min = filter.min_value.value | default: 0 -%}
+                            {%- assign price_max = filter.max_value.value | default: filter.range_max -%}
+                            <li><a class="av-collection__active" href="{{ filter.url_to_remove }}" data-anvil-facets-link>{{ filter.label | escape }}: {% render 'anvil-money', amount: price_min %} &ndash; {% render 'anvil-money', amount: price_max %} <span aria-hidden="true">&times;</span><span class="av-visually-hidden">{{ 'anvil.facets.remove' | t }}</span></a></li>
+                          {%- endif -%}
+                        {%- endif -%}
+                      {%- endfor -%}
+                      <li><a class="av-collection__clear av-link" href="{{ clear_url }}" data-anvil-facets-link>{{ 'anvil.facets.clear_all' | t }}</a></li>
+                    </ul>
+                  {%- endif -%}
+
+                  {%- for filter in collection.filters -%}
+                    {%- assign details_key = filter.param_name | default: filter.label | handleize -%}
+                    <details class="av-collection__filter" data-anvil-details-key="{{ details_key }}"{% if filter.active_values.size > 0 or filter.min_value.value != nil or filter.max_value.value != nil %} open{% endif %}>
+                      <summary class="av-collection__filter-summary">{{ filter.label | escape }}</summary>
+                      <div class="av-collection__filter-body">
+                        {%- case filter.type -%}
+                          {%- when 'list' -%}
+                            <ul class="av-collection__values av-list-reset">
+                              {%- for value in filter.values -%}
+                                {%- assign value_key = value.param_name | append: '-' | append: value.value | handleize -%}
+                                <li>
+                                  <label class="av-check">
+                                    <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value | escape }}"{% if value.active %} checked{% endif %}{% if value.count == 0 and value.active == false %} disabled{% endif %} data-anvil-focus-key="{{ value_key }}">
+                                    <span>{{ value.label | escape }} <span class="av-collection__count av-muted">({{ value.count }})</span></span>
+                                  </label>
+                                </li>
+                              {%- endfor -%}
+                            </ul>
+                          {%- when 'price_range' -%}
+                            {%- comment -%} Cents arithmetic: works for every money format, comma decimals included. {%- endcomment -%}
+                            {%- assign range_max = filter.range_max | divided_by: 100.0 -%}
+                            <div class="av-collection__price">
+                              <label class="av-field">
+                                <span class="av-field__label">{{ 'anvil.facets.from' | t }}</span>
+                                <input class="av-field__input" type="number" name="{{ filter.min_value.param_name }}" {% if filter.min_value.value != nil %}value="{{ filter.min_value.value | divided_by: 100.0 }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="0" inputmode="decimal" data-anvil-focus-key="price-min">
+                              </label>
+                              <label class="av-field">
+                                <span class="av-field__label">{{ 'anvil.facets.to' | t }}</span>
+                                <input class="av-field__input" type="number" name="{{ filter.max_value.param_name }}" {% if filter.max_value.value != nil %}value="{{ filter.max_value.value | divided_by: 100.0 }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="{{ range_max }}" inputmode="decimal" data-anvil-focus-key="price-max">
+                              </label>
+                            </div>
+                          {%- when 'boolean' -%}
+                            <ul class="av-collection__values av-list-reset">
                               <li>
                                 <label class="av-check">
-                                  <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value | escape }}"{% if value.active %} checked{% endif %}{% if value.count == 0 and value.active == false %} disabled{% endif %}>
-                                  <span>{{ value.label | escape }} <span class="av-collection__count av-muted">({{ value.count }})</span></span>
+                                  <input type="checkbox" name="{{ filter.true_value.param_name }}" value="{{ filter.true_value.value | escape }}"{% if filter.true_value.active %} checked{% endif %} data-anvil-focus-key="{{ filter.param_name | handleize }}-true">
+                                  <span>{{ filter.true_value.label | escape }} <span class="av-collection__count av-muted">({{ filter.true_value.count }})</span></span>
                                 </label>
                               </li>
-                            {%- endfor -%}
-                          </ul>
-                        {%- when 'price_range' -%}
-                          {%- assign range_max = filter.range_max | money_without_currency | replace: ',', '' -%}
-                          <div class="av-collection__price">
-                            <label class="av-field">
-                              <span class="av-field__label">From</span>
-                              <input class="av-field__input" type="number" name="{{ filter.min_value.param_name }}" {% if filter.min_value.value %}value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="0">
-                            </label>
-                            <label class="av-field">
-                              <span class="av-field__label">To</span>
-                              <input class="av-field__input" type="number" name="{{ filter.max_value.param_name }}" {% if filter.max_value.value %}value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="{{ range_max }}">
-                            </label>
-                          </div>
-                        {%- when 'boolean' -%}
-                          <ul class="av-collection__values av-list-reset">
-                            <li>
-                              <label class="av-check">
-                                <input type="checkbox" name="{{ filter.true_value.param_name }}" value="{{ filter.true_value.value | escape }}"{% if filter.true_value.active %} checked{% endif %}>
-                                <span>{{ filter.true_value.label | escape }} <span class="av-collection__count av-muted">({{ filter.true_value.count }})</span></span>
-                              </label>
-                            </li>
-                            <li>
-                              <label class="av-check">
-                                <input type="checkbox" name="{{ filter.false_value.param_name }}" value="{{ filter.false_value.value | escape }}"{% if filter.false_value.active %} checked{% endif %}>
-                                <span>{{ filter.false_value.label | escape }} <span class="av-collection__count av-muted">({{ filter.false_value.count }})</span></span>
-                              </label>
-                            </li>
-                          </ul>
-                      {%- endcase -%}
-                    </div>
-                  </details>
-                {%- endfor -%}
-              </div>
-            {%- endif -%}
-            <div class="av-collection__apply av-no-js-only">
-              {% render 'anvil-button', label: 'Apply', style: 'secondary', size: 'sm', type: 'submit' %}
+                              <li>
+                                <label class="av-check">
+                                  <input type="checkbox" name="{{ filter.false_value.param_name }}" value="{{ filter.false_value.value | escape }}"{% if filter.false_value.active %} checked{% endif %} data-anvil-focus-key="{{ filter.param_name | handleize }}-false">
+                                  <span>{{ filter.false_value.label | escape }} <span class="av-collection__count av-muted">({{ filter.false_value.count }})</span></span>
+                                </label>
+                              </li>
+                            </ul>
+                        {%- endcase -%}
+                      </div>
+                    </details>
+                  {%- endfor -%}
+                </div>
+              {%- endif -%}
+            </div>
+            <div class="av-collection__apply av-fallback-only">
+              {% render 'anvil-button', label: apply_label, style: 'secondary', size: 'sm', type: 'submit' %}
             </div>
           </form>
         {%- endif -%}
 
-        <div class="av-collection__results">
-          <p class="av-collection__summary av-muted" role="status">
-            {{ paginate.items }} {% if paginate.items == 1 %}product{% else %}products{% endif %}
-          </p>
+        <div class="av-collection__results" data-anvil-section="{{ section.id }}-results">
+          <h2 class="av-visually-hidden">{{ 'anvil.collection.products_heading' | t }}</h2>
+          <p class="av-collection__summary av-muted" tabindex="-1" data-anvil-facets-count>{{ 'anvil.collection.product_count' | t: count: paginate.items }}</p>
           {%- if collection.products.size > 0 -%}
             <ul class="av-collection__grid av-collection__grid--{{ s.columns_desktop }} av-list-reset">
               {%- for product in collection.products -%}
+                {%- liquid
+                  assign card_loading = 'lazy'
+                  assign card_priority = false
+                  if above_fold and forloop.index <= 4
+                    assign card_loading = 'eager'
+                    if forloop.first and collection.image == blank
+                      assign card_priority = true
+                    endif
+                  endif
+                -%}
                 <li class="av-collection__cell">
-                  {% render 'anvil-product-card', product: product, show_vendor: s.show_vendor, show_rating: s.show_rating, quick_add: s.quick_add, image_ratio: s.image_ratio, sizes: card_sizes %}
+                  {% render 'anvil-product-card', product: product, show_vendor: s.show_vendor, show_rating: s.show_rating, quick_add: s.quick_add, image_ratio: s.image_ratio, sizes: card_sizes, loading: card_loading, priority: card_priority %}
                 </li>
               {%- endfor -%}
             </ul>
           {%- else -%}
             <div class="av-collection__empty">
-              <p>No products match these filters.</p>
-              <a class="av-link" href="{{ collection.url }}">Clear all</a>
+              <p>{{ 'anvil.collection.empty' | t }}</p>
+              <a class="av-link" href="{{ collection.url }}" data-anvil-facets-link>{{ 'anvil.facets.clear_all' | t }}</a>
             </div>
           {%- endif -%}
           {% render 'anvil-pagination', paginate: paginate %}
         </div>
-      </div>
+        <p class="av-visually-hidden" role="status" aria-live="polite" data-anvil-facets-live></p>
+      </anvil-facets>
     {%- endpaginate -%}
   </div>
 </div>
+<script type="module" src="{{ 'anvil-facets.js' | asset_url }}"></script>
 {% stylesheet %}
   .av-collection {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--av-space-5);
   }
-  .av-collection__facets {
+  .av-collection__facets,
+  .av-collection__facets-body,
+  .av-collection__filters {
     display: flex;
     flex-direction: column;
     gap: var(--av-space-3);
   }
   .av-collection__filters {
-    display: flex;
-    flex-direction: column;
     gap: var(--av-space-2);
   }
   .av-collection__active-list {
@@ -171,12 +197,14 @@
     min-height: 28px;
     padding: 0 var(--av-space-3);
     font-size: var(--av-text-xs);
-    color: inherit;
     text-decoration: none;
     border: 1px solid var(--av-border);
     border-radius: var(--av-radius-pill);
   }
   .av-collection__clear {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
     font-size: var(--av-text-xs);
   }
   .av-collection__filter {
@@ -185,7 +213,6 @@
   .av-collection__filter-summary {
     padding: var(--av-space-3) 0;
     font-weight: 600;
-    cursor: pointer;
   }
   .av-collection__filter-body {
     padding-bottom: var(--av-space-3);
@@ -203,8 +230,11 @@
     grid-template-columns: 1fr 1fr;
     gap: var(--av-space-2);
   }
+  .av-collection__results[aria-busy="true"] {
+    opacity: 0.6;
+  }
   .av-collection__summary {
-    margin: 0 0 var(--av-space-3);
+    margin-bottom: var(--av-space-3);
     font-size: var(--av-text-sm);
   }
   .av-collection__grid {

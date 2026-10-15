@@ -1,3 +1,20 @@
+{% doc %}
+  Theme block: add-to-cart for one product (the picked one, else closest.product). Single-variant products get a form that works without JavaScript; products with options link to the product page.
+
+  Settings (id · type · values · default):
+  - product · product
+  - show_price · checkbox · default true
+  - label · text · default "Add to cart"
+  - sold_out_label · text · default "Sold out"
+  - options_label · text · default "Choose options"
+  - style · select · primary | secondary · default "primary"
+  - size · select · sm | md | lg · default "md"
+  - full · checkbox · default true
+  - align · text_alignment · default "left"
+
+  @example
+  {"type": "anvil-product-atc"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
   assign p = s.product | default: closest.product
@@ -35,7 +52,7 @@
       {%- render 'anvil-button', label: s.options_label, url: p.url, style: s.style, size: s.size, full: s.full -%}
     {%- endif -%}
   {%- elsif request.design_mode -%}
-    <p class="av-atc__note">Pick a product, or place this block where a product is in context.</p>
+    <p class="av-atc__note">{{ 'anvil.editor.atc_no_product' | t }}</p>
   {%- endif -%}
 </div>
 {% stylesheet %}

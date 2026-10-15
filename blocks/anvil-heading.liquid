@@ -1,3 +1,16 @@
+{% doc %}
+  Theme block: a heading; <strong> words take the accent style. Pick the level that keeps the page outline (one H1 per page).
+
+  Settings (id · type · values · default):
+  - heading · inline_richtext · default "Example heading — replace me"
+  - tag · select · h1 | h2 | h3 | h4 | p · default "h2"
+  - size · select · xs | sm | md | lg | xl · default "md"
+  - align · text_alignment · default "left"
+  - accent_style · select · color | underline | highlight | gradient · default "color"
+
+  @example
+  {"type": "anvil-heading"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
   assign head_tag = s.tag | default: 'h2'

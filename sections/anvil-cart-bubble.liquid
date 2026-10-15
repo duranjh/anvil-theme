@@ -1,8 +1,12 @@
-<anvil-cart-bubble class="av-cart-bubble" data-anvil-section="anvil-cart-bubble" data-section-id="{{ section.id }}"{% if cart.item_count == 0 %} hidden{% endif %}>
-  <span class="av-cart-bubble__count" data-anvil-count="{{ cart.item_count }}" aria-hidden="true">{{ cart.item_count }}</span>
-  <span class="av-visually-hidden">{{ 'anvil.cart.item_count' | t: count: cart.item_count }}</span>
-</anvil-cart-bubble>
+{%- comment -%}
+  Exists only for the Section Rendering API: cart requests ask for "anvil-cart-bubble" and the header's
+  bubble slot is swapped with this markup. Not addable (no presets) and not placed in any template.
+{%- endcomment -%}
+{%- render 'anvil-cart-bubble' -%}
 {% stylesheet %}
+  .av-cart-bubble-slot {
+    display: contents;
+  }
   .av-cart-bubble__count {
     display: inline-flex;
     align-items: center;

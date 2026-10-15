@@ -1149,6 +1149,75 @@
     ]
   },
   {
+    "name": "t:settings_schema.dropdowns.name",
+    "settings": [
+      {
+        "type": "paragraph",
+        "content": "t:settings_schema.dropdowns.settings.paragraph__1.content"
+      },
+      {
+        "type": "select",
+        "id": "dropdown_style",
+        "label": "t:settings_schema.dropdowns.settings.dropdown_style.label",
+        "options": [
+          {
+            "value": "outline",
+            "label": "t:settings_schema.dropdowns.settings.dropdown_style.options__1.label"
+          },
+          {
+            "value": "filled",
+            "label": "t:settings_schema.dropdowns.settings.dropdown_style.options__2.label"
+          },
+          {
+            "value": "underline",
+            "label": "t:settings_schema.dropdowns.settings.dropdown_style.options__3.label"
+          }
+        ],
+        "default": "outline"
+      },
+      {
+        "type": "range",
+        "id": "dropdown_border_width",
+        "label": "t:settings_schema.dropdowns.settings.dropdown_border_width.label",
+        "min": 0,
+        "max": 4,
+        "step": 1,
+        "default": 1,
+        "unit": "px"
+      },
+      {
+        "type": "range",
+        "id": "dropdown_radius",
+        "label": "t:settings_schema.dropdowns.settings.dropdown_radius.label",
+        "min": 0,
+        "max": 24,
+        "step": 1,
+        "default": 6,
+        "unit": "px"
+      },
+      {
+        "type": "select",
+        "id": "dropdown_shadow",
+        "label": "t:settings_schema.dropdowns.settings.dropdown_shadow.label",
+        "options": [
+          {
+            "value": "none",
+            "label": "t:settings_schema.dropdowns.settings.dropdown_shadow.options__1.label"
+          },
+          {
+            "value": "sm",
+            "label": "t:settings_schema.dropdowns.settings.dropdown_shadow.options__2.label"
+          },
+          {
+            "value": "md",
+            "label": "t:settings_schema.dropdowns.settings.dropdown_shadow.options__3.label"
+          }
+        ],
+        "default": "none"
+      }
+    ]
+  },
+  {
     "name": "t:settings_schema.quantity.name",
     "settings": [
       {
@@ -1244,6 +1313,16 @@
         "max": 14,
         "step": 1,
         "default": 8,
+        "unit": "px"
+      },
+      {
+        "type": "range",
+        "id": "slider_dot_gap",
+        "label": "t:settings_schema.slider.settings.slider_dot_gap.label",
+        "min": 0,
+        "max": 16,
+        "step": 2,
+        "default": 4,
         "unit": "px"
       }
     ]

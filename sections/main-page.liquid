@@ -1,5 +1,7 @@
 {%- liquid
   assign s = section.settings
+  assign table_label = 'anvil.a11y.scroll_table' | t
+  assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
 -%}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-page' %}>
   <div class="av-section__inner">
@@ -9,7 +11,7 @@
         <h1 class="av-page__title">{{ page.title | escape }}</h1>
       {%- endif -%}
       {%- if page.content != blank -%}
-        <div class="av-page__content av-prose">{{ page.content }}</div>
+        <div class="av-page__content av-prose">{{ page.content | replace: '<table', table_open | replace: '</table>', '</table></div>' }}</div>
       {%- endif -%}
     </article>
   </div>

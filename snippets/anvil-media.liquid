@@ -1,7 +1,7 @@
 {% doc %}
   Responsive media in an aspect-ratio box: an image via image_tag, a Shopify video via video_tag,
   or a click-to-load facade for YouTube/Vimeo (youtube-nocookie, nothing loads before the tap).
-  Falls back to a placeholder illustration. Sections that render it load assets/anvil-media.css once with stylesheet_tag.
+  Falls back to a placeholder illustration. Its styles live in assets/anvil-base.css (every page).
 
   @param {object} [image] - Image object; also used as the poster of an external video
   @param {object} [video] - Shopify video or external_video media object
@@ -15,9 +15,10 @@
   @param {string} [fit] - cover | contain (default cover)
   @param {string} [placeholder] - placeholder_svg_tag name used when nothing is set (default image)
   @param {string} [class] - Extra classes on the box
-  @param {boolean} [autoplay] - Shopify video: autoplay muted and looping without controls
+  @param {boolean} [autoplay] - Shopify video: play muted and looping while in view, started by anvil-core.js only when
+    the shopper allows motion; controls stay visible so it can always be paused (WCAG 2.2.2)
   @param {boolean} [loop] - Shopify video: loop (default follows autoplay)
-  @param {boolean} [controls] - Shopify video: show controls (default true unless autoplay)
+  @param {boolean} [controls] - Shopify video: show controls (default true; autoplay keeps them on)
 
   @example
   {% render 'anvil-media', image: s.image, ratio: '16:9', sizes: '(min-width: 990px) 50vw, 100vw' %}
@@ -110,15 +111,11 @@
     assign video_loop = autoplay
   endif
   assign video_controls = controls
-  if video_controls == nil
-    if autoplay
-      assign video_controls = false
-    else
-      assign video_controls = true
-    endif
+  if video_controls == nil or autoplay
+    assign video_controls = true
   endif
 -%}
-<div class="{{ classes }}" style="--av-media-ratio: {{ ratio_value }};">
+<div class="{{ classes }}" style="--av-media-ratio: {{ ratio_value }};"{% if autoplay and kind == 'video' %} data-anvil-autoplay{% endif %}>
   {%- case kind -%}
     {%- when 'image' -%}
       {%- if priority -%}
@@ -128,7 +125,7 @@
       {%- endif -%}
     {%- when 'video' -%}
       {%- if autoplay -%}
-        {{ video | video_tag: image_size: poster_size, autoplay: true, loop: video_loop, muted: true, controls: video_controls, playsinline: true, preload: 'metadata', class: 'av-media__video' }}
+        {{ video | video_tag: image_size: poster_size, loop: video_loop, muted: true, controls: video_controls, playsinline: true, preload: 'metadata', class: 'av-media__video' }}
       {%- else -%}
         {{ video | video_tag: image_size: poster_size, loop: video_loop, controls: video_controls, playsinline: true, preload: 'metadata', class: 'av-media__video' }}
       {%- endif -%}

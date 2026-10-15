@@ -8,8 +8,8 @@
  *   cartChange({id|line, quantity, properties, selling_plan}, opts)  → cart
  *   cartUpdate({updates, note, attributes, discount}, opts)          → cart
  *   cartGet()                 GET routes.cart_url + '.js' → cart (no event)
- *   applyDiscount(code, opts) → cart. `opts.codes` = codes already applied (kept; the cart JSON does not list them,
- *                             so the caller passes what the server rendered). `code` may be an array.
+ *   applyDiscount(code, opts) → cart. `opts.codes` = codes already applied (kept; pass what the server rendered or
+ *                             cart.discount_codes). `code` may be an array.
  *   removeDiscount(code, opts)→ cart. Without `code` every discount is removed; with one, `opts.codes` minus it are
  *                             re-sent (Shopify applies the full comma-separated list each time).
  *   cartClear(opts)           → empty cart (attributes and note survive, per Shopify)
@@ -20,9 +20,17 @@
  * description, source}. A response that lands after a newer mutation already finished is returned to its caller
  * but not emitted (monotonic sequence), so subscribers never render a stale cart.
  * Routes come from window.Anvil.routes, read by Liquid name (cart_add_url) or camelCase alias (cartAdd); no path is
- * hard-coded.
+ * hard-coded. The cart JSON's `discount_codes` ([{code, applicable}]) is used by callers to tell an applied code from
+ * an ignored one.
+ * No static imports: anvil-core.js loads the core modules from their versioned asset URLs, and events go through
+ * window.Anvil.events (or a plain document event before the bus exists).
  */
-import { emit } from './anvil-events.js';
+function emit(topic, detail) {
+  const bus = window.Anvil?.events;
+  if (bus?.emit) return bus.emit(topic, detail);
+  document.dispatchEvent(new CustomEvent(topic, { detail }));
+  return detail;
+}
 
 export class CartError extends Error {
   constructor(status, message, description, body) {

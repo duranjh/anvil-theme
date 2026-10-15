@@ -3,7 +3,96 @@
     "main": {
       "type": "main-product",
       "settings": {}
+    },
+    "icon_bar": {
+      "type": "anvil-icon-bar",
+      "blocks": {
+        "truck": {
+          "type": "item",
+          "settings": {
+            "icon": "truck",
+            "label": "Example: free shipping over $50",
+            "caption": "Replace with the threshold from your shipping rates"
+          }
+        },
+        "returns": {
+          "type": "item",
+          "settings": {
+            "icon": "rotate-ccw",
+            "label": "Example: 30-day returns",
+            "caption": "Replace with the window in your refund policy"
+          }
+        },
+        "secure": {
+          "type": "item",
+          "settings": {
+            "icon": "lock",
+            "label": "Example: secure checkout",
+            "caption": "Replace with what protects shoppers, in plain words"
+          }
+        },
+        "support": {
+          "type": "item",
+          "settings": {
+            "icon": "message-circle",
+            "label": "Example: fast support",
+            "caption": "Replace with real hours, such as replies within 24 hours"
+          }
+        }
+      },
+      "block_order": [
+        "truck",
+        "returns",
+        "secure",
+        "support"
+      ],
+      "settings": {
+        "pad_top": 32,
+        "pad_bottom": 32
+      }
+    },
+    "faq": {
+      "type": "anvil-faq",
+      "blocks": {
+        "faq_1": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — What is it made of?",
+            "answer": "<p>Example answer — describe the real materials and where to find care instructions.</p>"
+          }
+        },
+        "faq_2": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — What is your returns policy?",
+            "answer": "<p>Example answer — summarise your actual returns window and conditions here and link to your returns policy page.</p>"
+          }
+        },
+        "faq_3": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — Can I change or cancel an order?",
+            "answer": "<p>Example answer — say how quickly a shopper must contact you, how to reach you, and what happens once an order has shipped.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "faq_1",
+        "faq_2",
+        "faq_3"
+      ],
+      "settings": {
+        "heading": "Questions about this <strong>product</strong>",
+        "width": "narrow",
+        "anchor": "faq",
+        "json_ld": false,
+        "open_first": true
+      }
     }
   },
-  "order": ["main"]
+  "order": [
+    "main",
+    "icon_bar",
+    "faq"
+  ]
 }

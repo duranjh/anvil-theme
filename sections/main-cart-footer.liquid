@@ -1,32 +1,70 @@
 {%- liquid
   assign s = section.settings
   assign checkout_label = 'anvil.cart.checkout' | t
+  assign apply_label = 'anvil.cart.apply' | t
+
+  assign savings = 0
+  if settings.cart_show_savings
+    for item in cart.items
+      if item.variant.compare_at_price > item.original_price
+        assign line_saving = item.variant.compare_at_price | minus: item.original_price | times: item.quantity
+        assign savings = savings | plus: line_saving
+      endif
+    endfor
+    assign savings = savings | plus: cart.total_discount
+  endif
 -%}
-{%- unless cart.empty? -%}
-  <div {% render 'anvil-section-attrs', section: section, type: 'main-cart-footer' %}>
-    <div class="av-section__inner">
+<div {% render 'anvil-section-attrs', section: section, type: 'main-cart-footer' %}>
+  <div class="av-section__inner" data-anvil-cart-render="{{ section.id }}">
+    {%- comment -%}
+      The root always renders so a re-render after the last item is removed has a target; the summary itself
+      only shows while the cart has items. Fields point at the cart form in the items section with form=.
+    {%- endcomment -%}
+    {%- unless cart.empty? -%}
       {% render 'anvil-section-head', section: section %}
-      <div class="av-cart-footer">
+      <anvil-cart-form class="av-cart-footer av-enhance" cart-id="page-summary">
         <div class="av-cart-footer__note">
           {%- if settings.cart_show_note -%}
             <div class="av-field">
               <label class="av-field__label" for="anvil-cart-note">{{ 'anvil.cart.note' | t }}</label>
-              <textarea class="av-field__input av-cart-footer__textarea" id="anvil-cart-note" name="note" form="anvil-cart-form" rows="3" data-anvil-note>{{ cart.note }}</textarea>
+              <textarea class="av-field__input av-cart-footer__textarea" id="anvil-cart-note" name="note" form="anvil-cart-form" rows="3" data-anvil-note data-anvil-focus-key="note">{{ cart.note }}</textarea>
             </div>
           {%- endif -%}
         </div>
         <div class="av-cart-footer__summary">
+          <p class="av-form-message av-form-message--error" role="alert" data-anvil-cart-error hidden></p>
+          {%- if settings.cart_show_discount_field -%}
+            <div class="av-cart-footer__discount av-field av-enhanced-only">
+              <label class="av-field__label" for="anvil-cart-code">{{ 'anvil.cart.discount_code' | t }}</label>
+              <div class="av-field--inline">
+                <input class="av-field__input" id="anvil-cart-code" type="text" autocomplete="off" autocapitalize="characters" data-anvil-discount-input data-anvil-focus-key="code">
+                {% render 'anvil-button', label: apply_label, style: 'secondary', size: 'md', attrs: 'data-anvil-discount-apply data-anvil-focus-key="code-apply"' %}
+              </div>
+              {%- for application in cart.discount_applications -%}
+                {%- if application.type == 'discount_code' -%}
+                  <p class="av-cart-footer__code" data-anvil-code="{{ application.title | escape }}">
+                    <span>{{ application.title | escape }}</span>
+                    <button type="button" class="av-cart-footer__code-remove" data-anvil-remove-code="{{ application.title | escape }}" aria-label="{{ 'anvil.cart.remove_code' | t: code: application.title }}">
+                      {% render 'anvil-icon', name: 'x', size: 16 %}
+                    </button>
+                  </p>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
           {%- for discount in cart.cart_level_discount_applications -%}
             <div class="av-cart-footer__row av-cart-footer__row--discount">
               <span>{{ discount.title | escape }}</span>
-              <span>&minus;{{ discount.total_allocated_amount | money }}</span>
+              <span>&minus;{% render 'anvil-money', amount: discount.total_allocated_amount %}</span>
             </div>
           {%- endfor -%}
+          {%- if savings > 0 -%}
+            {%- capture savings_money -%}{% render 'anvil-money', amount: savings %}{%- endcapture -%}
+            <p class="av-cart-footer__row av-cart-footer__row--savings">{{ 'anvil.cart.you_save_html' | t: amount: savings_money }}</p>
+          {%- endif -%}
           <div class="av-cart-footer__row av-cart-footer__row--total">
             <span>{{ 'anvil.cart.subtotal' | t }}</span>
-            <span data-anvil-subtotal>
-              {%- if settings.show_currency_code -%}{{ cart.total_price | money_with_currency }}{%- else -%}{{ cart.total_price | money }}{%- endif -%}
-            </span>
+            <span>{% render 'anvil-money', amount: cart.total_price %}</span>
           </div>
           {%- if s.show_tax_note -%}
             <p class="av-cart-footer__tax av-muted">
@@ -37,11 +75,15 @@
             {% render 'anvil-button', label: checkout_label, style: 'primary', size: 'lg', full: true, type: 'submit', attrs: 'name="checkout" form="anvil-cart-form"' %}
           </div>
         </div>
-      </div>
-    </div>
+      </anvil-cart-form>
+      <script type="module" src="{{ 'anvil-cart.js' | asset_url }}"></script>
+    {%- endunless -%}
   </div>
-{%- endunless -%}
+</div>
 {% stylesheet %}
+  .av-s-main-cart-footer:not(:has(.av-cart-footer)) {
+    padding-block: 0;
+  }
   .av-cart-footer {
     display: grid;
     grid-template-columns: 1fr;
@@ -50,13 +92,27 @@
   .av-cart-footer__note .av-field {
     max-width: 480px;
   }
-  .av-cart-footer__textarea {
-    resize: vertical;
-  }
   .av-cart-footer__summary {
     display: flex;
     flex-direction: column;
     gap: var(--av-space-2);
+  }
+  .av-cart-footer__code {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: var(--av-space-1);
+    padding-inline-start: var(--av-space-3);
+    font-size: var(--av-text-xs);
+    font-weight: 600;
+    border: 1px solid var(--av-border);
+    border-radius: var(--av-radius-pill);
+  }
+  .av-cart-footer__code-remove {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
   }
   .av-cart-footer__row {
     display: flex;
@@ -64,12 +120,15 @@
     gap: var(--av-space-3);
     font-size: var(--av-text-sm);
   }
+  .av-cart-footer__row--savings {
+    justify-content: flex-start;
+    color: var(--av-success);
+  }
   .av-cart-footer__row--total {
     font-size: var(--av-text-lg);
     font-weight: 700;
   }
   .av-cart-footer__tax {
-    margin: 0;
     font-size: var(--av-text-xs);
   }
   .av-cart-footer__checkout {
@@ -96,7 +155,7 @@
     { "type": "header", "content": "Cart summary" },
     {
       "type": "paragraph",
-      "content": "The order note is switched on under Theme settings > Cart."
+      "content": "The order note, the discount field and the savings line are switched on under Theme settings > Cart."
     },
     {
       "type": "checkbox",

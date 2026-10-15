@@ -1,23 +1,41 @@
 /**
  * anvil-core.js — Anvil runtime (every page, from layout/theme.liquid). Adds events, cart, sections, dom and
  * reveal {scan} to window.Anvil without overwriting what theme.liquid set, and registers:
- *   <anvil-drawer side>  open(opener)/close()/toggle(); `open` attribute; panel = [data-anvil-panel] | .av-drawer__panel
- *     | <details> content (the <details> child is the JS-off fallback); adds .av-drawer__overlay; role=dialog, aria-modal,
- *     focus confined, page inert, scroll locked, Esc/overlay close. Emits anvil:drawer:opened|closed {id, element, opener}.
+ *   <anvil-drawer side close-at="990">  open(opener)/close()/toggle(); `open` attribute; panel = [data-anvil-panel] |
+ *     .av-drawer__panel | <details> content (the <details> child is the JS-off fallback); adds .av-drawer__overlay;
+ *     role=dialog, aria-modal, focus confined, page inert, scroll locked, Esc/overlay close; `close-at` closes it when
+ *     the viewport reaches that width (the panel is hidden there by CSS). Emits anvil:drawer:opened|closed.
  *   <anvil-dialog no-light-dismiss>  native <dialog>: open(opener) → showModal + scroll lock; backdrop click closes;
  *     focus returns to the opener. Emits anvil:dialog:opened|closed.
- *   <anvil-collapsible single>  <details> group with animated height (off under reduced motion / data-animations="off").
+ *   <anvil-collapsible single>  <details> group with animated height (the one height animation Anvil allows,
+ *     CONVENTIONS §8; off under reduced motion and html[data-animations="off"]).
  *   <anvil-header sticky="always|scroll-up|never" transparent>  :root --av-header-height/--av-header-offset;
- *     .is-stuck / .is-hidden / .is-transparent (data-anvil-* attribute forms also read).
- *   <anvil-cart-bubble show-zero>  anvil:cart:updated → item_count into [data-anvil-count]; hidden at 0.
+ *     .av-is-stuck / .av-is-hidden / .av-is-transparent; never hidden while focus is inside; desktop dropdowns
+ *     (details.av-header__dropdown) close each other, on outside click and on Escape.
+ *   <anvil-cart-bubble show-zero>  anvil:cart:updated → item_count into [data-anvil-count] and the hidden label.
  * Page-wide: [data-anvil-open="id"] → target.open(opener) (or showModal on a <dialog>), only when the target exists;
- * [data-anvil-close] → nearest ancestor's close(). Reveal: .av-reveal / .av-reveal--* get .is-in in view. Editor:
- * section:load/unload → anvil:section:load|unload; section/block select force .is-in, open <details>, scroll into view.
+ * [data-anvil-close] → nearest ancestor's close(). Every anvil:cart:updated that carries `sections` swaps them in.
+ * Reveal: .av-reveal / .av-reveal--* get .av-is-in in view; html.av-reveal-ready is set once the observer runs, and
+ * the CSS only hides reveal targets under that class, so a failed load never leaves content invisible.
+ * Videos inside [data-anvil-autoplay] play (muted, controls visible) while in view and only when motion is allowed.
+ * Editor: section:load/unload → anvil:section:load|unload; section/block select force .av-is-in, open <details>,
+ * scroll into view.
+ *
+ * The four core modules are loaded with dynamic import() from the versioned URLs theme.liquid puts in
+ * window.Anvil.modules (and preloads with <link rel="modulepreload">), so a theme update never mixes a new core with
+ * a cached older module.
  */
-import * as events from './anvil-events.js';
-import * as cart from './anvil-cart-api.js';
-import * as sections from './anvil-sections.js';
-import * as dom from './anvil-dom.js';
+const Anvil = (window.Anvil ||= {});
+Anvil.routes ||= {};
+Anvil.strings ||= {};
+Anvil.settings ||= {};
+const urls = Anvil.modules || {};
+const load = (name) => import(urls[name] || new URL(`./anvil-${name}.js`, import.meta.url).href);
+
+const events = await load('events');
+Anvil.events ||= events;
+const [cart, sections, dom] = await Promise.all([load('cart-api'), load('sections'), load('dom')]);
+for (const [key, value] of Object.entries({ cart, sections, dom })) Anvil[key] ||= value;
 
 const { on, emit } = events;
 const { confineFocus, releaseFocus, lockScroll, unlockScroll, motionOff, onReady, t } = dom;
@@ -42,6 +60,7 @@ class Drawer extends HTMLElement {
   #opener = null;
   #details = null;
   #active = false;
+  #mq = null;
 
   connectedCallback() {
     this.#details = this.querySelector(':scope > details');
@@ -51,6 +70,11 @@ class Drawer extends HTMLElement {
       overlay.setAttribute('data-anvil-close', '');
       this.prepend(overlay);
     }
+    const at = parseInt(this.getAttribute('close-at'), 10);
+    if (at > 0) {
+      this.#mq = matchMedia(`(min-width: ${at}px)`);
+      this.#mq.addEventListener('change', this.#onMedia);
+    }
     if (this.#details) {
       this.#details.addEventListener('toggle', this.#onToggle);
       if (this.#details.open) this.#enter();
@@ -59,6 +83,7 @@ class Drawer extends HTMLElement {
 
   disconnectedCallback() {
     this.#details?.removeEventListener('toggle', this.#onToggle);
+    this.#mq?.removeEventListener('change', this.#onMedia);
     if (this.#active) this.#leave(false);
   }
 
@@ -87,6 +112,8 @@ class Drawer extends HTMLElement {
   }
 
   toggle(opener) { this.isOpen ? this.close() : this.open(opener); }
+
+  #onMedia = (e) => { if (e.matches) this.close(); };
 
   #onToggle = () => {
     if (this.#details.open) { this.setAttribute('open', ''); this.#enter(); }
@@ -158,6 +185,7 @@ class Dialog extends HTMLElement {
     dialog.showModal();
     lockScroll();
     this.#locked = true;
+    this.#opener?.setAttribute?.('aria-expanded', 'true');
     emit('anvil:dialog:opened', { id: this.id, element: this, opener: this.#opener });
   }
 
@@ -168,6 +196,7 @@ class Dialog extends HTMLElement {
     this.#unlock();
     const opener = this.#opener;
     this.#opener = null;
+    opener?.setAttribute?.('aria-expanded', 'false');
     if (opener?.isConnected) opener.focus({ preventScroll: true });
     emit('anvil:dialog:closed', { id: this.id, element: this, opener });
   };
@@ -197,7 +226,7 @@ class Collapsible extends HTMLElement {
     const details = summary.parentElement;
     if (!(details instanceof HTMLDetailsElement)) return;
     e.preventDefault();
-    if (details.classList.contains('is-animating')) return;
+    if (details.classList.contains('av-is-animating')) return;
     const open = !details.open;
     if (open && this.hasAttribute('single')) {
       for (const other of this.querySelectorAll('details[open]')) {
@@ -215,9 +244,9 @@ class Collapsible extends HTMLElement {
       details.open = open;
     } else {
       const easing = getComputedStyle(this).getPropertyValue('--av-ease').trim() || 'ease';
-      details.classList.add('is-animating');
+      details.classList.add('av-is-animating');
       if (open) details.open = true;
-      else details.classList.add('is-closing');
+      else details.classList.add('av-is-closing');
       const h = body.getBoundingClientRect().height;
       const frames = [
         { height: '0px', opacity: 0, overflow: 'hidden' },
@@ -226,11 +255,13 @@ class Collapsible extends HTMLElement {
       body
         .animate(frames, { duration: ms, easing, direction: open ? 'normal' : 'reverse' })
         .finished.then(() => { if (!open) details.open = false; }, () => {})
-        .finally(() => details.classList.remove('is-animating', 'is-closing'));
+        .finally(() => details.classList.remove('av-is-animating', 'av-is-closing'));
     }
     this.dispatchEvent(new CustomEvent('anvil:collapsible:toggle', { bubbles: true, detail: { details, open } }));
   }
 }
+
+const DROPDOWN = 'details.av-header__dropdown';
 
 class Header extends HTMLElement {
   #ro;
@@ -242,7 +273,11 @@ class Header extends HTMLElement {
     this.#ro = new ResizeObserver(() => this.#measure());
     this.#ro.observe(this);
     window.addEventListener('scroll', this.#onScroll, { passive: true });
-    this.#off = on('anvil:drawer:opened', () => this.classList.remove('is-hidden'));
+    this.addEventListener('focusin', this.#reveal);
+    this.addEventListener('toggle', this.#onToggle, true);
+    this.addEventListener('keydown', this.#onKey);
+    document.addEventListener('click', this.#onDocClick);
+    this.#off = on('anvil:drawer:opened', this.#reveal);
     this.#measure();
     this.#update();
   }
@@ -250,11 +285,35 @@ class Header extends HTMLElement {
   disconnectedCallback() {
     this.#ro?.disconnect();
     window.removeEventListener('scroll', this.#onScroll);
+    this.removeEventListener('focusin', this.#reveal);
+    this.removeEventListener('toggle', this.#onToggle, true);
+    this.removeEventListener('keydown', this.#onKey);
+    document.removeEventListener('click', this.#onDocClick);
     cancelAnimationFrame(this.#raf);
     this.#off?.();
   }
 
   get mode() { return (this.dataset.anvilSticky || this.getAttribute('sticky') || 'always').replace('_', '-'); }
+
+  #reveal = () => this.classList.remove('av-is-hidden');
+
+  #onToggle = (e) => {
+    const opened = e.target;
+    if (!opened.matches?.(DROPDOWN) || !opened.open) return;
+    for (const other of this.querySelectorAll(`${DROPDOWN}[open]`)) if (other !== opened) other.open = false;
+  };
+
+  #onDocClick = (e) => {
+    for (const open of this.querySelectorAll(`${DROPDOWN}[open]`)) if (!open.contains(e.target)) open.open = false;
+  };
+
+  #onKey = (e) => {
+    if (e.key !== 'Escape') return;
+    const open = e.target.closest?.(`${DROPDOWN}[open]`);
+    if (!open) return;
+    open.open = false;
+    open.querySelector('summary')?.focus();
+  };
 
   #measure() {
     const h = Math.round(this.getBoundingClientRect().height);
@@ -272,12 +331,12 @@ class Header extends HTMLElement {
     const y = Math.max(0, window.scrollY);
     const h = this.offsetHeight || 1;
     const mode = this.mode;
-    this.classList.toggle('is-stuck', mode !== 'never' && y > h);
-    if (mode !== 'scroll-up') this.classList.remove('is-hidden');
-    else if (y > this.#lastY + 4 && y > h * 2) this.classList.add('is-hidden');
-    else if (y < this.#lastY - 4 || y <= h) this.classList.remove('is-hidden');
+    this.classList.toggle('av-is-stuck', mode !== 'never' && y > h);
+    if (mode !== 'scroll-up' || this.contains(document.activeElement)) this.classList.remove('av-is-hidden');
+    else if (y > this.#lastY + 4 && y > h * 2) this.classList.add('av-is-hidden');
+    else if (y < this.#lastY - 4 || y <= h) this.classList.remove('av-is-hidden');
     const transparent = this.hasAttribute('data-anvil-transparent') || this.hasAttribute('transparent');
-    this.classList.toggle('is-transparent', transparent && y <= 8);
+    this.classList.toggle('av-is-transparent', transparent && y <= 8);
     this.#lastY = y;
   }
 }
@@ -296,19 +355,17 @@ class CartBubble extends HTMLElement {
     (slot || this).textContent = String(count);
     slot?.setAttribute('data-anvil-count', String(count));
     this.hidden = count === 0 && !this.hasAttribute('show-zero');
-    this.dataset.count = count;
-    const label = t(count === 1 ? ['cart_count_one', 'cartCountOne'] : ['cart_count_other', 'cartCount'], { count }, '');
+    const label = count === 1
+      ? t(['cart_count_one', 'cartCountOne'], { count }, '[count] item')
+      : t(['cart_count_other', 'cartCount'], { count }, '[count] items');
     const text = this.querySelector('.av-visually-hidden');
-    if (label) {
-      this.setAttribute('aria-label', label);
-      if (text) text.textContent = label;
-    } else if (text) text.textContent = text.textContent.replace(/\d+/, String(count));
+    if (text) text.textContent = label;
   }
 }
 
 const REVEAL = '.av-reveal, [class*="av-reveal--"]';
 let observer;
-const markIn = (el) => el.classList.add('is-in');
+const markIn = (el) => el.classList.add('av-is-in');
 
 function revealTargets(root) {
   const list = [...root.querySelectorAll(REVEAL)];
@@ -318,7 +375,7 @@ function revealTargets(root) {
 
 function scan(root = document) {
   for (const el of revealTargets(root)) {
-    if (el.classList.contains('is-in')) continue;
+    if (el.classList.contains('av-is-in')) continue;
     if (motionOff()) { markIn(el); continue; }
     observer ||= new IntersectionObserver((entries) => {
       for (const entry of entries) {
@@ -329,6 +386,22 @@ function scan(root = document) {
     }, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
     observer.observe(el);
   }
+  document.documentElement.classList.add('av-reveal-ready');
+}
+
+let videoIO;
+function autoplay(root = document) {
+  const list = root.querySelectorAll('[data-anvil-autoplay] video');
+  if (!list.length) return;
+  videoIO ||= new IntersectionObserver((entries) => {
+    for (const { target, isIntersecting } of entries) {
+      if (isIntersecting && !motionOff()) {
+        target.muted = true;
+        target.play()?.catch(() => {});
+      } else target.pause();
+    }
+  }, { threshold: 0.25 });
+  for (const video of list) videoIO.observe(video);
 }
 
 function onTriggerClick(e) {
@@ -360,6 +433,7 @@ function onEditorEvent(e) {
   const sectionId = e.detail?.sectionId;
   if (e.type === 'shopify:section:load') {
     scan(target);
+    autoplay(target);
     emit('anvil:section:load', { sectionId, element: target });
     return;
   }
@@ -374,11 +448,7 @@ function onEditorEvent(e) {
   if (block && !e.detail?.load) target.scrollIntoView({ block: 'center', behavior: motionOff() ? 'auto' : 'smooth' });
 }
 
-const Anvil = (window.Anvil ||= {});
-Anvil.routes ||= {};
-Anvil.strings ||= {};
-Anvil.settings ||= {};
-for (const [key, value] of Object.entries({ events, cart, sections, dom, reveal: { scan } })) Anvil[key] ||= value;
+Anvil.reveal ||= { scan };
 
 const define = (name, cls) => customElements.get(name) || customElements.define(name, cls);
 define('anvil-drawer', Drawer);
@@ -391,6 +461,9 @@ document.addEventListener('click', onTriggerClick);
 for (const type of ['shopify:section:load', 'shopify:section:unload', 'shopify:section:select', 'shopify:block:select']) {
   document.addEventListener(type, onEditorEvent);
 }
-on('anvil:section:swapped', ({ element }) => scan(element));
+on('anvil:cart:updated', ({ sections: html }) => {
+  for (const id in html || {}) if (html[id] != null) sections.swapSection(id, html[id]);
+});
+on('anvil:section:swapped', ({ element }) => { scan(element); autoplay(element); });
 if (window.Shopify?.designMode) document.documentElement.classList.add('av-design-mode');
-onReady(() => scan());
+onReady(() => { scan(); autoplay(); });

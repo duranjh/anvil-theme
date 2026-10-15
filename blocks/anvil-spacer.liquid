@@ -1,3 +1,13 @@
+{% doc %}
+  Theme block: vertical space, separate heights for phones and desktop.
+
+  Settings (id · type · values · default):
+  - height · range · 0–160 step 4px · default 32
+  - height_mobile · range · 0–160 step 4px · default 16
+
+  @example
+  {"type": "anvil-spacer"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
 -%}

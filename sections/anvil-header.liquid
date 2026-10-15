@@ -1,9 +1,9 @@
 {%- liquid
   assign s = section.settings
   assign menu = s.menu
-  assign logo = s.logo | default: settings.logo
-  assign logo_width = s.logo_width
-  assign logo_width_2x = logo_width | times: 2
+  assign menu_label = 'anvil.a11y.menu' | t
+  assign close_label = 'anvil.a11y.close' | t
+  assign update_label = 'anvil.localization.update' | t
   if customer
     assign account_url = routes.account_url
   else
@@ -17,17 +17,87 @@
   if s.show_language and localization.available_languages.size > 1
     assign show_language = true
   endif
-  assign menu_label = 'anvil.a11y.menu' | t
-  assign close_label = 'anvil.a11y.close' | t
+
+  assign scheme_bg = s.color_scheme.settings.background | default: '#ffffff'
+  assign scheme_dark = false
+  assign brightness = scheme_bg | color_brightness
+  if brightness < 128
+    assign scheme_dark = true
+  endif
+
+  assign transparent = false
+  if s.transparent_home and template.name == 'index'
+    assign transparent = true
+  endif
+  assign over_dark = false
+  if transparent
+    assign over_bg = s.transparent_scheme.settings.background | default: '#000000'
+    assign over_brightness = over_bg | color_brightness
+    if over_brightness < 128
+      assign over_dark = true
+    endif
+  endif
+
+  comment
+    Logo: the header's own image, else the theme logo. The theme's light logo replaces it on a dark header
+    scheme, and swaps in while the header is transparent over a dark first section.
+  endcomment
+  assign logo = s.logo | default: settings.logo
+  assign logo_light = settings.logo_light
+  assign main_logo = logo
+  if scheme_dark and logo_light != blank
+    assign main_logo = logo_light
+  endif
+  assign over_logo = nil
+  if transparent and over_dark and logo_light != blank and main_logo != logo_light
+    assign over_logo = logo_light
+  endif
+  assign logo_w = settings.logo_width
+  assign logo_w_m = settings.logo_width_mobile
+  assign logo_w2 = logo_w | times: 2
+  assign logo_widths = logo_w_m | append: ', ' | append: logo_w | append: ', ' | append: logo_w2
+  assign logo_sizes = '(min-width: 750px) ' | append: logo_w | append: 'px, ' | append: logo_w_m | append: 'px'
+
+  if transparent
+    comment
+      The header overlaps the first section by its own height. The height is computed here from the
+      padding and the logo size, so nothing moves when scripts run (no layout shift).
+    endcomment
+    case s.pad_mobile
+      when 'same'
+        assign pad_scale = 1
+      when 'none'
+        assign pad_scale = 0
+      else
+        assign pad_scale = 0.6
+    endcase
+    assign logo_h_m = 28
+    assign logo_h_d = 28
+    if main_logo != blank
+      assign logo_h_m = logo_w_m | divided_by: main_logo.aspect_ratio | round
+      assign logo_h_d = logo_w | divided_by: main_logo.aspect_ratio | round
+    endif
+    assign bar_m = logo_h_m | at_least: 56
+    assign bar_d = logo_h_d | at_least: 56
+    assign pads = s.pad_top | plus: s.pad_bottom
+    assign overlap_m = pads | times: pad_scale | plus: bar_m | round
+    assign overlap_t = pads | plus: bar_d
+    assign overlap_d = overlap_t
+    if s.menu_position == 'below'
+      assign overlap_d = overlap_t | plus: 48
+    endif
+  endif
 -%}
-{%- if s.sticky != 'never' -%}
+{{ 'anvil-header.css' | asset_url | stylesheet_tag }}
+{%- if s.sticky != 'never' or transparent -%}
   {% style %}
     #shopify-section-{{ section.id }} {
-      position: sticky;
+      position: {% if s.sticky != 'never' %}sticky{% else %}relative{% endif %};
       top: 0;
       z-index: 40;
     }
-    #shopify-section-{{ section.id }}:has(.av-header.is-hidden) {
+    {%- if s.sticky == 'scroll-up' %}
+    #shopify-section-{{ section.id }}:has(.av-header.av-is-hidden):not(:focus-within) {
       transform: translateY(-100%);
     }
     @media (prefers-reduced-motion: no-preference) {
@@ -35,20 +105,42 @@
         transition: transform var(--av-dur) var(--av-ease);
       }
     }
+    {%- endif %}
+    {%- if transparent %}
+    #shopify-section-{{ section.id }} {
+      margin-bottom: -{{ overlap_m }}px;
+    }
+    @media (min-width: 750px) {
+      #shopify-section-{{ section.id }} {
+        margin-bottom: -{{ overlap_t }}px;
+      }
+    }
+    @media (min-width: 990px) {
+      #shopify-section-{{ section.id }} {
+        margin-bottom: -{{ overlap_d }}px;
+      }
+    }
+    #shopify-section-{{ section.id }}:has(.av-header.av-is-transparent) > .av-section {
+      background: transparent;
+    }
+    {%- endif %}
   {% endstyle %}
 {%- endif -%}
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-header' %}>
   <div class="av-section__inner">
-    {% render 'anvil-section-head', section: section %}
-    <anvil-header class="av-header av-header--logo-{{ s.logo_position }}" data-anvil-sticky="{{ s.sticky }}">
+    <anvil-header
+      class="av-header av-header--logo-{{ s.logo_position }} av-header--menu-{{ s.menu_position }}{% if transparent %} av-is-transparent{% endif %}"
+      data-anvil-sticky="{{ s.sticky }}"
+      {%- if transparent %} data-anvil-transparent style="--av-header-over-fg: {{ s.transparent_scheme.settings.text | default: '#ffffff' }};"{% endif %}
+    >
       <header class="av-header__bar">
-        <anvil-drawer id="anvil-menu-drawer" class="av-header__drawer" side="left">
+        <anvil-drawer id="anvil-menu-drawer" class="av-header__drawer" side="left" close-at="990">
           <details class="av-header__details">
             <summary class="av-header__icon av-header__burger">
               <span class="av-visually-hidden">{{ menu_label }}</span>
               {% render 'anvil-icon', name: 'menu', size: 24 %}
             </summary>
-            <div class="av-header__panel" data-anvil-panel aria-label="{{ menu_label }}">
+            <div class="av-header__panel av-header__panel--{{ s.drawer_layout }}" data-anvil-panel aria-label="{{ menu_label }}">
               <div class="av-header__panel-head">
                 <span class="av-header__panel-title">{{ menu_label }}</span>
                 <button type="button" class="av-header__icon av-js-only" data-anvil-close aria-label="{{ close_label }}">
@@ -59,16 +151,34 @@
                 <ul class="av-header__mobile-list av-list-reset">
                   {%- for link in menu.links -%}
                     <li class="av-header__mobile-item">
-                      {%- if link.links.size > 0 -%}
+                      {%- if s.drawer_layout == 'tiles' -%}
+                        <a class="av-header__tile" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title | escape }}</a>
+                        {%- if link.links.size > 0 -%}
+                          <ul class="av-header__tile-links av-list-reset">
+                            {%- for child in link.links -%}
+                              <li><a class="av-header__mobile-sublink" href="{{ child.url }}"{% if child.current %} aria-current="page"{% endif %}>{{ child.title | escape }}</a></li>
+                            {%- endfor -%}
+                          </ul>
+                        {%- endif -%}
+                      {%- elsif link.links.size > 0 -%}
                         <details class="av-header__mobile-sub"{% if link.child_active %} open{% endif %}>
                           <summary class="av-header__mobile-link">
                             <span>{{ link.title | escape }}</span>
                             {% render 'anvil-icon', name: 'chevron-down', size: 16, class: 'av-header__chevron' %}
                           </summary>
                           <ul class="av-header__mobile-sublist av-list-reset">
-                            <li><a class="av-header__mobile-sublink" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title | escape }}</a></li>
+                            <li><a class="av-header__mobile-sublink" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ 'anvil.header.view_all' | t: title: link.title }}</a></li>
                             {%- for child in link.links -%}
-                              <li><a class="av-header__mobile-sublink" href="{{ child.url }}"{% if child.current %} aria-current="page"{% endif %}>{{ child.title | escape }}</a></li>
+                              <li>
+                                <a class="av-header__mobile-sublink" href="{{ child.url }}"{% if child.current %} aria-current="page"{% endif %}>{{ child.title | escape }}</a>
+                                {%- if child.links.size > 0 -%}
+                                  <ul class="av-header__mobile-sublist av-header__mobile-sublist--deep av-list-reset">
+                                    {%- for grandchild in child.links -%}
+                                      <li><a class="av-header__mobile-sublink" href="{{ grandchild.url }}"{% if grandchild.current %} aria-current="page"{% endif %}>{{ grandchild.title | escape }}</a></li>
+                                    {%- endfor -%}
+                                  </ul>
+                                {%- endif -%}
+                              </li>
                             {%- endfor -%}
                           </ul>
                         </details>
@@ -86,33 +196,36 @@
                     <span>{{ 'anvil.a11y.account' | t }}</span>
                   </a>
                 {%- endif -%}
+                {%- if s.drawer_socials -%}
+                  {% render 'anvil-social-links', class: 'av-header__socials' %}
+                {%- endif -%}
                 {%- if show_country -%}
                   {%- form 'localization', id: 'anvil-header-country', class: 'av-header__loc av-field' -%}
-                    <label class="av-field__label" for="anvil-header-country-select">Country/region</label>
+                    <label class="av-field__label" for="anvil-header-country-select">{{ 'anvil.localization.country' | t }}</label>
                     <div class="av-header__loc-row">
                       <div class="av-field__select av-header__loc-select">
-                        <select class="av-field__input" id="anvil-header-country-select" name="country_code" data-anvil-localization>
+                        <select class="av-field__input" id="anvil-header-country-select" name="country_code">
                           {%- for country in localization.available_countries -%}
                             <option value="{{ country.iso_code }}"{% if country.iso_code == localization.country.iso_code %} selected{% endif %}>{{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})</option>
                           {%- endfor -%}
                         </select>
                       </div>
-                      <button type="submit" class="av-btn av-btn--secondary av-btn--md av-no-js-only">Update</button>
+                      <button type="submit" class="av-btn av-btn--secondary av-btn--md">{{ update_label }}</button>
                     </div>
                   {%- endform -%}
                 {%- endif -%}
                 {%- if show_language -%}
                   {%- form 'localization', id: 'anvil-header-language', class: 'av-header__loc av-field' -%}
-                    <label class="av-field__label" for="anvil-header-language-select">Language</label>
+                    <label class="av-field__label" for="anvil-header-language-select">{{ 'anvil.localization.language' | t }}</label>
                     <div class="av-header__loc-row">
                       <div class="av-field__select av-header__loc-select">
-                        <select class="av-field__input" id="anvil-header-language-select" name="language_code" data-anvil-localization>
+                        <select class="av-field__input" id="anvil-header-language-select" name="language_code">
                           {%- for language in localization.available_languages -%}
                             <option value="{{ language.iso_code }}" lang="{{ language.iso_code }}"{% if language.iso_code == localization.language.iso_code %} selected{% endif %}>{{ language.endonym_name }}</option>
                           {%- endfor -%}
                         </select>
                       </div>
-                      <button type="submit" class="av-btn av-btn--secondary av-btn--md av-no-js-only">Update</button>
+                      <button type="submit" class="av-btn av-btn--secondary av-btn--md">{{ update_label }}</button>
                     </div>
                   {%- endform -%}
                 {%- endif -%}
@@ -122,11 +235,13 @@
         </anvil-drawer>
 
         <a class="av-header__logo" href="{{ routes.root_url }}">
-          {%- if logo != blank -%}
-            {%- assign logo_height = logo_width | divided_by: logo.aspect_ratio | round -%}
-            {%- assign logo_sizes = logo_width | append: 'px' -%}
-            {%- assign logo_widths = logo_width | append: ', ' | append: logo_width_2x -%}
-            {{ logo | image_url: width: logo_width_2x | image_tag: widths: logo_widths, sizes: logo_sizes, width: logo_width, height: logo_height, loading: 'eager', class: 'av-header__logo-img', alt: shop.name }}
+          {%- if main_logo != blank -%}
+            {%- assign logo_h = logo_w | divided_by: main_logo.aspect_ratio | round -%}
+            {{ main_logo | image_url: width: logo_w2 | image_tag: widths: logo_widths, sizes: logo_sizes, width: logo_w, height: logo_h, loading: 'eager', class: 'av-header__logo-img', alt: shop.name }}
+            {%- if over_logo != blank -%}
+              {%- assign over_h = logo_w | divided_by: over_logo.aspect_ratio | round -%}
+              {{ over_logo | image_url: width: logo_w2 | image_tag: widths: logo_widths, sizes: logo_sizes, width: logo_w, height: over_h, loading: 'eager', class: 'av-header__logo-img av-header__logo-img--over', alt: shop.name }}
+            {%- endif -%}
           {%- else -%}
             <span class="av-header__logo-text">{{ shop.name }}</span>
           {%- endif -%}
@@ -135,19 +250,98 @@
         <nav class="av-header__nav" aria-label="{{ menu_label }}">
           <ul class="av-header__list av-list-reset">
             {%- for link in menu.links -%}
-              <li class="av-header__item">
+              {%- liquid
+                assign mega = nil
+                assign link_key = link.title | handleize
+                for block in section.blocks
+                  assign block_key = block.settings.menu_item | handleize
+                  if block.type == 'mega' and block_key == link_key and block_key != blank
+                    assign mega = block
+                    break
+                  endif
+                endfor
+              -%}
+              <li class="av-header__item{% if mega %} av-header__item--mega{% endif %}">
                 {%- if link.links.size > 0 -%}
-                  <details class="av-header__dropdown">
+                  <details class="av-header__dropdown{% if mega %} av-header__dropdown--mega{% endif %}">
                     <summary class="av-header__link{% if link.child_active %} av-header__link--active{% endif %}">
                       <span>{{ link.title | escape }}</span>
                       {% render 'anvil-icon', name: 'chevron-down', size: 16, class: 'av-header__chevron' %}
                     </summary>
-                    <ul class="av-header__sub av-list-reset">
-                      <li><a class="av-header__sublink" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title | escape }}</a></li>
-                      {%- for child in link.links -%}
-                        <li><a class="av-header__sublink" href="{{ child.url }}"{% if child.current %} aria-current="page"{% endif %}>{{ child.title | escape }}</a></li>
-                      {%- endfor -%}
-                    </ul>
+                    {%- if mega -%}
+                      <div class="av-header__mega" {{ mega.shopify_attributes }}>
+                        <ul class="av-header__mega-cols av-list-reset">
+                          {%- for child in link.links -%}
+                            <li class="av-header__mega-col">
+                              <a class="av-header__mega-heading" href="{{ child.url }}"{% if child.current %} aria-current="page"{% endif %}>{{ child.title | escape }}</a>
+                              {%- if child.links.size > 0 -%}
+                                <ul class="av-header__mega-links av-list-reset">
+                                  {%- for grandchild in child.links -%}
+                                    <li><a class="av-header__mega-link" href="{{ grandchild.url }}"{% if grandchild.current %} aria-current="page"{% endif %}>{{ grandchild.title | escape }}</a></li>
+                                  {%- endfor -%}
+                                </ul>
+                              {%- endif -%}
+                            </li>
+                          {%- endfor -%}
+                          <li class="av-header__mega-col">
+                            <a class="av-header__mega-heading" href="{{ link.url }}">{{ 'anvil.header.view_all' | t: title: link.title }}</a>
+                          </li>
+                        </ul>
+                        {%- liquid
+                          assign m = mega.settings
+                          assign has_feature = false
+                          if m.collection != blank or m.product != blank or m.image != blank
+                            assign has_feature = true
+                          endif
+                        -%}
+                        {%- if has_feature -%}
+                          <div class="av-header__features">
+                            {%- if m.collection != blank -%}
+                              <a class="av-header__feature" href="{{ m.collection.url }}">
+                                {% render 'anvil-media', image: m.collection.featured_image, ratio: '4:5', widths: '200, 300, 400', sizes: '200px', loading: 'lazy', alt: '', placeholder: 'collection-1' %}
+                                <span class="av-header__feature-title">{{ m.collection.title | escape }}</span>
+                              </a>
+                            {%- endif -%}
+                            {%- if m.product != blank -%}
+                              <a class="av-header__feature" href="{{ m.product.url }}">
+                                {% render 'anvil-media', image: m.product.featured_media.preview_image, ratio: '4:5', widths: '200, 300, 400', sizes: '200px', loading: 'lazy', alt: '', placeholder: 'product-1' %}
+                                <span class="av-header__feature-title">{{ m.product.title | escape }}</span>
+                                {% render 'anvil-price', product: m.product, show_badge: false, size: 'sm' %}
+                              </a>
+                            {%- endif -%}
+                            {%- if m.image != blank -%}
+                              {%- if m.image_link != blank -%}
+                                <a class="av-header__feature" href="{{ m.image_link }}">
+                                  {% render 'anvil-media', image: m.image, ratio: '4:5', widths: '200, 300, 400', sizes: '200px', loading: 'lazy', alt: m.image.alt %}
+                                  {%- if m.image_label != blank -%}<span class="av-header__feature-title">{{ m.image_label | escape }}</span>{%- endif -%}
+                                </a>
+                              {%- else -%}
+                                <figure class="av-header__feature">
+                                  {% render 'anvil-media', image: m.image, ratio: '4:5', widths: '200, 300, 400', sizes: '200px', loading: 'lazy', alt: m.image.alt %}
+                                  {%- if m.image_label != blank -%}<figcaption class="av-header__feature-title">{{ m.image_label | escape }}</figcaption>{%- endif -%}
+                                </figure>
+                              {%- endif -%}
+                            {%- endif -%}
+                          </div>
+                        {%- endif -%}
+                      </div>
+                    {%- else -%}
+                      <ul class="av-header__sub av-list-reset">
+                        <li><a class="av-header__sublink" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ 'anvil.header.view_all' | t: title: link.title }}</a></li>
+                        {%- for child in link.links -%}
+                          <li>
+                            <a class="av-header__sublink" href="{{ child.url }}"{% if child.current %} aria-current="page"{% endif %}>{{ child.title | escape }}</a>
+                            {%- if child.links.size > 0 -%}
+                              <ul class="av-header__sub-deep av-list-reset">
+                                {%- for grandchild in child.links -%}
+                                  <li><a class="av-header__sublink" href="{{ grandchild.url }}"{% if grandchild.current %} aria-current="page"{% endif %}>{{ grandchild.title | escape }}</a></li>
+                                {%- endfor -%}
+                              </ul>
+                            {%- endif -%}
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+                    {%- endif -%}
                   </details>
                 {%- else -%}
                   <a class="av-header__link{% if link.active %} av-header__link--active{% endif %}" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title | escape }}</a>
@@ -159,21 +353,21 @@
 
         <div class="av-header__actions">
           {%- if s.show_search -%}
-            <a class="av-header__icon" href="{{ routes.search_url }}"{% if s.search_mode == 'modal' %} data-anvil-open="anvil-search-dialog"{% endif %} aria-label="{{ 'anvil.a11y.search' | t }}">
+            <a class="av-header__icon" href="{{ routes.search_url }}"{% if s.search_mode == 'modal' %} data-anvil-open="anvil-search-dialog" aria-haspopup="dialog"{% endif %}>
+              <span class="av-visually-hidden">{{ 'anvil.a11y.search' | t }}</span>
               {% render 'anvil-icon', name: 'search', size: 24 %}
             </a>
           {%- endif -%}
           {%- if shop.customer_accounts_enabled and s.show_account -%}
-            <a class="av-header__icon" href="{{ account_url }}" aria-label="{{ 'anvil.a11y.account' | t }}">
+            <a class="av-header__icon" href="{{ account_url }}">
+              <span class="av-visually-hidden">{{ 'anvil.a11y.account' | t }}</span>
               {% render 'anvil-icon', name: 'user', size: 24 %}
             </a>
           {%- endif -%}
-          <a class="av-header__icon av-header__cart" href="{{ routes.cart_url }}" data-anvil-cart-link data-anvil-open="anvil-cart-drawer" aria-label="{{ 'anvil.a11y.cart' | t }}">
+          <a class="av-header__icon av-header__cart" href="{{ routes.cart_url }}" data-anvil-cart-link{% if settings.cart_type == 'drawer' %} data-anvil-open="anvil-cart-drawer" aria-haspopup="dialog"{% endif %}>
+            <span class="av-visually-hidden">{{ 'anvil.a11y.cart' | t }}</span>
             {% render 'anvil-icon', name: 'shopping-bag', size: 24 %}
-            <anvil-cart-bubble class="av-cart-bubble" data-anvil-section="anvil-cart-bubble"{% if cart.item_count == 0 %} hidden{% endif %}>
-              <span class="av-cart-bubble__count" data-anvil-count="{{ cart.item_count }}" aria-hidden="true">{{ cart.item_count }}</span>
-              <span class="av-visually-hidden">{{ 'anvil.cart.item_count' | t: count: cart.item_count }}</span>
-            </anvil-cart-bubble>
+            {% render 'anvil-cart-bubble' %}
           </a>
         </div>
       </header>
@@ -181,314 +375,71 @@
       {%- if s.show_search and s.search_mode == 'modal' -%}
         <anvil-dialog id="anvil-search-dialog" class="av-header__search-dialog">
           <dialog class="av-header__search-modal av-scheme av-scheme--{{ s.color_scheme.id }}" aria-label="{{ 'anvil.a11y.search' | t }}">
-            <form class="av-header__search-form" action="{{ routes.search_url }}" method="get" role="search">
-              <label class="av-visually-hidden" for="anvil-header-search-q">{{ 'anvil.search.placeholder' | t }}</label>
-              <input class="av-field__input" id="anvil-header-search-q" type="search" name="q" placeholder="{{ 'anvil.search.placeholder' | t }}" autocomplete="off">
-              <input type="hidden" name="options[prefix]" value="last">
-              <button type="submit" class="av-header__icon" aria-label="{{ 'anvil.search.submit' | t }}">
-                {% render 'anvil-icon', name: 'search', size: 24 %}
-              </button>
-              <button type="button" class="av-header__icon" data-anvil-close aria-label="{{ close_label }}">
-                {% render 'anvil-icon', name: 'x', size: 24 %}
-              </button>
-            </form>
+            {%- capture search_form -%}
+              <form class="av-header__search-form" action="{{ routes.search_url }}" method="get" role="search">
+                <label class="av-visually-hidden" for="anvil-header-search-q">{{ 'anvil.search.placeholder' | t }}</label>
+                <input class="av-field__input" id="anvil-header-search-q" type="search" name="q" placeholder="{{ 'anvil.search.placeholder' | t }}" autocomplete="off"{% if settings.predictive_search_enabled %} data-anvil-predictive-input aria-controls="anvil-predictive-results" aria-expanded="false"{% endif %}>
+                <input type="hidden" name="options[prefix]" value="last">
+                <button type="submit" class="av-header__icon">
+                  <span class="av-visually-hidden">{{ 'anvil.search.submit' | t }}</span>
+                  {% render 'anvil-icon', name: 'search', size: 24 %}
+                </button>
+                <button type="button" class="av-header__icon" data-anvil-close>
+                  <span class="av-visually-hidden">{{ close_label }}</span>
+                  {% render 'anvil-icon', name: 'x', size: 24 %}
+                </button>
+              </form>
+            {%- endcapture -%}
+            {%- if settings.predictive_search_enabled -%}
+              <anvil-predictive-search class="av-predictive av-enhance" section-url="{{ routes.predictive_search_url }}">
+                {{ search_form }}
+                <div class="av-predictive__results" id="anvil-predictive-results" data-anvil-predictive-results hidden></div>
+                <p class="av-visually-hidden" role="status" aria-live="polite" data-anvil-predictive-live></p>
+              </anvil-predictive-search>
+              <script type="module" src="{{ 'anvil-predictive-search.js' | asset_url }}"></script>
+            {%- else -%}
+              {{ search_form }}
+            {%- endif -%}
           </dialog>
         </anvil-dialog>
+      {%- endif -%}
+
+      {%- if request.design_mode -%}
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign block_key = block.settings.menu_item | handleize
+            assign matched = false
+            for link in menu.links
+              assign link_key = link.title | handleize
+              if link_key == block_key and link.links.size > 0
+                assign matched = true
+              endif
+            endfor
+          -%}
+          {%- unless matched -%}
+            <p class="av-header__editor-note av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.mega_unmatched' | t: item: block.settings.menu_item }}</p>
+          {%- endunless -%}
+        {%- endfor -%}
       {%- endif -%}
     </anvil-header>
   </div>
 </div>
-{% stylesheet %}
-  .av-header {
-    display: block;
-  }
-  .av-header__bar {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: var(--av-space-3);
-    min-height: 56px;
-  }
-  .av-header__logo {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    grid-column: 2;
-    justify-self: center;
-    color: inherit;
-    text-decoration: none;
-  }
-  .av-header__logo-img {
-    display: block;
-    width: auto;
-    max-width: 100%;
-    height: auto;
-  }
-  .av-header__logo-text {
-    font-family: var(--av-font-heading);
-    font-weight: var(--av-heading-weight);
-    font-size: var(--av-text-lg);
-    letter-spacing: var(--av-heading-spacing);
-    text-transform: var(--av-heading-case);
-  }
-  .av-header__nav {
-    display: none;
-  }
-  .av-header__actions {
-    display: flex;
-    align-items: center;
-    gap: var(--av-space-1);
-    grid-column: 3;
-  }
-  .av-header__icon {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    color: inherit;
-    background: none;
-    border: 0;
-    border-radius: var(--av-radius-button);
-    cursor: pointer;
-    text-decoration: none;
-    list-style: none;
-  }
-  .av-header__icon::-webkit-details-marker {
-    display: none;
-  }
-  .av-header .av-cart-bubble__count {
-    position: absolute;
-    top: 4px;
-    right: 2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    font-size: var(--av-text-xs);
-    font-weight: 700;
-    line-height: 1;
-    color: var(--av-on-accent);
-    background: var(--av-accent);
-    border-radius: var(--av-radius-pill);
-  }
-  .av-header__drawer {
-    display: block;
-    grid-column: 1;
-  }
-  .av-header__details[open]::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background: rgb(var(--av-fg-rgb) / 0.45);
-    z-index: 60;
-  }
-  .av-header__drawer .av-drawer__overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 61;
-  }
-  .av-header__drawer[open] .av-drawer__overlay {
-    display: block;
-  }
-  .av-header__panel {
-    position: fixed;
-    inset: 0 auto 0 0;
-    width: min(100%, 360px);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    padding: var(--av-space-4);
-    background: var(--av-bg);
-    color: var(--av-fg);
-    box-shadow: var(--av-shadow-drawer);
-    z-index: 70;
-  }
-  .av-header__panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--av-space-4);
-  }
-  .av-header__panel-title {
-    font-weight: 700;
-  }
-  .av-header__mobile-link {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--av-space-2);
-    padding: var(--av-space-3) 0;
-    color: inherit;
-    text-decoration: none;
-    font-size: var(--av-text-md);
-    border-bottom: 1px solid var(--av-border);
-    cursor: pointer;
-    list-style: none;
-  }
-  .av-header__mobile-link::-webkit-details-marker {
-    display: none;
-  }
-  .av-header__mobile-link--account {
-    justify-content: flex-start;
-  }
-  .av-header__mobile-sub[open] .av-header__chevron,
-  .av-header__dropdown[open] .av-header__chevron {
-    transform: rotate(180deg);
-  }
-  .av-header__mobile-sublink {
-    display: block;
-    padding: var(--av-space-2) var(--av-space-4);
-    color: var(--av-fg-muted);
-    text-decoration: none;
-  }
-  .av-header__panel-foot {
-    display: flex;
-    flex-direction: column;
-    gap: var(--av-space-3);
-    margin-top: auto;
-    padding-top: var(--av-space-4);
-  }
-  .av-header__loc-row {
-    display: flex;
-    gap: var(--av-space-2);
-  }
-  .av-header__loc-select {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .av-header__search-modal {
-    width: min(100%, 640px);
-    padding: var(--av-space-4);
-    border: 0;
-    border-radius: var(--av-radius-popup);
-    box-shadow: var(--av-shadow-popup);
-  }
-  .av-header__search-modal::backdrop {
-    background: rgb(0 0 0 / 0.5);
-  }
-  .av-header__search-form {
-    display: flex;
-    align-items: center;
-    gap: var(--av-space-2);
-  }
-  .av-header__search-form .av-field__input {
-    flex: 1 1 auto;
-    width: auto;
-    min-width: 0;
-  }
-  @media (min-width: 990px) {
-    .av-header__drawer {
-      display: none;
-    }
-    .av-header__logo {
-      grid-column: 1;
-      justify-self: start;
-    }
-    .av-header--logo-center .av-header__logo {
-      grid-column: 2;
-      justify-self: center;
-    }
-    .av-header__nav {
-      display: block;
-      grid-column: 2;
-      justify-self: center;
-    }
-    .av-header--logo-center .av-header__nav {
-      grid-column: 1;
-      justify-self: start;
-    }
-    .av-header__list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--av-space-1);
-    }
-    .av-header__item {
-      position: relative;
-    }
-    .av-header__link {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--av-space-1);
-      padding: var(--av-space-2) var(--av-space-3);
-      color: inherit;
-      text-decoration: none;
-      border-radius: var(--av-radius-button);
-      cursor: pointer;
-      list-style: none;
-    }
-    .av-header__link::-webkit-details-marker {
-      display: none;
-    }
-    .av-header__link:hover,
-    .av-header__link--active {
-      text-decoration: underline;
-      text-underline-offset: 0.3em;
-    }
-    .av-header__sub {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      min-width: 220px;
-      padding: var(--av-space-2);
-      background: var(--av-bg);
-      color: var(--av-fg);
-      border: 1px solid var(--av-border);
-      border-radius: var(--av-radius-popup);
-      box-shadow: var(--av-shadow-md);
-      z-index: 50;
-    }
-    .av-header__sublink {
-      display: block;
-      padding: var(--av-space-2) var(--av-space-3);
-      color: inherit;
-      text-decoration: none;
-      border-radius: var(--av-radius-button);
-    }
-    .av-header__sublink:hover {
-      background: rgb(var(--av-fg-rgb) / 0.06);
-    }
-  }
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Header",
   "settings": [
-    { "type": "header", "content": "Heading" },
-    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
-    { "type": "richtext", "id": "subheading", "label": "Subheading" },
-    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
-    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
-    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
     { "type": "header", "content": "Layout" },
     { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
-    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
     { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
     { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
     { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
-    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
     { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
-    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
     { "type": "header", "content": "Header" },
     {
       "type": "image_picker",
       "id": "logo",
       "label": "Logo",
-      "info": "Leave empty to use the logo from Theme settings, or the store name when there is none."
-    },
-    {
-      "type": "range",
-      "id": "logo_width",
-      "label": "Logo width",
-      "min": 60,
-      "max": 300,
-      "step": 10,
-      "unit": "px",
-      "default": 140
+      "info": "Leave empty to use the logo from Theme settings, or the store name when there is none. Its width is set under Theme settings > Logo & favicon."
     },
     {
       "type": "select",
@@ -508,6 +459,18 @@
     },
     {
       "type": "select",
+      "id": "menu_position",
+      "label": "Menu position on desktop",
+      "info": "With a centred logo the menu sits on the left, or below.",
+      "options": [
+        { "value": "left", "label": "Left, after the logo" },
+        { "value": "center", "label": "Centre" },
+        { "value": "below", "label": "Below the logo" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "select",
       "id": "sticky",
       "label": "Sticky header",
       "options": [
@@ -519,6 +482,20 @@
     },
     {
       "type": "checkbox",
+      "id": "transparent_home",
+      "label": "Transparent over the first section on the homepage",
+      "info": "The header sits on top of the first section until the page scrolls. Give that section enough top padding so its content clears the header.",
+      "default": false
+    },
+    {
+      "type": "color_scheme",
+      "id": "transparent_scheme",
+      "label": "Text colour while transparent",
+      "info": "The header uses this scheme's text colour over the first section. A dark scheme also switches to the light logo from Theme settings.",
+      "default": "scheme-4"
+    },
+    {
+      "type": "checkbox",
       "id": "show_search",
       "label": "Show search",
       "default": true
@@ -527,6 +504,7 @@
       "type": "select",
       "id": "search_mode",
       "label": "Search opens",
+      "info": "Results while typing are switched on under Theme settings > Search.",
       "options": [
         { "value": "link", "label": "The search page" },
         { "value": "modal", "label": "A search dialog" }
@@ -539,6 +517,24 @@
       "label": "Show account link",
       "info": "Only shows when customer accounts are enabled in your admin.",
       "default": true
+    },
+    { "type": "header", "content": "Menu on phones" },
+    {
+      "type": "select",
+      "id": "drawer_layout",
+      "label": "Menu layout",
+      "options": [
+        { "value": "list", "label": "List with expandable groups" },
+        { "value": "tiles", "label": "Large tiles" }
+      ],
+      "default": "list"
+    },
+    {
+      "type": "checkbox",
+      "id": "drawer_socials",
+      "label": "Show social links in the menu",
+      "info": "Links come from Theme settings > Social links.",
+      "default": false
     },
     {
       "type": "checkbox",
@@ -553,6 +549,46 @@
       "label": "Language selector in menu",
       "info": "Shows when more than one language is published.",
       "default": false
+    }
+  ],
+  "max_blocks": 6,
+  "blocks": [
+    {
+      "type": "mega",
+      "name": "Mega menu",
+      "settings": [
+        {
+          "type": "text",
+          "id": "menu_item",
+          "label": "Menu item",
+          "info": "The title of a top-level menu item that has child links, written as it appears in Navigation. Its child links show in columns."
+        },
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Featured collection"
+        },
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Featured product"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image"
+        },
+        {
+          "type": "text",
+          "id": "image_label",
+          "label": "Image caption"
+        },
+        {
+          "type": "url",
+          "id": "image_link",
+          "label": "Image link"
+        }
+      ]
     }
   ],
   "enabled_on": {

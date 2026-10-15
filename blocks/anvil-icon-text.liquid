@@ -1,3 +1,17 @@
+{% doc %}
+  Theme block: an icon (Lucide name or uploaded image) with a short line of text, optionally in a pill.
+
+  Settings (id · type · values · default):
+  - text · inline_richtext · default "Example: ships within 2 days — replace with a statement that is true for your store"
+  - icon · select · none | check | check-circle | truck | package | package-check | shield | shield-check | lock | badge-check | award | gift | tag | percent | heart | star | clock | timer | calendar | zap | leaf | recycle | sparkles | thumbs-up | refresh-cw | rotate-ccw | globe | map-pin | mail | phone | message-circle | credit-card | wallet | users | smartphone | info · default "check-circle"
+  - icon_image · image_picker
+  - size · select · sm | md | lg · default "md"
+  - align · text_alignment · default "left"
+  - pill · checkbox · default false
+
+  @example
+  {"type": "anvil-icon-text"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
   assign icon_px = 24

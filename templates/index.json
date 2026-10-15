@@ -11,7 +11,96 @@
         "pad_top": 96,
         "pad_bottom": 96
       }
+    },
+    "icon_bar": {
+      "type": "anvil-icon-bar",
+      "blocks": {
+        "truck": {
+          "type": "item",
+          "settings": {
+            "icon": "truck",
+            "label": "Example: free shipping over $50",
+            "caption": "Replace with the threshold from your shipping rates"
+          }
+        },
+        "returns": {
+          "type": "item",
+          "settings": {
+            "icon": "rotate-ccw",
+            "label": "Example: 30-day returns",
+            "caption": "Replace with the window in your refund policy"
+          }
+        },
+        "secure": {
+          "type": "item",
+          "settings": {
+            "icon": "lock",
+            "label": "Example: secure checkout",
+            "caption": "Replace with what protects shoppers, in plain words"
+          }
+        },
+        "support": {
+          "type": "item",
+          "settings": {
+            "icon": "message-circle",
+            "label": "Example: fast support",
+            "caption": "Replace with real hours, such as replies within 24 hours"
+          }
+        }
+      },
+      "block_order": [
+        "truck",
+        "returns",
+        "secure",
+        "support"
+      ],
+      "settings": {
+        "pad_top": 32,
+        "pad_bottom": 32
+      }
+    },
+    "faq": {
+      "type": "anvil-faq",
+      "blocks": {
+        "faq_1": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — How long does delivery take?",
+            "answer": "<p>Example answer — replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
+          }
+        },
+        "faq_2": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — How much does shipping cost?",
+            "answer": "<p>Example answer — list your actual shipping rates and any free-shipping threshold exactly as they are set in your admin.</p>"
+          }
+        },
+        "faq_3": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — What is your returns policy?",
+            "answer": "<p>Example answer — summarise your actual returns window and conditions here and link to your returns policy page.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "faq_1",
+        "faq_2",
+        "faq_3"
+      ],
+      "settings": {
+        "heading": "Frequently asked <strong>questions</strong>",
+        "width": "narrow",
+        "anchor": "faq",
+        "json_ld": false,
+        "open_first": true
+      }
     }
   },
-  "order": ["welcome"]
+  "order": [
+    "welcome",
+    "icon_bar",
+    "faq"
+  ]
 }

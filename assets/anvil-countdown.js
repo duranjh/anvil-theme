@@ -1,13 +1,16 @@
 /**
- * anvil-countdown.js — <anvil-countdown ends-at="2026-12-31T23:59:00" timezone="America/Denver" expired="hide|text">
+ * anvil-countdown.js — <anvil-countdown ends-at="2026-12-31T23:59:00" timezone="America/Denver" data-anvil-end="…"
+ *   expired="hide|text">
  *
- * Ticks once a second towards a real, absolute deadline. `ends-at` without an offset is read as wall-clock time in
- * `timezone` (IANA name; falls back to the browser zone when missing or invalid); with "Z" or an offset the
- * timezone attribute is ignored. Writes zero-padded values into [data-anvil-cd="days|hours|minutes|seconds"], adds
- * .is-under-day when fewer than 24 h remain, pauses while the tab is hidden and re-syncs on return.
- * Expiry: .is-expired; expired="hide" hides the whole element, otherwise [data-anvil-running] (or the number slots
+ * Ticks once a second towards one real, absolute deadline that is the same for every shopper. `data-anvil-end`
+ * (epoch seconds, written by Liquid in the store's time zone when no time zone is set) wins; otherwise `ends-at`
+ * without an offset is read as wall-clock time in `timezone` (IANA name), and with "Z" or an offset it is absolute.
+ * Writes zero-padded values into [data-anvil-cd="days|hours|minutes|seconds"], adds .av-is-under-day when fewer than
+ * 24 h remain, pauses while the tab is hidden and re-syncs on return. While time remains it clears any `hidden` the
+ * server set (its clock and zone can differ), so a live offer never stays hidden.
+ * Expiry: .av-is-expired; expired="hide" hides the whole element, otherwise [data-anvil-running] (or the number slots
  * when no wrapper exists) is hidden and [data-anvil-expired] is revealed. Emits anvil:countdown:expired
- * {element, endsAt} (bubbles). Without a parseable `ends-at` the element hides itself.
+ * {element, endsAt} (bubbles). Without a parseable deadline the element hides itself.
  * By design there is no duration, evergreen or per-visitor mode: the only input is an end time the merchant typed.
  */
 const LOCAL = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?$/;
@@ -48,15 +51,23 @@ class Countdown extends HTMLElement {
   #timer = 0;
   #slots = {};
   #last = {};
+  #done = false;
 
   connectedCallback() {
     const at = this.getAttribute('ends-at');
-    this.#end = at ? deadline(at, this.getAttribute('timezone')) : NaN;
+    const epoch = Number(this.dataset.anvilEnd);
+    this.#end = epoch > 0 ? epoch * 1000 : at ? deadline(at, this.getAttribute('timezone')) : NaN;
     for (const el of this.querySelectorAll('[data-anvil-cd]')) this.#slots[el.dataset.anvilCd] = el;
     if (!this.hasAttribute('role')) this.setAttribute('role', 'timer');
     if (Number.isNaN(this.#end)) {
       this.hidden = true;
       return;
+    }
+    if (this.#end > Date.now()) {
+      this.hidden = false;
+      this.classList.remove('av-is-expired');
+      for (const el of this.querySelectorAll('[data-anvil-running]')) el.hidden = false;
+      for (const el of this.querySelectorAll('[data-anvil-expired]')) el.hidden = true;
     }
     this.#tick();
     document.addEventListener('visibilitychange', this.#onVisibility);
@@ -70,7 +81,7 @@ class Countdown extends HTMLElement {
 
   #start() {
     this.#stop();
-    if (!document.hidden && !this.classList.contains('is-expired')) this.#timer = setInterval(this.#tick, 1000);
+    if (!document.hidden && !this.classList.contains('av-is-expired')) this.#timer = setInterval(this.#tick, 1000);
   }
 
   #stop() {
@@ -103,13 +114,14 @@ class Countdown extends HTMLElement {
       }
     }
     this.#last = parts;
-    this.classList.toggle('is-under-day', parts.days === 0);
+    this.classList.toggle('av-is-under-day', parts.days === 0);
   };
 
   #expire() {
     this.#stop();
-    if (this.classList.contains('is-expired')) return;
-    this.classList.add('is-expired');
+    if (this.#done) return;
+    this.#done = true;
+    this.classList.add('av-is-expired');
     if (this.getAttribute('expired') === 'hide') {
       this.hidden = true;
     } else {

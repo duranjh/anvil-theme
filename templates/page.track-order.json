@@ -3,7 +3,48 @@
     "main": {
       "type": "main-page",
       "settings": {}
+    },
+    "faq": {
+      "type": "anvil-faq",
+      "blocks": {
+        "delivery_1": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — How long does delivery take?",
+            "answer": "<p>Example answer — replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
+          }
+        },
+        "delivery_2": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — How much does shipping cost?",
+            "answer": "<p>Example answer — list your actual shipping rates and any free-shipping threshold exactly as they are set in your admin.</p>"
+          }
+        },
+        "delivery_3": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — How do I track my order?",
+            "answer": "<p>Example answer — explain where the tracking link arrives (for example in the shipping confirmation email) and how long carriers take to show updates.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "delivery_1",
+        "delivery_2",
+        "delivery_3"
+      ],
+      "settings": {
+        "heading": "Delivery <strong>questions</strong>",
+        "width": "narrow",
+        "anchor": "delivery",
+        "json_ld": false,
+        "open_first": true
+      }
     }
   },
-  "order": ["main"]
+  "order": [
+    "main",
+    "faq"
+  ]
 }

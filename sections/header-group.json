@@ -19,7 +19,6 @@
       "settings": {
         "pad_top": 8,
         "pad_bottom": 8,
-        "width": "full",
         "color_scheme": "scheme-3"
       }
     },
@@ -28,9 +27,9 @@
       "settings": {
         "pad_top": 12,
         "pad_bottom": 12,
-        "width": "page",
         "menu": "main-menu",
-        "sticky": "scroll-up"
+        "sticky": "scroll-up",
+        "menu_position": "center"
       }
     }
   },

@@ -4,12 +4,12 @@
 #   shopify theme dev  -e voreau-dev           local preview with hot reload
 #
 # First push (creates the dev theme; copy its id into `theme` below):
-#   shopify theme push --unpublished --theme "ANVIL dev - DO NOT PUBLISH" --store voreau.myshopify.com
+#   shopify theme push --unpublished --theme "ANVIL dev - DO NOT PUBLISH" --store ftsegk-n1.myshopify.com
 #
 # Never add `live = true` or `allow-live = true` here. The gate scripts use
 # DEV_THEME_ID / STORE / THEME_TOKEN env vars instead of this file so a token
 # never lands in git.
 
 [environments.voreau-dev]
-store = "voreau.myshopify.com"
+store = "ftsegk-n1.myshopify.com"
 theme = "REPLACE_WITH_DEV_THEME_ID"

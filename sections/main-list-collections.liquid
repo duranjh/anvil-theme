@@ -1,8 +1,8 @@
 {%- liquid
   assign s = section.settings
+  assign card_ratio = settings.collection_card_image_ratio | default: '1:1'
+  assign card_style = settings.collection_card_style | default: 'flat'
 -%}
-{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
-{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-list-collections' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
@@ -15,9 +15,18 @@
               {%- assign ph_index = forloop.index0 | modulo: 6 | plus: 1 -%}
               {%- assign ph_name = 'collection-' | append: ph_index -%}
               <li class="av-list-collections__cell">
-                <a class="av-list-collections__card" href="{{ collection.url }}">
+                {%- liquid
+                  assign img_loading = 'lazy'
+                  if forloop.index <= 4
+                    if section.index == nil or section.index <= 2
+                      assign img_loading = 'eager'
+                    endif
+                  endif
+                -%}
+                <a class="av-list-collections__card av-list-collections__card--{{ card_style }}" href="{{ collection.url }}">
                   <div class="av-list-collections__media">
-                    {% render 'anvil-media', image: collection.featured_image, ratio: s.image_ratio, widths: '300, 600, 900', sizes: '(min-width: 990px) 33vw, 50vw', loading: 'lazy', placeholder: ph_name, alt: collection.title, class: 'av-list-collections__img' %}
+                    {%- comment -%} The heading inside the link names it, so the image is decorative here. {%- endcomment -%}
+                    {% render 'anvil-media', image: collection.featured_image, ratio: card_ratio, widths: '300, 450, 600', sizes: '(min-width: 990px) 33vw, 50vw', loading: img_loading, placeholder: ph_name, alt: '', class: 'av-list-collections__img' %}
                   </div>
                   <h2 class="av-list-collections__name">{{ collection.title | escape }}</h2>
                 </a>
@@ -25,7 +34,7 @@
             {%- endfor -%}
           </ul>
         {%- else -%}
-          <p class="av-list-collections__empty">No collections yet.</p>
+          <p class="av-list-collections__empty">{{ 'anvil.list_collections.empty' | t }}</p>
         {%- endif -%}
         {% render 'anvil-pagination', paginate: paginate %}
       </div>
@@ -47,8 +56,17 @@
   }
   .av-list-collections__card {
     display: block;
-    color: inherit;
+    height: 100%;
     text-decoration: none;
+    border-radius: var(--av-radius-card);
+  }
+  .av-list-collections__card--outlined {
+    padding: var(--av-space-3);
+    border: var(--av-border-w-card) solid var(--av-border);
+  }
+  .av-list-collections__card--raised {
+    padding: var(--av-space-3);
+    box-shadow: var(--av-shadow-card, var(--av-shadow-md));
   }
   .av-list-collections__media {
     border-radius: var(--av-radius-media);
@@ -114,16 +132,8 @@
       "default": "3"
     },
     {
-      "type": "select",
-      "id": "image_ratio",
-      "label": "Image ratio",
-      "options": [
-        { "value": "adapt", "label": "Adapt to image" },
-        { "value": "1:1", "label": "Square" },
-        { "value": "4:5", "label": "Portrait" },
-        { "value": "16:9", "label": "Wide" }
-      ],
-      "default": "1:1"
+      "type": "paragraph",
+      "content": "Card style and image ratio are set under Theme settings > Cards > Collection cards."
     }
   ]
 }

@@ -35,7 +35,9 @@ Three rules from `docs/FORBIDDEN.md`:
 Fails on any raster image in `assets/` (`.png .jpg .jpeg .gif .webp .avif .bmp .tif .tiff .ico`), on SVGs (`assets/*.svg`, inline `<svg>` in `snippets/ blocks/ sections/ layout/`) that contain a brand token (review sites, social networks, payment brands, platform names) or an embedded base64 image, and on any base64 image data URI in `assets/`. Payment icons come from `payment_type_svg_tag`; other logos are merchant uploads.
 
 ### `scripts/chassis-lint.py [--root DIR] [--only PATH ...] [--strict]`
-For every `sections/anvil-*.liquid` with `presets` (addable sections):
+For every group-only or overlay `sections/anvil-*.liquid` (`enabled_on.groups` without `templates`: header, announcement bar, footer, overlay widgets): the **reduced chassis** — exactly `color_scheme`, `pad_top`, `pad_bottom`, `pad_mobile`, `show_on` with the contract types and options, none of the full-chassis heading/width/reveal/anchor ids, `anvil-section-attrs` with the file name as `type`, and the `av-section__inner` wrapper (CONVENTIONS §4, DECISIONS 22).
+
+For every other `sections/anvil-*.liquid` with `presets` (addable sections):
 - skeleton: `{% render 'anvil-section-attrs', section: section, type: '<file name>' %}`, `{% render 'anvil-section-head', section: section %}`, an `av-section__inner` wrapper (`assign s = section.settings` is a warning);
 - the 13 chassis settings with exact ids and types (`heading` inline_richtext, `subheading` richtext, `head_align` text_alignment, `head_size`/`accent_style`/`width`/`pad_mobile`/`reveal`/`show_on` select with the exact option values, `color_scheme` color_scheme, `pad_top`/`pad_bottom` range 0–120 step 4 px, `anchor` text). Defaults, order and "chassis first" drift are warnings;
 - `presets` non-empty and named; schema `name` ≤ 25 chars; ≤ 40 non-header settings; `enabled_on`/`disabled_on` not both;
@@ -49,7 +51,7 @@ For every `sections/*.liquid` and `blocks/*.liquid` (`main-*`, static and group 
 Theme blocks must print `{{ block.shopify_attributes }}` on their root.
 
 ### `scripts/check-limits.sh [--root DIR]`
-Shopify platform limits: Liquid < 256 KB; `settings_schema.json` < 512 KB; `settings_data.json` and locale files < 1.5 MB; JSON templates and section groups < 512 KB; locale files below 3,400 translation keys and 1,000 chars per value; JSON validity of `templates/**`, `config/`, `locales/`, `sections/*.json` (a leading `/* … */` comment is tolerated); templates: `sections`/`order` agree, ≤ 25 sections, ≤ 50 blocks per section, `block_order` agrees with `blocks`; section groups carry `type/name/sections/order`; `theme_info` has name, version and author; `blocks/` ≤ 300 files.
+Gzip budgets (DECISIONS 20): the core modules `anvil-core`, `-events`, `-cart-api`, `-sections`, `-dom` together ≤ 15,360 B; `anvil-slider.js` ≤ 5,120; `anvil-marquee.js` ≤ 1,536; every other `assets/anvil-*.js` ≤ 4,096; `anvil-base.css` ≤ 20,480; every other `assets/anvil-*.css` ≤ 8,192 (each finding names the file and its size). Shopify platform limits: Liquid < 256 KB; `settings_schema.json` < 512 KB; `settings_data.json` and locale files < 1.5 MB; JSON templates and section groups < 512 KB; locale files below 3,400 translation keys and 1,000 chars per value; JSON validity of `templates/**`, `config/`, `locales/`, `sections/*.json` (a leading `/* … */` comment is tolerated); templates: `sections`/`order` agree, ≤ 25 sections, ≤ 50 blocks per section, `block_order` agrees with `blocks`; section groups carry `type/name/sections/order`; `theme_info` has name, version and author; `blocks/` ≤ 300 files.
 
 ### `scripts/paths-lint.sh [--root DIR] [--base REF] GLOB...`
 Fails when `git status --porcelain -uall` (and, with `--base`, `git diff --name-only REF`) lists a path outside the allowed globs. Globs are shell patterns matched against repo-relative paths; `*` crosses `/`.
@@ -89,7 +91,7 @@ Shallow-clones the two public Shopify reference themes into a cache **outside** 
 - `.github/workflows/lighthouse.yml` — `workflow_dispatch`: `Shopify/lighthouse-ci-action@v1` with minimum scores performance 0.80 / accessibility 0.95. Secrets: `SHOP_CLIENT_ID`, `SHOP_CLIENT_SECRET` (a Dev Dashboard app with `read_products` + `write_themes`), `SHOP_STORE`, `SHOP_PASSWORD` (password-protected stores only), optional `LHCI_GITHUB_APP_TOKEN`. Point it at a development store.
 
 ## 4. Dev theme
-`shopify.theme.toml` declares `[environments.voreau-dev]` (`store = "voreau.myshopify.com"`, `theme = "REPLACE_WITH_DEV_THEME_ID"`). Create the dev theme once with `shopify theme push --unpublished --theme "ANVIL dev - DO NOT PUBLISH"`, paste its id into the TOML and into `DEV_THEME_ID` for the gate. Never add `live`/`allow-live`. Tokens go in `THEME_TOKEN` (env), never in the TOML.
+`shopify.theme.toml` declares `[environments.voreau-dev]` (`store = "ftsegk-n1.myshopify.com"`, `theme = "REPLACE_WITH_DEV_THEME_ID"`). Create the dev theme once with `shopify theme push --unpublished --theme "ANVIL dev - DO NOT PUBLISH"`, paste its id into the TOML and into `DEV_THEME_ID` for the gate. Never add `live`/`allow-live`. Tokens go in `THEME_TOKEN` (env), never in the TOML.
 
 ## 5. Working as an implementation agent
 1. `npm run prompt -- <slug>` gives you the brief; the card comes from `npm run spec-cards`.

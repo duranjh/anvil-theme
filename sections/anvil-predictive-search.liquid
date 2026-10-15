@@ -1,0 +1,86 @@
+{%- comment -%}
+  Results for the header's predictive search (assets/anvil-predictive-search.js). Requested only through
+  routes.predictive_search_url with section_id=anvil-predictive-search; not addable (no presets) and not placed
+  in any template. Prices show when Theme settings > Search > "Show prices" is on.
+{%- endcomment -%}
+{%- liquid
+  assign res = predictive_search.resources
+  assign total = res.queries.size | plus: res.products.size | plus: res.collections.size | plus: res.pages.size | plus: res.articles.size
+-%}
+<div class="av-predictive-search" data-anvil-predictive-results>
+  {%- if predictive_search.performed -%}
+    <p class="av-visually-hidden" data-anvil-predictive-count>{{ 'anvil.search.results_count' | t: count: total }}</p>
+    {%- if res.queries.size > 0 -%}
+      <div class="av-predictive__group">
+        <h2 class="av-predictive__heading">{{ 'anvil.search.suggestions' | t }}</h2>
+        <ul class="av-predictive__list av-list-reset">
+          {%- for query in res.queries -%}
+            <li><a class="av-predictive__link" href="{{ query.url }}">{{ query.styled_text }}</a></li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+    {%- if res.products.size > 0 -%}
+      <div class="av-predictive__group">
+        <h2 class="av-predictive__heading">{{ 'anvil.search.products' | t }}</h2>
+        <ul class="av-predictive__list av-list-reset">
+          {%- for product in res.products -%}
+            <li>
+              <a class="av-predictive__link" href="{{ product.url }}">
+                <span class="av-predictive__thumb">
+                  {% render 'anvil-media', image: product.featured_media.preview_image, ratio: '1:1', widths: '48, 96', sizes: '48px', loading: 'lazy', alt: '', placeholder: 'product-1' %}
+                </span>
+                <span class="av-predictive__name">
+                  <span>{{ product.title | escape }}</span>
+                  {%- if settings.predictive_search_show_price -%}
+                    {% render 'anvil-price', product: product, show_badge: false, size: 'sm' %}
+                  {%- endif -%}
+                </span>
+              </a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+    {%- if res.collections.size > 0 -%}
+      <div class="av-predictive__group">
+        <h2 class="av-predictive__heading">{{ 'anvil.search.collections' | t }}</h2>
+        <ul class="av-predictive__list av-list-reset">
+          {%- for collection in res.collections -%}
+            <li><a class="av-predictive__link" href="{{ collection.url }}">{{ collection.title | escape }}</a></li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+    {%- if res.pages.size > 0 -%}
+      <div class="av-predictive__group">
+        <h2 class="av-predictive__heading">{{ 'anvil.search.pages' | t }}</h2>
+        <ul class="av-predictive__list av-list-reset">
+          {%- for page in res.pages -%}
+            <li><a class="av-predictive__link" href="{{ page.url }}">{{ page.title | escape }}</a></li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+    {%- if res.articles.size > 0 -%}
+      <div class="av-predictive__group">
+        <h2 class="av-predictive__heading">{{ 'anvil.search.articles' | t }}</h2>
+        <ul class="av-predictive__list av-list-reset">
+          {%- for article in res.articles -%}
+            <li><a class="av-predictive__link" href="{{ article.url }}">{{ article.title | escape }}</a></li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+    {%- if total == 0 -%}
+      <p class="av-predictive__empty">{{ 'anvil.search.no_results' | t: terms: predictive_search.terms }}</p>
+    {%- endif -%}
+    <a class="av-predictive__link av-predictive__all" href="{{ routes.search_url }}?q={{ predictive_search.terms | url_encode }}&amp;options%5Bprefix%5D=last">{{ 'anvil.search.view_all_for' | t: terms: predictive_search.terms }}</a>
+  {%- endif -%}
+</div>
+{% schema %}
+{
+  "name": "Predictive search",
+  "settings": []
+}
+{% endschema %}

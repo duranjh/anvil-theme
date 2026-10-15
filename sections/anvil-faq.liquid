@@ -2,8 +2,9 @@
   assign s = section.settings
   assign untitled_label = 'anvil.faq.untitled_question' | t
 
-  # The icon snippet scans its whole table on every render, so the icons are
-  # captured once here and printed per item instead of rendered 30-60 times.
+  # The icons are captured once here and printed per item instead of being
+  # rendered 30-60 times.
+  assign opened = false
   if s.icon_style == 'chevron'
     capture icon_toggle
       render 'anvil-icon', name: 'chevron-down', size: 24
@@ -61,7 +62,15 @@
               endif
             endif
           -%}
-          <details class="av-faq__item"{% if forloop.first and s.open_first %} open{% endif %} {{ block.shopify_attributes }}>
+          {%- liquid
+            # Open the first item that is actually rendered (a blank first question is skipped above).
+            assign open_attr = ''
+            if s.open_first and opened == false
+              assign open_attr = ' open'
+              assign opened = true
+            endif
+          -%}
+          <details class="av-faq__item"{{ open_attr }} {{ block.shopify_attributes }}>
             <summary class="av-faq__summary">
               <h3 class="av-faq__question">{{ question | escape }}</h3>
               <span class="av-faq__icon" aria-hidden="true">
@@ -77,7 +86,7 @@
         {%- endfor -%}
       </anvil-collapsible>
     {%- elsif request.design_mode -%}
-      <p class="av-faq__empty av-example-note">{{ 'anvil.faq.empty_editor_note' | t }}</p>
+      <p class="av-faq__empty av-example-note">{{ 'anvil.editor.empty_section' | t }}</p>
     {%- endif -%}
   </div>
   {%- if faq_entities != '' -%}
@@ -147,13 +156,13 @@
   .av-faq__icon-close {
     display: none;
   }
-  .av-faq__item[open]:not(.is-closing) .av-faq__icon-open {
+  .av-faq__item[open]:not(.av-is-closing) .av-faq__icon-open {
     display: none;
   }
-  .av-faq__item[open]:not(.is-closing) .av-faq__icon-close {
+  .av-faq__item[open]:not(.av-is-closing) .av-faq__icon-close {
     display: inline-flex;
   }
-  .av-faq--icon-chevron .av-faq__item[open]:not(.is-closing) .av-faq__icon svg {
+  .av-faq--icon-chevron .av-faq__item[open]:not(.av-is-closing) .av-faq__icon svg {
     transform: rotate(180deg);
   }
   .av-faq__answer {

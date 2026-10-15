@@ -1,3 +1,20 @@
+{% doc %}
+  Theme block: a box with its own colour scheme, padding and layout that holds other theme blocks (@theme, @app). Nestable.
+
+  Settings (id · type · values · default):
+  - color_scheme · color_scheme · default "scheme-1"
+  - layout · select · stack | row · default "stack"
+  - width · select · full | narrow | compact · default "full"
+  - align · text_alignment · default "left"
+  - gap · range · 0–64 step 4px · default 16
+  - pad · range · 0–64 step 4px · default 24
+  - border · checkbox · default false
+  - rounded · checkbox · default true
+  Accepts child blocks: @theme, @app
+
+  @example
+  {"type": "anvil-group"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
   assign scheme_id = 'scheme-1'
@@ -5,20 +22,20 @@
     assign scheme_id = s.color_scheme.id
   endif
 -%}
-<div class="av-group av-scheme av-scheme--{{ scheme_id }} av-group--{{ s.layout }} av-group--{{ s.width }} av-group--{{ s.align }}{% if s.border %} av-group--border{% endif %}{% if s.rounded %} av-group--rounded{% endif %}" style="--av-group-gap: {{ s.gap }}px; --av-group-pad: {{ s.pad }}px;" {{ block.shopify_attributes }}>
+<div class="av-group-block av-scheme av-scheme--{{ scheme_id }} av-group-block--{{ s.layout }} av-group-block--{{ s.width }} av-group-block--{{ s.align }}{% if s.border %} av-group-block--border{% endif %}{% if s.rounded %} av-group-block--rounded{% endif %}" style="--av-group-gap: {{ s.gap }}px; --av-group-pad: {{ s.pad }}px;" {{ block.shopify_attributes }}>
   {% content_for 'blocks' %}
 </div>
 {% stylesheet %}
-.av-group{box-sizing:border-box;display:flex;flex-direction:column;width:100%;gap:var(--av-group-gap,16px);padding:var(--av-group-pad,24px);background:var(--av-bg);color:var(--av-fg)}
-.av-group--row{flex-direction:row;flex-wrap:wrap;align-items:center}
-.av-group--row>*{flex:1 1 240px;min-width:0}
-.av-group--narrow{max-width:720px;margin-inline:auto}
-.av-group--compact{max-width:480px;margin-inline:auto}
-.av-group--left{text-align:left;justify-content:flex-start}
-.av-group--center{text-align:center;justify-content:center}
-.av-group--right{text-align:right;justify-content:flex-end}
-.av-group--border{border:var(--av-border-w-card,1px) solid var(--av-border)}
-.av-group--rounded{border-radius:var(--av-radius-card)}
+.av-group-block{box-sizing:border-box;display:flex;flex-direction:column;width:100%;gap:var(--av-group-gap,16px);padding:var(--av-group-pad,24px);background:var(--av-bg);color:var(--av-fg)}
+.av-group-block--row{flex-direction:row;flex-wrap:wrap;align-items:center}
+.av-group-block--row>*{flex:1 1 240px;min-width:0}
+.av-group-block--narrow{max-width:720px;margin-inline:auto}
+.av-group-block--compact{max-width:480px;margin-inline:auto}
+.av-group-block--left{text-align:left;justify-content:flex-start}
+.av-group-block--center{text-align:center;justify-content:center}
+.av-group-block--right{text-align:right;justify-content:flex-end}
+.av-group-block--border{border:var(--av-border-w-card,1px) solid var(--av-border)}
+.av-group-block--rounded{border-radius:var(--av-radius-card)}
 {% endstylesheet %}
 {% schema %}
 {

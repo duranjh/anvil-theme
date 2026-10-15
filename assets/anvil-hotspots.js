@@ -5,7 +5,7 @@
  * <button data-spot aria-expanded="false" aria-controls="popId"> and <div class="av-hotspots__pop" id="popId" hidden>.
  * The popover may also simply follow the button as its next sibling. Click / Enter / Space toggles; one popover is
  * open at a time; Esc closes and returns focus to the spot; clicking or focusing outside closes. Popovers get
- * .is-flip-y / .is-left / .is-right so they stay inside the element. Emits anvil:hotspot:toggle {spot, open}
+ * .av-is-flip-y / .av-is-left / .av-is-right so they stay inside the element. Emits anvil:hotspot:toggle {spot, open}
  * (bubbles). shopify:block:select on a spot block opens it; deselect closes.
  * Methods: open(spot), close(spot, refocus?), closeAll(except?). Property: spots.
  */
@@ -45,12 +45,12 @@ class Hotspots extends HTMLElement {
     const dot = spot.getBoundingClientRect();
     const x = (dot.left + dot.width / 2 - host.left) / (host.width || 1);
     const y = (dot.top + dot.height / 2 - host.top) / (host.height || 1);
-    pop.classList.toggle('is-flip-y', y > 0.6);
-    pop.classList.toggle('is-left', x < 0.3);
-    pop.classList.toggle('is-right', x > 0.7);
+    pop.classList.toggle('av-is-flip-y', y > 0.6);
+    pop.classList.toggle('av-is-left', x < 0.3);
+    pop.classList.toggle('av-is-right', x > 0.7);
     pop.hidden = false;
     spot.setAttribute('aria-expanded', 'true');
-    spot.classList.add('is-open');
+    spot.classList.add('av-is-open');
     this.#emit(spot, true);
   }
 
@@ -59,7 +59,7 @@ class Hotspots extends HTMLElement {
     if (!pop || pop.hidden) return;
     pop.hidden = true;
     spot.setAttribute('aria-expanded', 'false');
-    spot.classList.remove('is-open');
+    spot.classList.remove('av-is-open');
     if (refocus) spot.focus();
     this.#emit(spot, false);
   }

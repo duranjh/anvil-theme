@@ -9,35 +9,41 @@
         <div>
           <h1 class="av-customers-order__title">{{ s.heading_prefix | escape }} {{ order.name }}</h1>
           <p class="av-customers-order__meta">
-            Placed {{ order.created_at | time_tag: '%B %-d, %Y' }}
-            {%- if order.cancelled %} &middot; Cancelled {{ order.cancelled_at | time_tag: '%B %-d, %Y' }}{% if order.cancel_reason_label != blank %} ({{ order.cancel_reason_label }}){% endif %}{% endif -%}
+            {%- capture placed_date -%}{{ order.created_at | time_tag: format: 'anvil_date' }}{%- endcapture -%}
+            {{ 'anvil.customer.order.placed_html' | t: date: placed_date }}
+            {%- if order.cancelled -%}
+              {%- capture cancelled_date -%}{{ order.cancelled_at | time_tag: format: 'anvil_date' }}{%- endcapture %}
+              &middot; {{ 'anvil.customer.order.cancelled_html' | t: date: cancelled_date }}
+              {%- if order.cancel_reason_label != blank %} ({{ order.cancel_reason_label }}){% endif -%}
+            {%- endif -%}
           </p>
         </div>
         <div class="av-customers-order__links">
           {%- if order.order_status_url != blank -%}
-            <a class="av-customers-order__link" href="{{ order.order_status_url }}">Track order</a>
+            <a class="av-customers-order__link" href="{{ order.order_status_url }}">{{ 'anvil.customer.order.track' | t }}</a>
           {%- endif -%}
-          <a class="av-customers-order__link" href="{{ routes.account_url }}">&larr; Back to account</a>
+          <a class="av-customers-order__link" href="{{ routes.account_url }}"><span aria-hidden="true">&larr;</span> {{ 'anvil.customer.back_to_account' | t }}</a>
         </div>
       </div>
 
       <div class="av-customers-order__layout">
         <div class="av-customers-order__items">
-          <table class="av-customers-order__table">
-            <caption class="av-visually-hidden">Items in {{ order.name }}</caption>
-            <thead>
-              <tr>
-                <th scope="col">Product</th>
-                <th scope="col">SKU</th>
-                <th scope="col">Price</th>
-                <th scope="col">Quantity</th>
-                <th scope="col" class="av-customers-order__num">Total</th>
+          <table class="av-customers-order__table" role="table">
+            <caption class="av-visually-hidden">{{ 'anvil.customer.order.items_caption' | t: order: order.name }}</caption>
+            <thead class="av-customers-order__thead" role="rowgroup">
+              <tr role="row">
+                <th scope="col" role="columnheader">{{ 'anvil.customer.order.product' | t }}</th>
+                <th scope="col" role="columnheader">{{ 'anvil.customer.order.sku' | t }}</th>
+                <th scope="col" role="columnheader">{{ 'anvil.customer.order.price' | t }}</th>
+                <th scope="col" role="columnheader">{{ 'anvil.customer.order.quantity' | t }}</th>
+                <th scope="col" role="columnheader" class="av-customers-order__num">{{ 'anvil.customer.order.total' | t }}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {%- for line_item in order.line_items -%}
-                <tr>
-                  <td data-label="Product">
+                <tr role="row">
+                  <td role="cell">
+                    <span class="av-customers-order__cell-label" aria-hidden="true">{{ 'anvil.customer.order.product' | t }}</span>
                     {%- if line_item.product.url != blank -%}
                       <a class="av-customers-order__link" href="{{ line_item.product.url }}">{{ line_item.title | escape }}</a>
                     {%- else -%}
@@ -51,20 +57,21 @@
                     {%- endfor -%}
                     {%- if line_item.fulfillment -%}
                       <p class="av-customers-order__small">
-                        Shipped
+                        {{ 'anvil.customer.order.shipped' | t }}
                         {%- if line_item.fulfillment.tracking_number != blank %} &middot; {{ line_item.fulfillment.tracking_company }}
                           {%- if line_item.fulfillment.tracking_url != blank %} <a class="av-customers-order__link" href="{{ line_item.fulfillment.tracking_url }}">{{ line_item.fulfillment.tracking_number }}</a>{% else %} {{ line_item.fulfillment.tracking_number }}{% endif -%}
                         {%- endif -%}
                       </p>
                     {%- endif -%}
                   </td>
-                  <td data-label="SKU">{{ line_item.sku }}</td>
-                  <td data-label="Price">
-                    {%- if line_item.original_price != line_item.final_price -%}<s>{{ line_item.original_price | money }}</s> {% endif -%}
-                    {{ line_item.final_price | money }}
+                  <td role="cell"><span class="av-customers-order__cell-label" aria-hidden="true">{{ 'anvil.customer.order.sku' | t }}</span>{{ line_item.sku }}</td>
+                  <td role="cell">
+                    <span class="av-customers-order__cell-label" aria-hidden="true">{{ 'anvil.customer.order.price' | t }}</span>
+                    {%- if line_item.original_price != line_item.final_price -%}<s><span class="av-visually-hidden">{{ 'anvil.price.regular_price' | t }}</span> {% render 'anvil-money', amount: line_item.original_price %}</s> <span class="av-visually-hidden">{{ 'anvil.price.sale_price' | t }}</span> {% endif -%}
+                    {% render 'anvil-money', amount: line_item.final_price %}
                   </td>
-                  <td data-label="Quantity">{{ line_item.quantity }}</td>
-                  <td data-label="Total" class="av-customers-order__num">{{ line_item.final_line_price | money }}</td>
+                  <td role="cell"><span class="av-customers-order__cell-label" aria-hidden="true">{{ 'anvil.customer.order.quantity' | t }}</span>{{ line_item.quantity }}</td>
+                  <td role="cell" class="av-customers-order__num"><span class="av-customers-order__cell-label" aria-hidden="true">{{ 'anvil.customer.order.total' | t }}</span>{% render 'anvil-money', amount: line_item.final_line_price %}</td>
                 </tr>
               {%- endfor -%}
             </tbody>
@@ -72,41 +79,41 @@
 
           <dl class="av-customers-order__totals">
             <div class="av-customers-order__total-row">
-              <dt>Subtotal</dt>
-              <dd>{{ order.line_items_subtotal_price | money }}</dd>
+              <dt>{{ 'anvil.customer.order.subtotal' | t }}</dt>
+              <dd>{% render 'anvil-money', amount: order.line_items_subtotal_price %}</dd>
             </div>
             {%- if order.total_discounts > 0 -%}
               <div class="av-customers-order__total-row">
-                <dt>Discounts</dt>
-                <dd>&minus;{{ order.total_discounts | money }}</dd>
+                <dt>{{ 'anvil.customer.order.discounts' | t }}</dt>
+                <dd>&minus;{% render 'anvil-money', amount: order.total_discounts %}</dd>
               </div>
             {%- endif -%}
             {%- for shipping_method in order.shipping_methods -%}
               <div class="av-customers-order__total-row">
-                <dt>Shipping ({{ shipping_method.title | escape }})</dt>
-                <dd>{{ shipping_method.price | money }}</dd>
+                <dt>{{ 'anvil.customer.order.shipping_method' | t: method: shipping_method.title }}</dt>
+                <dd>{% render 'anvil-money', amount: shipping_method.price %}</dd>
               </div>
             {%- endfor -%}
             {%- for tax_line in order.tax_lines -%}
               <div class="av-customers-order__total-row">
                 <dt>{{ tax_line.title | escape }} ({{ tax_line.rate_percentage }}%)</dt>
-                <dd>{{ tax_line.price | money }}</dd>
+                <dd>{% render 'anvil-money', amount: tax_line.price %}</dd>
               </div>
             {%- endfor -%}
             {%- if order.total_duties > 0 -%}
               <div class="av-customers-order__total-row">
-                <dt>Duties</dt>
-                <dd>{{ order.total_duties | money }}</dd>
+                <dt>{{ 'anvil.customer.order.duties' | t }}</dt>
+                <dd>{% render 'anvil-money', amount: order.total_duties %}</dd>
               </div>
             {%- endif -%}
             <div class="av-customers-order__total-row av-customers-order__total-row--grand">
-              <dt>Total</dt>
+              <dt>{{ 'anvil.customer.order.total' | t }}</dt>
               <dd>{{ order.total_price | money_with_currency }}</dd>
             </div>
             {%- if order.total_refunded_amount > 0 -%}
               <div class="av-customers-order__total-row">
-                <dt>Refunded</dt>
-                <dd>&minus;{{ order.total_refunded_amount | money }}</dd>
+                <dt>{{ 'anvil.customer.order.refunded' | t }}</dt>
+                <dd>&minus;{% render 'anvil-money', amount: order.total_refunded_amount %}</dd>
               </div>
             {%- endif -%}
           </dl>
@@ -114,14 +121,14 @@
 
         <aside class="av-customers-order__aside">
           <section class="av-customers-order__block" aria-labelledby="anvil-order-payment">
-            <h2 class="av-customers-order__subtitle" id="anvil-order-payment">Payment</h2>
+            <h2 class="av-customers-order__subtitle" id="anvil-order-payment">{{ 'anvil.customer.order.payment' | t }}</h2>
             <p class="av-customers-order__status">{{ order.financial_status_label }}</p>
             {%- if order.billing_address -%}
               <address class="av-customers-order__address">{{ order.billing_address | format_address }}</address>
             {%- endif -%}
           </section>
           <section class="av-customers-order__block" aria-labelledby="anvil-order-shipping">
-            <h2 class="av-customers-order__subtitle" id="anvil-order-shipping">Shipping</h2>
+            <h2 class="av-customers-order__subtitle" id="anvil-order-shipping">{{ 'anvil.customer.order.shipping' | t }}</h2>
             <p class="av-customers-order__status">{{ order.fulfillment_status_label }}</p>
             {%- if order.shipping_address -%}
               <address class="av-customers-order__address">{{ order.shipping_address | format_address }}</address>
@@ -129,7 +136,7 @@
           </section>
           {%- if order.note != blank -%}
             <section class="av-customers-order__block" aria-labelledby="anvil-order-note">
-              <h2 class="av-customers-order__subtitle" id="anvil-order-note">Order note</h2>
+              <h2 class="av-customers-order__subtitle" id="anvil-order-note">{{ 'anvil.customer.order.note' | t }}</h2>
               <p class="av-customers-order__status">{{ order.note | escape }}</p>
             </section>
           {%- endif -%}
@@ -175,8 +182,13 @@
     border-collapse: collapse;
     font-size: var(--av-text-sm);
   }
-  .av-customers-order__table thead {
-    display: none;
+  .av-customers-order__thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .av-customers-order__table tr {
     display: grid;
@@ -191,8 +203,7 @@
   .av-customers-order__table td:first-child {
     grid-column: 1 / -1;
   }
-  .av-customers-order__table td::before {
-    content: attr(data-label);
+  .av-customers-order__cell-label {
     display: block;
     font-size: var(--av-text-xs);
     color: var(--av-fg-muted);
@@ -247,8 +258,13 @@
     color: var(--av-fg-muted);
   }
   @media (min-width: 750px) {
-    .av-customers-order__table thead {
-      display: table-header-group;
+    .av-customers-order__thead {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
     }
     .av-customers-order__table th {
       text-align: left;
@@ -267,7 +283,7 @@
       border-bottom: 1px solid var(--av-border);
       vertical-align: top;
     }
-    .av-customers-order__table td::before {
+    .av-customers-order__cell-label {
       display: none;
     }
     .av-customers-order__num {

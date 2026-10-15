@@ -1,3 +1,19 @@
+{% doc %}
+  Theme block: rating stars from the product's reviews.rating metafield, or typed stars with a source link. Nothing renders without one of the two.
+
+  Settings (id · type · values · default):
+  - source · select · product | manual · default "product"
+  - product · product
+  - rating · range · 0–5 step 0.5 · default 5
+  - source_url · url
+  - show_number · checkbox · default true
+  - text · text
+  - size · select · sm | md | lg · default "md"
+  - align · text_alignment · default "left"
+
+  @example
+  {"type": "anvil-stars"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
   assign rating_value = ''
@@ -30,7 +46,7 @@
     {%- capture stars_inner -%}
       {%- render 'anvil-stars', rating: rating_value, max: rating_max, size: star_px -%}
       {%- if s.show_number -%}<span class="av-stars-block__number">{{ rating_value | round: 1 }}/{{ rating_max | round }}</span>{%- endif -%}
-      {%- if rating_count != blank -%}<span class="av-stars-block__count">({{ rating_count }})</span>{%- endif -%}
+      {%- if rating_count != blank -%}<span class="av-stars-block__count" aria-hidden="true">({{ rating_count }})</span><span class="av-visually-hidden">{{ 'anvil.stars.count' | t: count: rating_count }}</span>{%- endif -%}
       {%- if s.text != blank -%}<span class="av-stars-block__text">{{ s.text }}</span>{%- endif -%}
     {%- endcapture -%}
     {%- if source_url != blank -%}
@@ -39,7 +55,7 @@
       {{ stars_inner }}
     {%- endif -%}
   {%- elsif request.design_mode -%}
-    <p class="av-stars-block__note">Stars appear once a product with a review rating is in context, or when a source link is set.</p>
+    <p class="av-stars-block__note">{{ 'anvil.editor.stars_no_source' | t }}</p>
   {%- endif -%}
 </div>
 {% stylesheet %}

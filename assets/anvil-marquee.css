@@ -1,9 +1,10 @@
-/* anvil-marquee.css — <anvil-marquee> strip. The JS clones [data-marquee-track] into [data-marquee-clone] siblings
-   and sets --av-marquee-duration / --av-marquee-direction. Only transform animates; reduced motion and
-   html[data-animations="off"] show one static wrapping row. */
+/* anvil-marquee.css — <anvil-marquee> strip. The JS clones [data-marquee-track] into .av-marquee__clone siblings,
+   adds the .av-marquee__pause button and sets --av-marquee-duration / --av-marquee-direction. Only transform
+   animates; reduced motion and html[data-animations="off"] show one static wrapping row from the first paint. */
 
 anvil-marquee {
   --av-marquee-gap: var(--av-space-6);
+  position: relative;
   display: flex;
   gap: var(--av-marquee-gap);
   width: 100%;
@@ -11,7 +12,7 @@ anvil-marquee {
 }
 
 anvil-marquee > [data-marquee-track],
-anvil-marquee > [data-marquee-clone] {
+anvil-marquee > .av-marquee__clone {
   display: flex;
   flex: none;
   align-items: center;
@@ -20,8 +21,8 @@ anvil-marquee > [data-marquee-clone] {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  anvil-marquee:not(.is-static) > [data-marquee-track],
-  anvil-marquee:not(.is-static) > [data-marquee-clone] {
+  anvil-marquee:not(.av-is-static) > [data-marquee-track],
+  anvil-marquee:not(.av-is-static) > .av-marquee__clone {
     animation: av-marquee var(--av-marquee-duration, 30s) linear infinite var(--av-marquee-direction, normal);
   }
 }
@@ -32,19 +33,49 @@ anvil-marquee > [data-marquee-clone] {
   }
 }
 
-anvil-marquee.av-marquee--hover:hover > *,
-anvil-marquee:focus-within > *,
-anvil-marquee.is-paused > * {
+/* Same specificity as the animation rule above (and later in the file), so pausing always wins. */
+anvil-marquee.av-marquee--hover:hover > :is([data-marquee-track], .av-marquee__clone),
+anvil-marquee:focus-within > :is([data-marquee-track], .av-marquee__clone),
+anvil-marquee[paused] > :is([data-marquee-track], .av-marquee__clone),
+anvil-marquee.av-is-held > :is([data-marquee-track], .av-marquee__clone) {
   animation-play-state: paused;
 }
 
-anvil-marquee.is-static,
+.av-marquee__pause {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: 50%;
+  inset-inline-end: var(--av-space-2);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: var(--av-border-w-button) solid var(--av-border);
+  border-radius: var(--av-radius-button);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  translate: 0 -50%;
+  cursor: pointer;
+}
+
+.av-marquee__pause .av-marquee__ico-play,
+anvil-marquee[paused] .av-marquee__ico-pause {
+  display: none;
+}
+
+anvil-marquee[paused] .av-marquee__ico-play {
+  display: inline;
+}
+
+/* Static wrapping row: decided by CSS at first paint, so the strip never changes height when the script runs. */
+anvil-marquee.av-is-static,
 html[data-animations="off"] anvil-marquee {
   flex-wrap: wrap;
   justify-content: center;
 }
 
-anvil-marquee.is-static > [data-marquee-track],
+anvil-marquee.av-is-static > [data-marquee-track],
 html[data-animations="off"] anvil-marquee > [data-marquee-track] {
   flex: 1 1 100%;
   flex-wrap: wrap;
@@ -53,6 +84,27 @@ html[data-animations="off"] anvil-marquee > [data-marquee-track] {
   animation: none;
 }
 
-html[data-animations="off"] anvil-marquee > [data-marquee-clone] {
+html[data-animations="off"] anvil-marquee > .av-marquee__clone,
+html[data-animations="off"] .av-marquee__pause {
   display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  anvil-marquee {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  anvil-marquee > [data-marquee-track] {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    min-width: 0;
+    animation: none;
+  }
+
+  anvil-marquee > .av-marquee__clone,
+  .av-marquee__pause {
+    display: none;
+  }
 }

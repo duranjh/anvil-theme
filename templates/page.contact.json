@@ -10,7 +10,49 @@
         "heading": "Send us a <strong>message</strong>",
         "subheading": "<p>Example text — say how quickly you usually reply.</p>"
       }
+    },
+    "faq": {
+      "type": "anvil-faq",
+      "blocks": {
+        "before_you_write_1": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — How long does delivery take?",
+            "answer": "<p>Example answer — replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
+          }
+        },
+        "before_you_write_2": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — What is your returns policy?",
+            "answer": "<p>Example answer — summarise your actual returns window and conditions here and link to your returns policy page.</p>"
+          }
+        },
+        "before_you_write_3": {
+          "type": "item",
+          "settings": {
+            "question": "Example question — Can I change or cancel an order?",
+            "answer": "<p>Example answer — say how quickly a shopper must contact you, how to reach you, and what happens once an order has shipped.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "before_you_write_1",
+        "before_you_write_2",
+        "before_you_write_3"
+      ],
+      "settings": {
+        "heading": "Before you <strong>write</strong>",
+        "width": "narrow",
+        "anchor": "before-you-write",
+        "json_ld": false,
+        "open_first": true
+      }
     }
   },
-  "order": ["main", "contact"]
+  "order": [
+    "main",
+    "contact",
+    "faq"
+  ]
 }

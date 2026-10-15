@@ -8,14 +8,16 @@ ignore:
   - /dev/**
   - /docs/**
   - /scripts/**
+# Raw-byte ceilings (Shopify CLI 4.9.3 measures raw bytes, DECISIONS 16 and 20). The gzip budgets from
+# ARCHITECTURE §10 / DESIGN-sections §6 are enforced per file by scripts/check-limits.sh.
 AssetSizeCSS:
   enabled: true
   severity: error
-  thresholdInBytes: 60000
+  thresholdInBytes: 40000
 AssetSizeJavaScript:
   enabled: true
   severity: error
-  thresholdInBytes: 15000
+  thresholdInBytes: 40000
 RemoteAsset:
   severity: error
 ParserBlockingScript:

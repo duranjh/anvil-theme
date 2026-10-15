@@ -75,17 +75,17 @@ anvil-hotspots [data-spot]::after {
   translate: -50% 0;
 }
 
-.av-hotspots__pop.is-flip-y {
+.av-hotspots__pop.av-is-flip-y {
   top: auto;
   bottom: calc(100% + var(--av-space-1));
 }
 
-.av-hotspots__pop.is-left {
+.av-hotspots__pop.av-is-left {
   left: 0;
   translate: 0 0;
 }
 
-.av-hotspots__pop.is-right {
+.av-hotspots__pop.av-is-right {
   left: auto;
   right: 0;
   translate: 0 0;
@@ -99,7 +99,7 @@ anvil-hotspots [data-spot]::after {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  anvil-hotspots [data-spot]:not(.is-open)::after {
+  anvil-hotspots [data-spot]:not(.av-is-open)::after {
     animation: av-hotspot-pulse 2.4s var(--av-ease) infinite;
   }
 }

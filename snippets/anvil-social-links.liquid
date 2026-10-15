@@ -1,0 +1,31 @@
+{% doc %}
+  Text pills for the social profiles filled in under Theme settings > Social links, in a list. Network names are
+  plain text (Anvil ships no platform logos). Renders nothing when no link is set.
+
+  @param {string} [class] - Extra classes on the <ul>
+  @param {string} [label] - Accessible name for the list (default "Follow us")
+
+  @example
+  {% render 'anvil-social-links', class: 'av-footer__socials' %}
+{% enddoc %}
+{%- liquid
+  if label != blank
+    assign social_list_label = label
+  else
+    assign social_list_label = 'anvil.social.label' | t
+  endif
+  assign social_any = false
+  if settings.social_instagram_url != blank or settings.social_tiktok_url != blank or settings.social_facebook_url != blank or settings.social_youtube_url != blank or settings.social_x_url != blank or settings.social_pinterest_url != blank
+    assign social_any = true
+  endif
+-%}
+{%- if social_any -%}
+  <ul class="av-social av-list-reset{% if class != blank %} {{ class }}{% endif %}" aria-label="{{ social_list_label | escape }}">
+    {%- if settings.social_instagram_url != blank -%}<li><a class="av-social__pill" href="{{ settings.social_instagram_url | escape }}" rel="noopener">Instagram</a></li>{%- endif -%}
+    {%- if settings.social_tiktok_url != blank -%}<li><a class="av-social__pill" href="{{ settings.social_tiktok_url | escape }}" rel="noopener">TikTok</a></li>{%- endif -%}
+    {%- if settings.social_facebook_url != blank -%}<li><a class="av-social__pill" href="{{ settings.social_facebook_url | escape }}" rel="noopener">Facebook</a></li>{%- endif -%}
+    {%- if settings.social_youtube_url != blank -%}<li><a class="av-social__pill" href="{{ settings.social_youtube_url | escape }}" rel="noopener">YouTube</a></li>{%- endif -%}
+    {%- if settings.social_x_url != blank -%}<li><a class="av-social__pill" href="{{ settings.social_x_url | escape }}" rel="noopener">X</a></li>{%- endif -%}
+    {%- if settings.social_pinterest_url != blank -%}<li><a class="av-social__pill" href="{{ settings.social_pinterest_url | escape }}" rel="noopener">Pinterest</a></li>{%- endif -%}
+  </ul>
+{%- endif -%}

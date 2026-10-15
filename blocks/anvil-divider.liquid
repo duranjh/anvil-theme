@@ -1,3 +1,17 @@
+{% doc %}
+  Theme block: a horizontal rule (<hr>) in the border, text or accent colour.
+
+  Settings (id · type · values · default):
+  - style · select · solid | dashed | dotted · default "solid"
+  - color · select · border | text | accent · default "border"
+  - thickness · range · 1–8 step 1px · default 1
+  - width · range · 10–100 step 10% · default 100
+  - align · text_alignment · default "center"
+  - space · range · 0–64 step 4px · default 16
+
+  @example
+  {"type": "anvil-divider"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
 -%}

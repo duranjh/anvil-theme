@@ -3,12 +3,16 @@
   assign search_terms = search.terms | escape
   assign sort_by = search.sort_by | default: search.default_sort_by
   assign submit_label = 'anvil.search.submit' | t
+  assign apply_label = 'anvil.facets.apply' | t
   assign show_filters = false
   if s.show_filters and search.filters.size > 0
     assign show_filters = true
   endif
+  assign above_fold = false
+  if section.index == nil or section.index <= 2
+    assign above_fold = true
+  endif
 -%}
-{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
 {{ 'anvil-card.css' | asset_url | stylesheet_tag }}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-search' %}>
   <div class="av-section__inner">
@@ -30,105 +34,118 @@
 
       {%- if search.performed -%}
         {%- paginate search.results by s.per_page -%}
-          <div class="av-search__layout{% if show_filters %} av-search__layout--has-filters{% endif %}">
+          <anvil-facets class="av-search__layout av-enhance{% if show_filters %} av-search__layout--has-filters{% endif %}" section-id="{{ section.id }}">
             {%- if show_filters or s.show_sort -%}
-              <form class="av-search__facets" method="get" action="{{ routes.search_url }}" data-anvil-facets>
+              <form class="av-search__facets" method="get" action="{{ routes.search_url }}" data-anvil-facets-form>
                 <input type="hidden" name="q" value="{{ search_terms }}">
                 <input type="hidden" name="options[prefix]" value="last">
-                {%- if s.show_sort -%}
-                  <div class="av-search__sort av-field">
-                    <label class="av-field__label" for="anvil-search-sort-{{ section.id }}">Sort by</label>
-                    <div class="av-field__select">
-                      <select class="av-field__input" id="anvil-search-sort-{{ section.id }}" name="sort_by">
-                        {%- for option in search.sort_options -%}
-                          <option value="{{ option.value | escape }}"{% if option.value == sort_by %} selected{% endif %}>{{ option.name | escape }}</option>
-                        {%- endfor -%}
-                      </select>
+                <div class="av-search__facets-body" data-anvil-section="{{ section.id }}-facets">
+                  {%- if s.show_sort -%}
+                    <div class="av-search__sort av-field">
+                      <label class="av-field__label" for="anvil-search-sort-{{ section.id }}">{{ 'anvil.facets.sort_by' | t }}</label>
+                      <div class="av-field__select">
+                        <select class="av-field__input" id="anvil-search-sort-{{ section.id }}" name="sort_by" data-anvil-focus-key="sort">
+                          {%- for option in search.sort_options -%}
+                            <option value="{{ option.value | escape }}"{% if option.value == sort_by %} selected{% endif %}>{{ option.name | escape }}</option>
+                          {%- endfor -%}
+                        </select>
+                      </div>
                     </div>
-                  </div>
-                {%- endif -%}
-                {%- if show_filters -%}
-                  <div class="av-search__filters">
-                    {%- for filter in search.filters -%}
-                      {%- for value in filter.active_values -%}
-                        <a class="av-search__active" href="{{ value.url_to_remove }}">{{ filter.label | escape }}: {{ value.label | escape }} <span aria-hidden="true">&times;</span><span class="av-visually-hidden">(remove)</span></a>
+                  {%- endif -%}
+                  {%- if show_filters -%}
+                    <div class="av-search__filters">
+                      {%- for filter in search.filters -%}
+                        {%- for value in filter.active_values -%}
+                          <a class="av-search__active" href="{{ value.url_to_remove }}" data-anvil-facets-link>{{ filter.label | escape }}: {{ value.label | escape }} <span aria-hidden="true">&times;</span><span class="av-visually-hidden">{{ 'anvil.facets.remove' | t }}</span></a>
+                        {%- endfor -%}
                       {%- endfor -%}
-                    {%- endfor -%}
-                    {%- for filter in search.filters -%}
-                      <details class="av-search__filter"{% if filter.active_values.size > 0 %} open{% endif %}>
-                        <summary class="av-search__filter-summary">{{ filter.label | escape }}</summary>
-                        <div class="av-search__filter-body">
-                          {%- case filter.type -%}
-                            {%- when 'list' -%}
-                              <ul class="av-search__values av-list-reset">
-                                {%- for value in filter.values -%}
+                      {%- for filter in search.filters -%}
+                        {%- assign details_key = filter.param_name | default: filter.label | handleize -%}
+                        <details class="av-search__filter" data-anvil-details-key="{{ details_key }}"{% if filter.active_values.size > 0 or filter.min_value.value != nil or filter.max_value.value != nil %} open{% endif %}>
+                          <summary class="av-search__filter-summary">{{ filter.label | escape }}</summary>
+                          <div class="av-search__filter-body">
+                            {%- case filter.type -%}
+                              {%- when 'list' -%}
+                                <ul class="av-search__values av-list-reset">
+                                  {%- for value in filter.values -%}
+                                    {%- assign value_key = value.param_name | append: '-' | append: value.value | handleize -%}
+                                    <li>
+                                      <label class="av-check">
+                                        <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value | escape }}"{% if value.active %} checked{% endif %}{% if value.count == 0 and value.active == false %} disabled{% endif %} data-anvil-focus-key="{{ value_key }}">
+                                        <span>{{ value.label | escape }} <span class="av-search__count av-muted">({{ value.count }})</span></span>
+                                      </label>
+                                    </li>
+                                  {%- endfor -%}
+                                </ul>
+                              {%- when 'price_range' -%}
+                                {%- comment -%} Cents arithmetic: works for every money format, comma decimals included. {%- endcomment -%}
+                                {%- assign range_max = filter.range_max | divided_by: 100.0 -%}
+                                <div class="av-search__price">
+                                  <label class="av-field">
+                                    <span class="av-field__label">{{ 'anvil.facets.from' | t }}</span>
+                                    <input class="av-field__input" type="number" name="{{ filter.min_value.param_name }}" {% if filter.min_value.value != nil %}value="{{ filter.min_value.value | divided_by: 100.0 }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="0" inputmode="decimal" data-anvil-focus-key="price-min">
+                                  </label>
+                                  <label class="av-field">
+                                    <span class="av-field__label">{{ 'anvil.facets.to' | t }}</span>
+                                    <input class="av-field__input" type="number" name="{{ filter.max_value.param_name }}" {% if filter.max_value.value != nil %}value="{{ filter.max_value.value | divided_by: 100.0 }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="{{ range_max }}" inputmode="decimal" data-anvil-focus-key="price-max">
+                                  </label>
+                                </div>
+                              {%- when 'boolean' -%}
+                                <ul class="av-search__values av-list-reset">
                                   <li>
                                     <label class="av-check">
-                                      <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value | escape }}"{% if value.active %} checked{% endif %}{% if value.count == 0 and value.active == false %} disabled{% endif %}>
-                                      <span>{{ value.label | escape }} <span class="av-search__count av-muted">({{ value.count }})</span></span>
+                                      <input type="checkbox" name="{{ filter.true_value.param_name }}" value="{{ filter.true_value.value | escape }}"{% if filter.true_value.active %} checked{% endif %} data-anvil-focus-key="{{ filter.param_name | handleize }}-true">
+                                      <span>{{ filter.true_value.label | escape }}</span>
                                     </label>
                                   </li>
-                                {%- endfor -%}
-                              </ul>
-                            {%- when 'price_range' -%}
-                              {%- assign range_max = filter.range_max | money_without_currency | replace: ',', '' -%}
-                              <div class="av-search__price">
-                                <label class="av-field">
-                                  <span class="av-field__label">From</span>
-                                  <input class="av-field__input" type="number" name="{{ filter.min_value.param_name }}" {% if filter.min_value.value %}value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="0">
-                                </label>
-                                <label class="av-field">
-                                  <span class="av-field__label">To</span>
-                                  <input class="av-field__input" type="number" name="{{ filter.max_value.param_name }}" {% if filter.max_value.value %}value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="{{ range_max }}">
-                                </label>
-                              </div>
-                            {%- when 'boolean' -%}
-                              <ul class="av-search__values av-list-reset">
-                                <li>
-                                  <label class="av-check">
-                                    <input type="checkbox" name="{{ filter.true_value.param_name }}" value="{{ filter.true_value.value | escape }}"{% if filter.true_value.active %} checked{% endif %}>
-                                    <span>{{ filter.true_value.label | escape }}</span>
-                                  </label>
-                                </li>
-                                <li>
-                                  <label class="av-check">
-                                    <input type="checkbox" name="{{ filter.false_value.param_name }}" value="{{ filter.false_value.value | escape }}"{% if filter.false_value.active %} checked{% endif %}>
-                                    <span>{{ filter.false_value.label | escape }}</span>
-                                  </label>
-                                </li>
-                              </ul>
-                          {%- endcase -%}
-                        </div>
-                      </details>
-                    {%- endfor -%}
-                  </div>
-                {%- endif -%}
-                <div class="av-search__apply av-no-js-only">
-                  {% render 'anvil-button', label: 'Apply', style: 'secondary', size: 'sm', type: 'submit' %}
+                                  <li>
+                                    <label class="av-check">
+                                      <input type="checkbox" name="{{ filter.false_value.param_name }}" value="{{ filter.false_value.value | escape }}"{% if filter.false_value.active %} checked{% endif %} data-anvil-focus-key="{{ filter.param_name | handleize }}-false">
+                                      <span>{{ filter.false_value.label | escape }}</span>
+                                    </label>
+                                  </li>
+                                </ul>
+                            {%- endcase -%}
+                          </div>
+                        </details>
+                      {%- endfor -%}
+                    </div>
+                  {%- endif -%}
+                </div>
+                <div class="av-search__apply av-fallback-only">
+                  {% render 'anvil-button', label: apply_label, style: 'secondary', size: 'sm', type: 'submit' %}
                 </div>
               </form>
             {%- endif -%}
 
-            <div class="av-search__results">
+            <div class="av-search__results" data-anvil-section="{{ section.id }}-results">
+              <h2 class="av-visually-hidden">{{ 'anvil.search.results_heading' | t }}</h2>
+              <p class="av-search__summary av-muted" tabindex="-1" data-anvil-facets-count>{{ 'anvil.search.results_count' | t: count: search.results_count }}</p>
               {%- if search.results_count == 0 -%}
-                <p class="av-search__empty">{{ 'anvil.search.no_results' | t: terms: search_terms }}</p>
+                <p class="av-search__empty">{{ 'anvil.search.no_results' | t: terms: search.terms }}</p>
               {%- else -%}
                 <ul class="av-search__grid av-list-reset">
                   {%- for item in search.results -%}
                     {%- if item.object_type == 'product' -%}
+                      {%- liquid
+                        assign card_loading = 'lazy'
+                        if above_fold and forloop.index <= 4
+                          assign card_loading = 'eager'
+                        endif
+                      -%}
                       <li class="av-search__cell">
-                        {% render 'anvil-product-card', product: item, show_vendor: s.show_vendor, show_rating: false, quick_add: false, image_ratio: '1:1', sizes: '(min-width: 990px) 25vw, 50vw' %}
+                        {% render 'anvil-product-card', product: item, show_vendor: s.show_vendor, show_rating: false, quick_add: false, image_ratio: '1:1', sizes: '(min-width: 990px) 25vw, (min-width: 750px) 33vw, 50vw', loading: card_loading %}
                       </li>
                     {%- else -%}
                       <li class="av-search__cell av-search__cell--text">
                         <article class="av-search__card">
                           {%- if item.object_type == 'article' and item.image -%}
                             <a class="av-search__card-media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
-                              {% render 'anvil-media', image: item.image, ratio: '16:9', widths: '300, 600, 900', sizes: '(min-width: 990px) 25vw, 50vw', loading: 'lazy', alt: item.title, class: 'av-search__card-img' %}
+                              {% render 'anvil-media', image: item.image, ratio: '16:9', widths: '300, 450, 600', sizes: '(min-width: 990px) 25vw, 50vw', loading: 'lazy', alt: '', class: 'av-search__card-img' %}
                             </a>
                           {%- endif -%}
                           <p class="av-search__type av-muted">{% if item.object_type == 'article' %}{{ 'anvil.search.articles' | t }}{% else %}{{ 'anvil.search.pages' | t }}{% endif %}</p>
-                          <h2 class="av-search__card-title"><a class="av-search__card-link" href="{{ item.url }}">{{ item.title | escape }}</a></h2>
+                          <h3 class="av-search__card-title"><a class="av-search__card-link" href="{{ item.url }}">{{ item.title | escape }}</a></h3>
                           <p class="av-search__excerpt av-muted">
                             {%- if item.object_type == 'article' -%}
                               {{ item.excerpt_or_content | strip_html | truncatewords: 30 }}
@@ -144,8 +161,10 @@
               {%- endif -%}
               {% render 'anvil-pagination', paginate: paginate %}
             </div>
-          </div>
+            <p class="av-visually-hidden" role="status" aria-live="polite" data-anvil-facets-live></p>
+          </anvil-facets>
         {%- endpaginate -%}
+        <script type="module" src="{{ 'anvil-facets.js' | asset_url }}"></script>
       {%- endif -%}
     </div>
   </div>
@@ -164,10 +183,18 @@
     grid-template-columns: 1fr;
     gap: var(--av-space-5);
   }
-  .av-search__facets {
+  .av-search__facets,
+  .av-search__facets-body {
     display: flex;
     flex-direction: column;
     gap: var(--av-space-3);
+  }
+  .av-search__results[aria-busy="true"] {
+    opacity: 0.6;
+  }
+  .av-search__summary {
+    margin: 0 0 var(--av-space-3);
+    font-size: var(--av-text-sm);
   }
   .av-search__filters {
     display: flex;

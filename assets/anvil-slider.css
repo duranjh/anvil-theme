@@ -1,7 +1,8 @@
 /* anvil-slider.css — <anvil-slider> surfaces, keyed on the markup contract ([data-slider-track], [data-slider-slide])
-   plus the controls the JS creates (.av-slider__arrow, __dots, __dot, __pause, __live). Tokens only (--av-slider-arrow,
-   --av-slider-dot from theme settings); motion gated by prefers-reduced-motion and html[data-animations="off"].
-   Layout works without JS (plain scroll-snap row). */
+   plus the controls (.av-slider__arrow, __dots, __dot, __pause, __live). Tokens only (--av-slider-arrow,
+   --av-slider-dot, --av-slider-dot-gap from theme settings); motion gated by prefers-reduced-motion and
+   html[data-animations="off"]. Layout works without JS (plain scroll-snap row); the dots row Liquid renders empty
+   keeps its height before the script fills it, so nothing shifts. */
 
 anvil-slider {
   --n: var(--av-slider-per-view, 1);
@@ -77,6 +78,7 @@ anvil-slider > [data-slider-track] > [data-slider-slide] {
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--av-slider-dot-gap, var(--av-space-1));
+  min-height: 24px;
   margin-top: var(--av-space-4);
 }
 
@@ -98,7 +100,7 @@ anvil-slider > [data-slider-track] > [data-slider-slide] {
   height: var(--av-slider-dot, 8px);
   border-radius: var(--av-radius-pill);
   background: var(--av-fg);
-  opacity: 0.3;
+  opacity: 0.55;
 }
 
 .av-slider__dot[aria-current="true"]::before {
@@ -124,11 +126,11 @@ anvil-slider > [data-slider-track] > [data-slider-slide] {
 }
 
 .av-slider__pause .av-slider__ico-play,
-.av-slider__pause.is-paused .av-slider__ico-pause {
+.av-slider__pause.av-is-paused .av-slider__ico-pause {
   display: none;
 }
 
-.av-slider__pause.is-paused .av-slider__ico-play {
+.av-slider__pause.av-is-paused .av-slider__ico-play {
   display: inline;
 }
 
@@ -143,10 +145,13 @@ anvil-slider > [data-slider-track] > [data-slider-slide] {
 }
 
 /* everything fits: no controls */
-anvil-slider.is-static .av-slider__arrow,
-anvil-slider.is-static .av-slider__dots,
-anvil-slider.is-static .av-slider__pause {
+anvil-slider.av-is-static .av-slider__arrow,
+anvil-slider.av-is-static .av-slider__pause {
   display: none;
+}
+
+anvil-slider.av-is-static .av-slider__dots {
+  visibility: hidden;
 }
 
 @media (prefers-reduced-motion: no-preference) {

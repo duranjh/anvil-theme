@@ -1,39 +1,51 @@
 {%- liquid
   assign s = section.settings
   assign form_id = 'anvil-contact-' | append: section.id
-  assign email_label = 'anvil.newsletter.label' | t
 -%}
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-contact-form' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
-    <div class="av-contact">
-      {%- form 'contact', id: form_id, class: 'av-contact__form' -%}
+    <div class="av-contact-form">
+      {%- form 'contact', id: form_id, class: 'av-contact-form__form' -%}
+        {%- liquid
+          assign errors_id = form_id | append: '-errors'
+          assign email_invalid = false
+          assign body_invalid = false
+          if form.errors
+            if form.errors contains 'email'
+              assign email_invalid = true
+            endif
+            if form.errors contains 'body'
+              assign body_invalid = true
+            endif
+          endif
+        -%}
         {%- if form.posted_successfully? -%}
-          <p class="av-contact__notice av-form-message av-form-message--success" role="status" tabindex="-1" autofocus>{{ s.success_text | escape }}</p>
+          <p class="av-contact-form__notice av-form-message av-form-message--success" role="status" tabindex="-1" autofocus>{{ s.success_text | escape }}</p>
         {%- elsif form.errors -%}
-          <div class="av-contact__notice av-form-message av-form-message--error" role="alert">{{ form.errors | default_errors }}</div>
+          <div class="av-contact-form__notice av-form-message av-form-message--error" id="{{ errors_id }}" role="alert">{{ form.errors | default_errors }}</div>
         {%- endif -%}
-        <div class="av-contact__grid">
-          <div class="av-contact__field av-field">
-            <label class="av-contact__label av-field__label" for="{{ form_id }}-name">Name</label>
-            <input class="av-contact__input av-field__input" id="{{ form_id }}-name" type="text" name="contact[name]" autocomplete="name">
+        <div class="av-contact-form__grid">
+          <div class="av-contact-form__field av-field">
+            <label class="av-field__label" for="{{ form_id }}-name">{{ 'anvil.contact_form.name' | t }}</label>
+            <input class="av-field__input" id="{{ form_id }}-name" type="text" name="contact[name]" value="{{ form.name }}" autocomplete="name">
           </div>
-          <div class="av-contact__field av-field">
-            <label class="av-contact__label av-field__label" for="{{ form_id }}-email">{{ email_label }} <span aria-hidden="true">*</span></label>
-            <input class="av-contact__input av-field__input" id="{{ form_id }}-email" type="email" name="contact[email]" value="{{ form.email }}" autocomplete="email" required aria-required="true">
+          <div class="av-contact-form__field av-field">
+            <label class="av-field__label" for="{{ form_id }}-email">{{ 'anvil.contact_form.email' | t }} <span aria-hidden="true">*</span></label>
+            <input class="av-field__input" id="{{ form_id }}-email" type="email" name="contact[email]" value="{{ form.email }}" autocomplete="email" required aria-required="true"{% if email_invalid %} aria-invalid="true" aria-describedby="{{ errors_id }}"{% endif %}>
           </div>
           {%- if s.show_phone -%}
-            <div class="av-contact__field av-field">
-              <label class="av-contact__label av-field__label" for="{{ form_id }}-phone">Phone</label>
-              <input class="av-contact__input av-field__input" id="{{ form_id }}-phone" type="tel" name="contact[phone]" autocomplete="tel">
+            <div class="av-contact-form__field av-field">
+              <label class="av-field__label" for="{{ form_id }}-phone">{{ 'anvil.contact_form.phone' | t }}</label>
+              <input class="av-field__input" id="{{ form_id }}-phone" type="tel" name="contact[phone]" value="{{ form.phone }}" autocomplete="tel">
             </div>
           {%- endif -%}
-          <div class="av-contact__field av-contact__field--full av-field">
-            <label class="av-contact__label av-field__label" for="{{ form_id }}-body">Message <span aria-hidden="true">*</span></label>
-            <textarea class="av-contact__input av-field__input" id="{{ form_id }}-body" name="contact[body]" rows="6" required aria-required="true">{{ form.body }}</textarea>
+          <div class="av-contact-form__field av-contact-form__field--full av-field">
+            <label class="av-field__label" for="{{ form_id }}-body">{{ 'anvil.contact_form.message' | t }} <span aria-hidden="true">*</span></label>
+            <textarea class="av-field__input" id="{{ form_id }}-body" name="contact[body]" rows="6" required aria-required="true"{% if body_invalid %} aria-invalid="true" aria-describedby="{{ errors_id }}"{% endif %}>{{ form.body }}</textarea>
           </div>
         </div>
-        <div class="av-contact__actions">
+        <div class="av-contact-form__actions">
           {% render 'anvil-button', label: s.button_label, style: 'primary', size: 'lg', type: 'submit' %}
         </div>
       {%- endform -%}
@@ -41,29 +53,28 @@
   </div>
 </div>
 {% stylesheet %}
-  .av-contact {
+  .av-contact-form {
     max-width: 720px;
     margin: 0 auto;
   }
-  .av-contact__grid {
+  .av-contact-form__grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--av-space-4);
     margin-bottom: var(--av-space-4);
   }
-  
-  
-  
-  
-  .av-contact__actions {
+  .av-contact-form__notice {
+    margin-bottom: var(--av-space-4);
+  }
+  .av-contact-form__actions {
     display: flex;
     justify-content: flex-start;
   }
   @media (min-width: 750px) {
-    .av-contact__grid {
+    .av-contact-form__grid {
       grid-template-columns: 1fr 1fr;
     }
-    .av-contact__field--full {
+    .av-contact-form__field--full {
       grid-column: 1 / -1;
     }
   }
@@ -104,6 +115,7 @@
       "type": "text",
       "id": "success_text",
       "label": "Success message",
+      "info": "Shown after the form is sent. Promise only the reply time you can keep.",
       "default": "Thanks — your message has been sent."
     }
   ],

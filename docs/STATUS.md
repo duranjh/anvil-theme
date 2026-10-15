@@ -1,71 +1,77 @@
-# Anvil — Status after wave 0 (chassis integration)
+# Anvil — Status after the wave-0 fix pass
 
-_2026-10-14. Written by the wave-0 integrator after the five chassis clusters landed. Numbers below are from the in-place gate (`shopify theme check --fail-level warning`, Shopify CLI 4.9.3) and the repo scripts._
+_2026-10-14. Written by the fixer after applying the wave-0 review (about 90 findings) and the owner's decisions A–H on the integrator's open questions. Numbers are from the in-place gate (`shopify theme check --fail-level warning`, Shopify CLI 4.9.3) and the repo scripts. The previous integrator status is in git history._
 
 ## 1. What exists
 
 | Area | Files | Notes |
 |---|---|---|
-| Layouts | `layout/theme.liquid`, `layout/password.liquid` | head order per ARCHITECTURE §2; `window.Anvil` bootstrap (routes, money formats, strings, settings); `html.no-js → js` swap; `data-animations`; body scheme + style-variant classes; header/footer/overlay groups; static cart drawer when `cart_type == drawer`; JSON-LD; security snippet |
-| Config | `config/settings_schema.json` (22 groups, 112 settings, 45 KB), `config/settings_data.json` | 10-definition colour scheme group with 5 schemes; presets "Anvil" and "Anvil Dark" |
-| Locales | `locales/en.default.json` (541 values), `locales/en.default.schema.json` (278) | every `t:` key in the schema resolves; 67 `anvil.*` keys are reserved for later waves (cart drawer blocks, product blocks, predictive search) |
-| Snippets (13) | `anvil-meta`, `anvil-css-tokens`, `anvil-json-ld`, `anvil-security`, `anvil-section-attrs`, `anvil-section-head`, `anvil-button`, `anvil-icon` (143 Lucide icons), `anvil-media`, `anvil-stars`, `anvil-price`, `anvil-product-card`, `anvil-pagination` | all with `{% doc %}` headers; `scripts/agent-prompt.py --write-chassis-api docs/CHASSIS-API.md` extracts them |
-| Theme blocks (12) | `anvil-heading`, `-text`, `-button`, `-image`, `-icon-text`, `-stars`, `-review-stars`, `-countdown`, `-spacer`, `-divider`, `-group`, `-product-atc` | `tag: null`, `shopify_attributes` on the root, presets, small `{% stylesheet %}` each. **No section offers `@theme` yet**, so these are not placeable until a container section (columns, rich text, group) lands |
-| Assets (21) | `anvil-base.css` (32.2 KB / 7.3 KB gz); core JS `anvil-core.js` + `anvil-events/cart-api/sections/dom.js` (11.7 KB gz together); `anvil-editor.js`; components `anvil-slider`, `-marquee`, `-dialog` (CSS only), `-countdown`, `-tabs`, `-compare`, `-hotspots` (+ their CSS); `anvil-card.css`, `anvil-media.css` | every custom element removes its listeners in `disconnectedCallback`; no dependencies; no raster files |
-| Sections (31) | group chrome `anvil-announcement-bar`, `anvil-header`, `anvil-footer`, `apps`; static `anvil-cart-drawer`, `anvil-cart-bubble`; addable `anvil-welcome`, `anvil-contact-form`; every `main-*` (product, collection + banner, list-collections, search, cart items + footer, page, blog, article, 404, password, 7 × customers) | `main-*` carry the reduced chassis (scheme, width, padding); the three group-only sections carry the full chassis block |
-| Groups + templates | `header-group.json`, `footer-group.json`, `overlay-group.json` (empty, `custom.overlay`); 15 JSON templates + 7 `customers/*.json` + `gift_card.liquid` | `page.faq.json` and `page.track-order.json` render `main-page` only until `anvil-faq` / `anvil-track-order` exist; `index.json` uses the `anvil-welcome` placeholder; `product.landing.json` = `main-product` only |
-| Harness | `scripts/` (13 scripts), `.github/workflows/{ci,release,lighthouse}.yml`, `package.json`, `shopify.theme.toml`, `docs/HARNESS.md` | `docs/spec/*.md` and `docs/CHASSIS-API.md` are generated artefacts and have not been generated yet (`npm run spec-cards`, `npm run prompt -- <slug>`) |
+| Layouts | `layout/theme.liquid`, `layout/password.liquid` | `window.Anvil` bootstrap (routes, versioned core module URLs in `Anvil.modules`, money formats, strings, settings); `<link rel="modulepreload">` for the four core modules; body-font preload with `crossorigin` |
+| Config | `config/settings_schema.json` (23 groups, 117 settings, 48 KB), `config/settings_data.json` | new "Variant dropdowns" group and slider dot spacing; "Anvil Dark" now redefines schemes 1–5 (dark surfaces, light inverse in scheme 5) |
+| Locales | `locales/en.default.json` (690 values incl. `date_formats.anvil_date`), `locales/en.default.schema.json` (291) | every storefront string of the main, customer, gift card, chrome and contact sections is an `anvil.*` key (DECISIONS 23) |
+| Snippets (20) | chassis snippets + `anvil-money`, `anvil-social-links`, `anvil-cart-bubble`, icon lookups `anvil-icon-a-c/-d-l/-m-r/-s-z` | `anvil-product-card` takes `loading`, `priority`, `heading_tag`; `anvil-media` autoplay keeps controls |
+| Theme blocks (12) | unchanged set | every block has a `{% doc %}` header (settings, values, defaults, example) feeding `docs/CHASSIS-API.md`; group block class `.av-group-block` |
+| Assets (26) | `anvil-base.css` (38.8 KB raw / 8.8 KB gz, now incl. media, price, stars, social pills), `anvil-header.css` (new), `anvil-card.css` (card only); core JS 5 modules; new `anvil-cart.js`, `anvil-cart-drawer.js`, `anvil-facets.js`, `anvil-predictive-search.js`, `anvil-code.js`; `anvil-media.css` removed | gzip budgets enforced by `scripts/check-limits.sh` |
+| Sections (30 Liquid + 3 groups) | chrome `anvil-announcement-bar`, `anvil-header`, `anvil-footer` (reduced chassis); static `anvil-cart-drawer`, `anvil-cart-bubble`, `anvil-predictive-search` (new, SRA only); addable `anvil-welcome`, `anvil-contact-form`, `anvil-faq`, `anvil-icon-bar`, `apps`; every `main-*` | header: mega menu blocks, menu position, transparent homepage mode, tiles drawer, socials, predictive search; footer: featured product/collection blocks, payment filter; announcement: page targeting, apply-to-cart codes |
+| Templates | 15 JSON + 7 `customers/*.json` + `gift_card.liquid` | `page.faq.json` = main page + two FAQ sections (decision G); example icon bar / FAQ added to `index`, `product.landing`, `page.contact`, `page.track-order` |
+| Docs | `docs/spec/*.md` (35 cards), `docs/CHASSIS-API.md`, `docs/sections/*.md` (10 cards), `docs/agent-prompts/2026-10-14-fix-pass.md`, DECISIONS 20–40, CONVENTIONS amended | |
 
-## 2. Gates
+## 2. Gates (after the fix pass)
 
-- `shopify theme check --fail-level warning` (in place, repo config): **85 files inspected, 0 offenses**. The config now anchors its ignore globs (`/dev/**`, `/docs/**`, `/scripts/**`); the unanchored `dev/**` had matched the `~/dev/anvil-theme` checkout and every earlier "clean" run inspected 0 files (DECISIONS 15).
-- With `theme-check:all` the only extra findings are three `AssetSizeJavaScript` notices at the default 10,000-byte threshold (`anvil-core.js` 14,935 B, `anvil-slider.js` 13,887 B); the repo threshold is 15,000 and passes.
-- `scripts/cleanroom-lint.sh` clean (30 token patterns); `scripts/asset-audit.py` clean; `scripts/chassis-lint.py` clean (39 files; 3 informational notices that the group-only header, announcement bar and footer are exempt from chassis enforcement); `scripts/check-limits.sh` clean.
-- Budgets (gzip): core modules 11.7 KB (≤ 15 KB); slider 4.35 KB (≤ 5); marquee 1.3 KB (≤ 1.5); other components 0.9–1.9 KB; base CSS 7.3 KB (≤ 20); component CSS 0.6–1.4 KB each. Raw: every JS asset < 15,000 B (the CLI measures raw bytes, DECISIONS 16).
-- Not run (need a live store or npm packages): `scripts/gate.sh` G3/G4 push + screenshots, `scripts/a11y.sh`, `scripts/similarity.py` (CI only), Lighthouse.
+- `shopify theme check --fail-level warning`: **95 files inspected, 0 offenses**. Thresholds: `AssetSizeJavaScript` and `AssetSizeCSS` 40,000 raw bytes (DECISIONS 20).
+- `scripts/cleanroom-lint.sh`: clean (30 token patterns). `--strict` reports only the provenance prose it is meant to exempt (ARCHITECTURE, DESIGN-sections, NOTICE); README no longer names a competitor.
+- `scripts/asset-audit.py`: clean. `scripts/chassis-lint.py`: clean, 42 files, 0 warnings (header, announcement bar and footer now checked against the reduced chassis). `scripts/check-limits.sh`: all limits respected, including the new gzip budgets.
+- Forbidden-token grep over theme files, scripts, `docs/sections`, `docs/spec`, `docs/CHASSIS-API.md`: empty.
+- Gzip sizes: core modules 13.0 KB together (≤ 15 KB); slider 4.5 KB (≤ 5); marquee 1.46 KB (≤ 1.5); cart 2.9 KB, facets 1.9 KB, predictive search 1.6 KB, code 1.5 KB, drawer 1.2 KB (≤ 4); base CSS 8.8 KB (≤ 20); header CSS 2.3 KB (≤ 8).
+- JS smoke test (local static page with the real assets and a mocked Cart API, Chromium in the browser pane): every element defines; the drawer opens, a stepper updates the line, the re-render keeps the dialog open and the focused button, the bubble updates without nesting, a 422 rolls the quantity back and shows the message, an unusable code shows "not valid", removing the last line focuses the drawer title, closing releases the scroll lock and returns focus; facets re-render with focus kept and the URL pushed; header dropdowns close each other and on outside click; marquee pause/play; predictive results with ArrowDown into the list; countdown un-hides and ticks from `data-anvil-end`; no console errors.
+- Not run (need a live store or npm packages): `scripts/gate.sh` G3/G4, `scripts/a11y.sh`, `scripts/similarity.py`, Lighthouse.
 
-## 3. Integration fixes made in this pass
+## 3. Fix pass
 
-1. `.theme-check.yml`: ignore globs anchored so the gate inspects the theme.
-2. `assets/anvil-base.css`: `--av-header-h` now aliases `--av-header-offset`, the token `anvil-core.js` writes from the sticky header's height, so `scroll-padding-top` / `scroll-margin-top` clear the header; `anvil-product-form { display: block }` so the quick-add and product forms are block boxes before wave 1 defines the element.
-3. `sections/anvil-announcement-bar.liquid`: loads `anvil-slider.css` with the slider (the JS-created arrows and pause button were unstyled) and sizes those controls for a one-line bar.
-4. `layout/theme.liquid`: added the `strings` the components look up (`carousel`, `goToSlide`, `cartCountOne`, `cartCount`) from existing locale keys; `assets/anvil-slider.js` reads the `goToSlide` alias.
-5. Contract docs: CONVENTIONS §1 (locale keys during waves), §5 (`anvil-section-attrs` output incl. `data-anvil-section`, padding units), §7 (shipped `anvil-dom.js` export names, camelCase route and string keys); DECISIONS 12–19; FORBIDDEN "How the lint matches"; HARNESS §0; CHANGELOG.
+### Owner decisions applied (DECISIONS 20–27)
+A raw thresholds 40,000 + gzip budgets in check-limits · B collapsible height exception in CONVENTIONS §8 · C reduced chassis for header/announcement/footer, CONVENTIONS §4 paragraph, chassis-lint enforcement · D storefront strings to `anvil.*` keys · E `smile` dropped · F icon-bar labels stay `<span>`, heading rule amended, shared `anvil.editor.empty_section` · G FAQ page with JSON-LD on the first FAQ only · H spec cards and CHASSIS-API generated (both scripts ran without changes).
 
-Cross-cluster checks that passed without changes: every `render 'anvil-*'` call matches the snippet's `{% doc %}` signature; every custom element used in Liquid is registered (`anvil-core.js`: drawer, dialog, collapsible, header, cart-bubble; module per section for slider, countdown; inline guarded definitions for `anvil-cart-drawer` and `anvil-video-facade`) except `<anvil-product-form>`, which is wave 1 and degrades to a native form post; every `settings.*` read exists in the schema; every `{{ 'anvil.…' | t }}` key exists and its placeholders match the call sites; `.av-scheme--<id>` is emitted identically by `anvil-css-tokens`, `anvil-section-attrs`, `theme.liquid` and the blocks; every `--av-*` custom property consumed has a definition or an inline fallback.
+### Blockers fixed
+1. Collection and search filtering/sorting: `<anvil-facets>` re-renders results through the Section Rendering API; Apply stays visible until the element is defined; no navigation on select change.
+2. Country/language forms: Update buttons always visible; no auto-submit.
+3. Cart drawer and cart page: `<anvil-cart-form>` handles steppers, typed quantities, remove links, note and discount field; Update stays until defined; steppers appear only when defined.
 
-## 4. Wave-0 verifications that still need a live store
+### Majors fixed
+SVG fill rule; header logo box; font preload `crossorigin`; cart count in the link name; hidden header never holds focus; product media row keyboard-reachable and slider tracks focusable when they scroll; announcement text wraps; focus rings visible in forced colours; `--av-input-border` (3:1) on inputs and quantity boxes; linked images always named (footer, image block); media/price/stars CSS in base so blocks render correctly anywhere; drawer swap root moved inside the dialog, scroll lock released on disconnect, `wrapper()` prefers `data-anvil-section`; reveal gated on `html.av-reveal-ready`; first card row eager + LCP priority; hover images not downloaded on touch; autoplay videos keep controls and respect reduced motion; marquee pause button; slider layout written inline with a reserved dots row; `heading` → `title` in main sections and `drawer_title` in the drawer; countdowns to one absolute instant with date validation; storefront strings localised; unused settings wired (card/blog card style and ratio, cart vendor/savings/discount, light logo, predictive search); price filter in cents; review badge only with a source link; real dark preset; FAQ templates; header, footer and announcement spec gaps (mega menu, menu position, transparent mode, drawer layout and socials, predictive search, featured product/collection, payment filter, page targeting, apply mode); variant dropdown settings and dot spacing; password errors visible; open-on-add via a document event; drawer JS moved to a module.
 
-From `docs/DECISIONS.md` / `docs/DESIGN-sections.md`:
-1. **Static-section blocks editable in the editor** (DECISIONS 4). The drawer ships with `"blocks": []` and its three settings, so nothing depends on it yet; wave 1 adds the 16 drawer blocks and needs the answer. Fallback: `block_list`-style settings.
-2. **`{% stylesheet %}` subsetted per page** (DECISIONS 3). 31 sections and 12 blocks use it. If the bundle is not subsetted, section CSS moves to `assets/anvil-<slug>.css`.
-3. **JSONC comments inside `{% schema %}`** (DESIGN §1). Not used: the chassis block is verified by id/type in `scripts/chassis-lint.py`, and a `//` comment is reported as a warning. Only matters if the `// anvil:chassis` markers are wanted after all.
-4. **`content_for 'blocks'` with `closest.product` vs `context.product`** (DESIGN §2). `anvil-stars` and `anvil-product-atc` use `closest.product` as a Liquid fallback; no schema-level dynamic default was declared because shopify.dev does not document it for product settings.
+### Minors fixed
+Drawer closes past 990 px; no-JS menu drops down under the bar; per-line control names and price context; responsive tables keep semantics (hidden thead + explicit roles + aria-hidden cell labels); heading levels (footer `h2`, hidden `h2` over card grids, welcome `h1`); slider pause state under reduced motion, named dots group, 0.55 dot opacity; marquee static row from CSS under reduced motion and pause rules that actually win; announcement slide roles left to the slider, copy label fallback; `aria-haspopup` on search and cart; duplicate link names (empty alt inside named links); rating counts read as "12 reviews"; modulepreload; icon lookup split (no 27 KB re-parse, under LiquidComplexity); card widths `300, 450, 600`, banner `sizes`; reveal from the third section; form errors tied to fields (contact, newsletter, comments, customer forms); prose tables in labelled scroll regions; bubble slot; overlay tokens; `av-is-*` state classes; `av-s-<type>` class; `data-anvil-*` hooks and `.av-marquee__clone`; slug classes; sentence-case names documented; footer heading "Shop"; vendor prefixes removed; contact keys; CSS threshold; block doc headers; README; password and gift card routes; currency-code money everywhere (`anvil-money`); CartBubble fallback; empty-cart link navigates; drawer backdrop closes; honesty notes (announcement text, footer image, newsletter text, contact success); security setting text; sold-out variants selectable; FAQ open-first flag.
 
-From the cluster reports:
-5. `visible_if` on theme settings (`use_custom_fonts`, country rule) — ValidVisibleIf passes locally.
-6. A system font picked in `font_picker`: `font.family`/`fallback_families` stack and the skipped preload.
-7. Inline tokens stay < 6 KB with real font URLs (estimate 4.3 KB, 5 schemes).
-8. Customer account templates (`main-customers-*`): legacy form field names, `address[province]` as plain text, delete via `_method=delete`; stores on new customer accounts bypass them.
-9. Two separate `{% form 'localization' %}` forms per location (country, language) with a visible Update button only without JS.
-10. Shopify's response to an invalid discount code on `/cart/update.js` (200 with the code ignored, or 422).
-11. Whether `variant | json` includes `featured_media` (money path) and whether `routes.product_recommendations_url` honours `section_id`.
-12. `drawer_preview_open` keeps the drawer open in the editor; `section.index` is nil in the editor so reveal is off there by design.
-13. `og:image` with `http:` + `https:` URL pairs, JSON-LD validity in Google's rich-results test.
-14. The gift card page: `vendor/qrcode.js` via `shopify_asset_url` and the Apple Wallet badge.
-15. Country rule with JS off: the overlay covers the viewport but the page behind stays in the accessibility tree (default-off parity feature; acceptable?).
+### Skipped or deferred (with reason)
+- **Cart drawer blocks (SPEC §2.4, 16 blocks)** — wave-1 scope per DESIGN-money-path §G and still blocked on the static-section-blocks verification (DECISIONS 4, 36). The drawer settings that already existed now work.
+- **JS-off discount field** — hidden without JavaScript on purpose (DECISIONS 37): a blank `discount` field posted with every cart update could clear codes, and checkout has its own field.
+- **Archiving every section prompt now** (`agent-prompt.py <slug> --archive` × 35) — not done ahead of time: a prompt archived before a section is dispatched is not the prompt actually used; the dispatcher archives each one when it runs (DECISIONS 38). The wave-0 cluster briefs cannot be recovered verbatim; this pass archived its own brief.
+- **Section cards for `main-*`** — exempt (minimal page shells, DECISIONS 38); cards were added for every wave-0 `anvil-*` section.
+- **Templates waiting on sections that do not exist yet** (hero, ticker, featured collection, related products, track order, 404 featured collection) — added as their waves land.
+- **`js` / `no-js` classes** kept (documented in CONVENTIONS §1 as the only non-`av` classes) rather than renamed.
+
+## 4. Verifications that still need a live store
+
+Carried from wave 0 (see the previous status in git history for detail): static-section blocks editable in the editor; `{% stylesheet %}` subsetting per page; `content_for 'blocks'` with `closest.product`; `visible_if` on settings (now also `pages_custom` in the announcement bar); system fonts in `font_picker`; inline token size with real font URLs; legacy customer-account templates; invalid discount code behaviour on `cart/update.js`; `variant | json` media; recommendations `section_id`; `drawer_preview_open`; OG image pairs and JSON-LD validity; gift card QR script and wallet badge; country rule with JS off.
+
+New from this pass (written from memory of shopify.dev; the sandbox had no network):
+1. `preload_tag: … crossorigin: 'anonymous'` writes the attribute (and the Link header) — confirm in the rendered source; otherwise switch back to a literal `<link … crossorigin>` and accept Theme Check's `AssetPreload` suggestion.
+2. The AJAX cart JSON includes `discount_codes: [{code, applicable}]` (used to report an unusable code).
+3. `/discount/CODE?redirect=…` keeps the market/locale prefix; predictive search accepts `resources[limit_scope]=each`.
+4. `time_tag: format: 'anvil_date'` and `date: format: 'anvil_date'` resolve a theme-defined `date_formats` key.
+5. `form.errors contains 'email'` (field-level checks) on contact, customer, comment and newsletter forms.
+6. The transparent header's computed overlap matches the rendered height with a real logo; `:has()` hides the section background while transparent.
+7. Section Rendering with `section_id` for JSON-template sections on collection/search URLs carrying filter parameters (facets).
+8. Liquid `date: '%s'` reads a zone-less `YYYY-MM-DDTHH:MM` string in the store's time zone (countdown `data-anvil-end`).
 
 ## 5. Open questions carried forward
 
-- **AssetSizeJavaScript threshold.** The CLI measures raw bytes; 15,000 raw per asset is far tighter than the documented gzip budgets (core 15 KB gz, product page 60 KB gz). Either raise `thresholdInBytes` (e.g. 40,000) and enforce gzip budgets in `scripts/check-limits.sh`, or require every module to stay under 15 KB raw. Decide before wave 1 writes `anvil-product.js`.
-- **`<anvil-collapsible>` height animation** uses the Web Animations API on `height`; CONVENTIONS §8 says only `transform`/`opacity` animate. Keep (gated by reduced motion and `data-animations`) or drop for a transform-only reveal.
-- **Chassis on group-only sections.** Header, announcement bar and footer carry the full 13-id chassis (heading settings above a header are unusual). Keep for uniformity or allow a reduced block; `scripts/chassis-lint.py` already exempts them. Same decision for overlay widgets (`anvil-scroll-top`, `anvil-audio`, `anvil-popup`).
-- **Secondary button colours.** `--av-btn2-fg` / `--av-btn2-border` map to the scheme's `text`; add two colour-scheme definitions if merchants need a distinct secondary colour.
-- **Plain English strings** in the main sections (sort/filter labels, "Clear all", customer-account labels, article comments, password page, gift card) are not in `locales/en.default.json`. Move them to `anvil.*` keys before any second locale.
-- **Lucide `smile`** no longer exists upstream; 143 of 144 requested icons shipped. Alias `thumbs-up` or drop.
-- **Countdown unit labels** are block settings; locale now has `anvil.countdown.days|hours|minutes|seconds`, so the block can switch to `t` if preferred.
-- **Video facade script** is inline in `snippets/anvil-media.liquid` (guarded, ~20 lines per facade instance); move into `anvil-core.js` or an `anvil-media.js` if the duplication matters.
-- **`cartAdd` makes two requests** (`add.js` then `cart.js`) to honour the `{cart, sections, source}` event shape; acceptable unless the drawer only ever needs section HTML.
-- **Wave 1 hand-offs.** `sections/anvil-cart-drawer.liquid` must swap its inline `{% javascript %}` element for `assets/anvil-cart-drawer.js` (or keep the `customElements.get` guard); `<anvil-product-form>` must pass `sections: ['anvil-cart-drawer', 'anvil-cart-bubble']` and call `Anvil.sections.swapSection`; the drawer should render applied discount codes with data attributes for `applyDiscount/removeDiscount(opts.codes)`.
-- **Generated docs.** Run `python3 scripts/spec-cards.py` and `python3 scripts/agent-prompt.py <slug> --write-chassis-api docs/CHASSIS-API.md` before the first section prompt; `docs/sections/<slug>.md` files do not exist yet for the wave-0 sections.
-- **Dev store.** `shopify.theme.toml` still has `theme = "REPLACE_WITH_DEV_THEME_ID"`; `SCRATCH_PAGE` defaults to `contact` and needs an existing page on the dev store.
+- **FAQ JSON-LD on example content.** Decision G puts `json_ld: true` on the first FAQ section of `page.faq.json`, whose questions are examples until the merchant edits them; search engines would read example questions as FAQ data on a store published unedited. Keep, or ship it off and let the merchant turn it on?
+- **Secondary button colours.** `--av-btn2-fg` / `--av-btn2-border` still map to the scheme text; add two scheme definitions if merchants need a distinct secondary colour.
+- **Countdown unit labels** are block settings; `anvil.countdown.*` keys exist if the block should switch to `t`.
+- **Video facade script** is inline in `snippets/anvil-media.liquid` (guarded, ~20 lines per facade); move into a module if the duplication matters.
+- **`cartAdd` makes two requests** (`add.js` then `cart.js`) to keep the event shape.
+- **Address deletion** posts immediately (the old `data-anvil-confirm` attribute had no handler and was removed); add a confirmation step later if wanted.
+- **Copy button** in the announcement bar is shown whenever JS runs (`av-js-only`), not keyed on `anvil-code.js` having loaded; low risk, but not the `:defined` pattern.
+- **Wave-1 hand-offs.** `<anvil-product-form>` must pass the ids from `[data-anvil-cart-render]` (drawer, bubble) as `sections` to `Anvil.cart.cartAdd` — `anvil-core.js` then swaps them and the drawer opens on `source: 'add'`; drawer blocks render inside `.av-cart-drawer__frame` and reuse `<anvil-cart-form>`.
+- **Dev store.** `shopify.theme.toml` still has `theme = "REPLACE_WITH_DEV_THEME_ID"`; `SCRATCH_PAGE` defaults to `contact`.

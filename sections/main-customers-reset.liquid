@@ -1,26 +1,27 @@
 {%- liquid
   assign s = section.settings
+  assign reset_label = 'anvil.customer.reset.submit' | t
 -%}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-customers-reset' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
     <div class="av-customers-reset">
-      <h1 class="av-customers-reset__title">{{ s.heading | escape }}</h1>
-      <p class="av-customers-reset__hint">Enter a new password for your account.</p>
+      <h1 class="av-customers-reset__title">{{ s.title | escape }}</h1>
+      <p class="av-customers-reset__hint">{{ 'anvil.customer.reset.hint' | t }}</p>
       {%- form 'reset_customer_password', id: 'anvil-reset-form', class: 'av-customers-reset__form' -%}
         {%- if form.errors -%}
-          <div class="av-customers-reset__notice av-form-message av-form-message--error" role="alert">{{ form.errors | default_errors }}</div>
+          <div class="av-customers-reset__notice av-form-message av-form-message--error" id="anvil-reset-form-errors" role="alert">{{ form.errors | default_errors }}</div>
         {%- endif -%}
         <div class="av-customers-reset__field av-field">
-          <label class="av-customers-reset__label av-field__label" for="anvil-reset-password">New password</label>
-          <input class="av-customers-reset__input av-field__input" id="anvil-reset-password" type="password" name="customer[password]" autocomplete="new-password" required aria-required="true">
+          <label class="av-customers-reset__label av-field__label" for="anvil-reset-password">{{ 'anvil.customer.reset.new_password' | t }}</label>
+          <input class="av-customers-reset__input av-field__input" id="anvil-reset-password" type="password" name="customer[password]" autocomplete="new-password" required aria-required="true"{% if form.errors %} aria-invalid="true" aria-describedby="anvil-reset-form-errors"{% endif %}>
         </div>
         <div class="av-customers-reset__field av-field">
-          <label class="av-customers-reset__label av-field__label" for="anvil-reset-confirm">Confirm new password</label>
-          <input class="av-customers-reset__input av-field__input" id="anvil-reset-confirm" type="password" name="customer[password_confirmation]" autocomplete="new-password" required aria-required="true">
+          <label class="av-customers-reset__label av-field__label" for="anvil-reset-confirm">{{ 'anvil.customer.reset.confirm' | t }}</label>
+          <input class="av-customers-reset__input av-field__input" id="anvil-reset-confirm" type="password" name="customer[password_confirmation]" autocomplete="new-password" required aria-required="true"{% if form.errors %} aria-invalid="true" aria-describedby="anvil-reset-form-errors"{% endif %}>
         </div>
         <div class="av-customers-reset__actions">
-          {% render 'anvil-button', label: 'Reset password', style: 'primary', size: 'lg', full: true, type: 'submit' %}
+          {% render 'anvil-button', label: reset_label, style: 'primary', size: 'lg', full: true, type: 'submit' %}
         </div>
       {%- endform -%}
     </div>
@@ -52,6 +53,7 @@
     margin-top: var(--av-space-2);
   }
 {% endstylesheet %}
+
 {% schema %}
 {
   "name": "Reset password",
@@ -65,8 +67,8 @@
     { "type": "header", "content": "Reset password" },
     {
       "type": "text",
-      "id": "heading",
-      "label": "Heading",
+      "id": "title",
+      "label": "Page title",
       "default": "Reset your password"
     }
   ]

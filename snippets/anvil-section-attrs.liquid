@@ -1,7 +1,10 @@
 {% doc %}
   Attributes for a section's root element: id (anchor), chassis classes, padding custom properties and data hooks.
-  Falls back to the chassis defaults when a section schema lacks a setting.
-  Reveal is disabled for the first section and whenever section.index is nil (editor, Section Rendering API).
+  Falls back to the chassis defaults when a section schema lacks a setting, so sections with the reduced chassis
+  (color_scheme, pad_top, pad_bottom, pad_mobile, show_on) and template sections without heading settings work.
+  Reveal is disabled for the first two sections (usually above the fold on phones, where the LCP image lives) and
+  whenever section.index is nil (editor, Section Rendering API).
+  data-anvil-section marks this root as the Section Rendering swap target: its children are replaced, the root stays.
 
   @param {object} section - The section object
   @param {string} type - Section type class, for example 'anvil-ticker'
@@ -42,7 +45,7 @@
   if reveal != 'none'
     assign reveal_ok = false
     if section.index != nil
-      if section.index > 1
+      if section.index > 2
         assign reveal_ok = true
       endif
     endif
@@ -55,4 +58,4 @@
 
   assign anchor_id = s.anchor | default: section.id | handleize
 -%}
-id="{{ anchor_id }}" class="av-section av-scheme av-scheme--{{ scheme_id }} av-width--{{ width }} av-reveal--{{ reveal }} av-show--{{ show_on }} {{ type }}" style="--av-pad-top: {{ pad_top }}px; --av-pad-bottom: {{ pad_bottom }}px; --av-pad-mobile: {{ pad_scale }};" data-section-id="{{ section.id }}" data-section-type="{{ type }}" data-anvil-section="{{ section.id }}"
+id="{{ anchor_id }}" class="av-section av-scheme av-scheme--{{ scheme_id }} av-width--{{ width }} av-reveal--{{ reveal }} av-show--{{ show_on }} av-s-{{ type }}" style="--av-pad-top: {{ pad_top }}px; --av-pad-bottom: {{ pad_bottom }}px; --av-pad-mobile: {{ pad_scale }};" data-section-id="{{ section.id }}" data-section-type="{{ type }}" data-anvil-section="{{ section.id }}"

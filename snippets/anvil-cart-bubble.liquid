@@ -1,0 +1,17 @@
+{% doc %}
+  The cart count bubble used in the header link, wrapped in the slot the Section Rendering API swaps.
+  The slot carries data-anvil-section="anvil-cart-bubble", so a swap replaces the whole <anvil-cart-bubble> element
+  (count, hidden state, label) and never nests one bubble inside another. The visually hidden "N items" text joins
+  the link's own hidden "Cart" text to name the link, for example "Cart, 3 items".
+  Rendered by sections/anvil-header.liquid and by sections/anvil-cart-bubble.liquid (the section exists only for
+  the Section Rendering API).
+
+  @example
+  {% render 'anvil-cart-bubble' %}
+{% enddoc %}
+<span class="av-cart-bubble-slot" data-anvil-section="anvil-cart-bubble" data-anvil-cart-render="anvil-cart-bubble">
+  <anvil-cart-bubble class="av-cart-bubble"{% if cart.item_count == 0 %} hidden{% endif %}>
+    <span class="av-cart-bubble__count" data-anvil-count="{{ cart.item_count }}" aria-hidden="true">{{ cart.item_count }}</span>
+    <span class="av-visually-hidden">{{ 'anvil.cart.item_count' | t: count: cart.item_count }}</span>
+  </anvil-cart-bubble>
+</span>

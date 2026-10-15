@@ -5,15 +5,18 @@
  *   <div data-slider-track> <div data-slider-slide>…</div> … </div>  + optional [data-slider-prev] [data-slider-next]
  *   [data-slider-dots] [data-slider-pause] [data-slider-live] (created when the attributes ask for them).
  * Attributes: per-view / per-view-desktop (slides visible, ≥ 990 px; fractions allowed), peek (px of the next slide),
- * autoplay (seconds, 0 = off; implies wrap-around), loop, dots, arrows. They are written to --av-slider-per-view /
- * --av-slider-per-view-desktop / --av-slider-peek unless Liquid set them inline (recommended for a stable first paint).
+ * autoplay (seconds, 0 = off; implies wrap-around), loop, dots, arrows. Liquid must write --av-slider-per-view /
+ * --av-slider-per-view-desktop / --av-slider-peek inline and render an empty <div class="av-slider__dots"
+ * data-slider-dots></div> when dots are on, so nothing moves when this script runs (CONVENTIONS §6); the script only
+ * fills those values in when they are missing.
  * Behaviour: arrows move one page (per-view slides); one dot per page; ArrowLeft/ArrowRight inside the element;
- * autoplay pauses on hover, focus within, hidden tab, off-screen, reduced motion (html[data-animations="off"] too)
- * and while a block is selected in the editor; a pause/play button is added for autoplay. A11y: role=region +
- * aria-roledescription carousel, slides role=group "N of M", a polite live region (off while auto-rotating).
+ * autoplay pauses on hover, focus within, hidden tab, off-screen and while a block is selected in the editor; under
+ * reduced motion (html[data-animations="off"] too) it starts paused and the pause/play button offers Play. A11y:
+ * role=region + aria-roledescription carousel, slides role=group "N of M", a named dots group, the track is
+ * keyboard-focusable whenever it scrolls, a polite live region (off while auto-rotating).
  * Strings (window.Anvil.strings, first key found wins): slider_label|carousel, slide_of|slideOf ({{ index }}/{{ total }}
- * or [index]/[total]), slider_prev|previous, slider_next|next, slider_goto, slider_pause|pause, slider_play|play,
- * slider_moved. Events: anvil:slider:change {index, total, element} (bubbles). shopify:block:select jumps to that
+ * or [index]/[total]), slider_prev|previous, slider_next|next, slider_goto, slider_dots|chooseSlide,
+ * slider_pause|pause, slider_play|play, slider_moved. Events: anvil:slider:change {index, total, element} (bubbles). shopify:block:select jumps to that
  * slide. Methods: goTo(index, smooth?), next(), prev(), play(), pause(). Property: index.
  */
 const anvil = () => window.Anvil || {};
@@ -55,6 +58,7 @@ class Slider extends HTMLElement {
   #visible = true;
   #editing = false;
   #userPaused = false;
+  #ownTabindex = false;
   #ro;
   #io;
 
@@ -108,15 +112,18 @@ class Slider extends HTMLElement {
     }
     this.#dotsWrap =
       this.querySelector('[data-slider-dots]') ||
-      (this.hasAttribute('dots')
-        ? this.#make('div', 'av-slider__dots', { 'data-slider-dots': '', role: 'group' })
-        : null);
-    if (!this.#prev && !this.#next && !this.#dotsWrap && !this.#track.hasAttribute('tabindex')) {
-      this.#track.tabIndex = 0;
+      (this.hasAttribute('dots') ? this.#make('div', 'av-slider__dots', { 'data-slider-dots': '' }) : null);
+    if (this.#dotsWrap) {
+      this.#dotsWrap.setAttribute('role', 'group');
+      if (!this.#dotsWrap.hasAttribute('aria-label')) {
+        this.#dotsWrap.setAttribute('aria-label', t(['slider_dots', 'chooseSlide'], null, 'Choose slide'));
+      }
     }
+    this.#ownTabindex = !this.#track.hasAttribute('tabindex');
 
     this.#interval = Math.max(0, parseFloat(this.getAttribute('autoplay')) || 0) * 1000;
     if (this.#interval) {
+      this.#userPaused = motionOff();
       this.#pauseBtn =
         this.querySelector('[data-slider-pause]') ||
         this.#make('button', 'av-slider__pause', { type: 'button', 'data-slider-pause': '' }, PAUSE_PLAY);
@@ -203,14 +210,19 @@ class Slider extends HTMLElement {
           const dot = document.createElement('button');
           dot.type = 'button';
           dot.className = 'av-slider__dot';
-          dot.dataset.page = i;
+          dot.dataset.anvilPage = i;
           dot.setAttribute('aria-label', t(['slider_goto', 'goToSlide'], { index: i + 1 }, 'Go to slide {{ index }}'));
           return dot;
         })
       );
       this.#dots = [...this.#dotsWrap.children];
     }
-    this.classList.toggle('is-static', this.#maxScroll <= 1);
+    const scrolls = this.#maxScroll > 1;
+    this.classList.toggle('av-is-static', !scrolls);
+    if (this.#ownTabindex) {
+      if (scrolls) this.#track.tabIndex = 0;
+      else this.#track.removeAttribute('tabindex');
+    }
     this.#update(true);
   }
 
@@ -289,15 +301,14 @@ class Slider extends HTMLElement {
       !this.#focus &&
       !this.#editing &&
       this.#visible &&
-      !document.hidden &&
-      !motionOff();
+      !document.hidden;
     if (run && !this.#timer) this.#timer = setInterval(() => this.next(), this.#interval);
     if (!run && this.#timer) {
       clearInterval(this.#timer);
       this.#timer = 0;
     }
     this.#live?.setAttribute('aria-live', this.#timer ? 'off' : 'polite');
-    this.classList.toggle('is-playing', !!this.#timer);
+    this.classList.toggle('av-is-playing', !!this.#timer);
   };
 
   #pauseLabel() {
@@ -306,7 +317,7 @@ class Slider extends HTMLElement {
     const paused = this.#userPaused;
     btn.setAttribute('aria-pressed', String(paused));
     btn.setAttribute('aria-label', paused ? t(['slider_play', 'play'], null, 'Play slideshow') : t(['slider_pause', 'pause'], null, 'Pause slideshow'));
-    btn.classList.toggle('is-paused', paused);
+    btn.classList.toggle('av-is-paused', paused);
   }
 
   #onPauseClick = () => (this.#userPaused ? this.play() : this.pause());
@@ -330,8 +341,8 @@ class Slider extends HTMLElement {
     this.#sync();
   };
   #onDot = (e) => {
-    const dot = e.target.closest('[data-page]');
-    if (dot) this.goTo(Math.min(this.#slides.length - 1, Number(dot.dataset.page) * this.#perView));
+    const dot = e.target.closest('[data-anvil-page]');
+    if (dot) this.goTo(Math.min(this.#slides.length - 1, Number(dot.dataset.anvilPage) * this.#perView));
   };
   #onKey = (e) => {
     if (e.target.closest('input, textarea, select, [contenteditable]')) return;

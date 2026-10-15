@@ -2,7 +2,10 @@
    Loaded on every page by layout/theme.liquid after the inline token <style>.
    Contents: fallback tokens, reset, fluid type scale, layout primitives,
    scheme surface, buttons, fields, badges, utilities, reveal/show helpers,
-   grid, prose, pagination, form messages, country-block overlay.
+   grid, prose, pagination, form messages, country-block overlay, and the
+   small shared components every block may render without loading another
+   file: media box (snippets/anvil-media), price (anvil-price) and stars
+   (anvil-stars).
    Mobile first. Breakpoints: 480 / 750 / 990 / 1200. No !important. */
 
 /* 1. Fallback tokens --------------------------------------------------------
@@ -16,6 +19,7 @@
   --av-fg-rgb: 17 17 17;
   --av-fg-muted: #5c5c5c;
   --av-border: #e3e3e3;
+  --av-input-border: rgb(17 17 17 / 0.5);
   --av-accent: #1d4ed8;
   --av-accent-rgb: 29 78 216;
   --av-on-accent: #ffffff;
@@ -60,6 +64,11 @@
   --av-border-w-swatch: 1px;
   --av-shadow-rgb: 0 0 0;
   --av-shadow-a: 0.12;
+  --av-overlay-rgb: 0 0 0;
+  --av-overlay-a: 0.45;
+  --av-dropdown-radius: 6px;
+  --av-dropdown-border-w: 1px;
+  --av-shadow-dropdown: none;
   --av-shadow-button: none;
   --av-shadow-input: none;
   --av-shadow-card: none;
@@ -141,7 +150,6 @@ body {
   font-weight: var(--av-body-weight);
   font-size: var(--av-text-md);
   line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-wrap: break-word;
 }
@@ -197,7 +205,9 @@ video {
   height: auto;
 }
 
-svg {
+/* Only SVGs without their own fill attribute inherit the text colour; outline icons
+   (fill="none") and the star rows (fill="currentColor") keep what they declare. */
+svg:not([fill]) {
   fill: currentColor;
 }
 
@@ -253,7 +263,7 @@ dialog {
 }
 
 dialog::backdrop {
-  background: rgb(0 0 0 / 0.45);
+  background: rgb(var(--av-overlay-rgb, 0 0 0) / var(--av-overlay-a, 0.45));
 }
 
 table {
@@ -292,6 +302,16 @@ anvil-product-form {
 
 .no-js .av-js-only,
 .js .av-no-js-only {
+  display: none;
+}
+
+/* Progressive enhancement keyed on a custom element being defined, not on JS
+   merely running: an element with class .av-enhance shows its .av-fallback-only
+   controls (Update / Apply buttons) until its module has defined it, and its
+   .av-enhanced-only controls (steppers, live discount field) only afterwards.
+   If a module fails to load, the plain form keeps working. */
+.av-enhance:not(:defined) .av-enhanced-only,
+.av-enhance:defined .av-fallback-only {
   display: none;
 }
 
@@ -544,7 +564,8 @@ h6,
 }
 
 .av-btn:focus-visible {
-  outline: none;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
   box-shadow: var(--av-focus-ring);
 }
 
@@ -636,13 +657,13 @@ h6,
 }
 
 /* Loading state: text goes transparent, a ring spins in its place */
-.av-btn.is-loading,
+.av-btn.av-is-loading,
 .av-btn[aria-busy="true"] {
   color: transparent;
   pointer-events: none;
 }
 
-.av-btn.is-loading::after,
+.av-btn.av-is-loading::after,
 .av-btn[aria-busy="true"]::after {
   content: "";
   position: absolute;
@@ -655,9 +676,9 @@ h6,
   border-radius: 50%;
 }
 
-.av-btn--secondary.is-loading::after,
+.av-btn--secondary.av-is-loading::after,
 .av-btn--secondary[aria-busy="true"]::after,
-.av-btn--ghost.is-loading::after,
+.av-btn--ghost.av-is-loading::after,
 .av-btn--ghost[aria-busy="true"]::after {
   border-color: var(--av-fg);
   border-right-color: transparent;
@@ -716,7 +737,7 @@ h6,
   line-height: 1.4;
   color: var(--av-fg);
   background: rgb(var(--av-bg-rgb));
-  border: var(--av-border-w-input) solid var(--av-border);
+  border: var(--av-border-w-input) solid var(--av-input-border);
   border-radius: var(--av-radius-input);
   box-shadow: var(--av-shadow-input);
   appearance: none;
@@ -738,16 +759,28 @@ h6,
 .av-field input:focus-visible,
 .av-field select:focus-visible,
 .av-field textarea:focus-visible {
-  outline: none;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
   border-color: var(--av-accent);
   box-shadow: 0 0 0 1px var(--av-accent);
 }
 
+/* Windows High Contrast drops box-shadow: draw a real outline there. */
+@media (forced-colors: active) {
+  .av-btn:focus-visible,
+  .av-field__input:focus-visible,
+  .av-field input:focus-visible,
+  .av-field select:focus-visible,
+  .av-field textarea:focus-visible {
+    outline: 2px solid CanvasText;
+  }
+}
+
 .av-field__input[aria-invalid="true"],
-.av-field.is-invalid .av-field__input,
-.av-field.is-invalid input,
-.av-field.is-invalid select,
-.av-field.is-invalid textarea {
+.av-field.av-is-invalid .av-field__input,
+.av-field.av-is-invalid input,
+.av-field.av-is-invalid select,
+.av-field.av-is-invalid textarea {
   border-color: var(--av-error);
 }
 
@@ -768,6 +801,26 @@ h6,
 
 .av-field__select select {
   padding-inline-end: calc(var(--av-space-4) * 2 + 0.75em);
+}
+
+/* Variant dropdowns (Theme settings > Variant dropdowns) */
+.av-dropdown .av-field__input,
+select.av-dropdown {
+  border-width: var(--av-dropdown-border-w);
+  border-radius: var(--av-dropdown-radius);
+  box-shadow: var(--av-shadow-dropdown);
+}
+
+.av-dropdown--filled .av-field__input,
+select.av-dropdown--filled {
+  background: rgb(var(--av-fg-rgb) / 0.05);
+}
+
+.av-dropdown--underline .av-field__input,
+select.av-dropdown--underline {
+  border-width: 0 0 var(--av-dropdown-border-w);
+  border-radius: 0;
+  background: transparent;
 }
 
 .av-field__select::after {
@@ -828,7 +881,7 @@ h6,
   display: inline-flex;
   align-items: stretch;
   min-height: var(--av-control-h);
-  border: var(--av-border-w-input) solid var(--av-border);
+  border: var(--av-border-w-input) solid var(--av-input-border);
   border-radius: var(--av-radius-qty);
   background: rgb(var(--av-bg-rgb));
 }
@@ -992,7 +1045,6 @@ h6,
   gap: var(--av-grid-gap);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
 
@@ -1081,10 +1133,11 @@ h6,
   border-top: 1px solid var(--av-border);
 }
 
+/* Image overlay inside a section; the section sets --av-overlay-strength inline. */
 .av-overlay {
   position: absolute;
   inset: 0;
-  background: rgb(0 0 0 / var(--av-overlay-a, 0.3));
+  background: rgb(var(--av-overlay-rgb, 0 0 0) / var(--av-overlay-strength, 0.3));
   pointer-events: none;
 }
 
@@ -1150,28 +1203,29 @@ h6,
 
 /* 12. Reveal on scroll ------------------------------------------------------
    Only when the shopper allows motion, the merchant left animations on, and
-   JavaScript is running (anvil-core.js adds .is-in via IntersectionObserver).
-   Without JS nothing is ever hidden. */
+   anvil-core.js has actually set up its observer (it adds .av-reveal-ready to
+   <html>, then .av-is-in to each target in view). If the core module never
+   runs, nothing is ever hidden. */
 @media (prefers-reduced-motion: no-preference) {
-  html.js:not([data-animations="off"]) .av-reveal:not(.is-in),
-  html.js:not([data-animations="off"]) .av-reveal--fade:not(.is-in),
-  html.js:not([data-animations="off"]) .av-reveal--fade-up:not(.is-in),
-  html.js:not([data-animations="off"]) .av-reveal--zoom:not(.is-in) {
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal:not(.av-is-in),
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal--fade:not(.av-is-in),
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal--fade-up:not(.av-is-in),
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal--zoom:not(.av-is-in) {
     opacity: 0;
   }
 
-  html.js:not([data-animations="off"]) .av-reveal--fade-up:not(.is-in) {
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal--fade-up:not(.av-is-in) {
     transform: translateY(24px);
   }
 
-  html.js:not([data-animations="off"]) .av-reveal--zoom:not(.is-in) {
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal--zoom:not(.av-is-in) {
     transform: scale(0.96);
   }
 
-  html.js:not([data-animations="off"]) .av-reveal,
-  html.js:not([data-animations="off"]) .av-reveal--fade,
-  html.js:not([data-animations="off"]) .av-reveal--fade-up,
-  html.js:not([data-animations="off"]) .av-reveal--zoom {
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal,
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal--fade,
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal--fade-up,
+  html.av-reveal-ready:not([data-animations="off"]) .av-reveal--zoom {
     transition:
       opacity calc(var(--av-dur) * 2) var(--av-ease),
       transform calc(var(--av-dur) * 2) var(--av-ease);
@@ -1194,7 +1248,7 @@ h6,
     transition: transform var(--av-dur) var(--av-ease);
   }
 
-  html:not([data-animations="off"]) .av-btn.is-loading::after,
+  html:not([data-animations="off"]) .av-btn.av-is-loading::after,
   html:not([data-animations="off"]) .av-btn[aria-busy="true"]::after,
   html:not([data-animations="off"]) .av-spinner {
     animation: av-spin 0.8s linear infinite;
@@ -1300,8 +1354,17 @@ h6,
 
 .av-prose table {
   font-size: var(--av-text-sm);
-  display: block;
+}
+
+/* Liquid wraps merchant tables in .av-prose__table (a focusable, labelled
+   region) so wide size charts scroll sideways while keeping table semantics. */
+.av-prose__table {
+  max-width: 100%;
   overflow-x: auto;
+}
+
+.av-prose__table > table {
+  min-width: 100%;
 }
 
 .av-prose th,
@@ -1585,4 +1648,191 @@ h6,
   .av-device-note {
     display: none;
   }
+}
+
+/* 18. Media box (snippets/anvil-media) ------------------------------------
+   Aspect-ratio container for images, Shopify video, click-to-load video
+   facades and placeholders. Radius, border and shadow come from the
+   .av-media-frame class composed on the same element. */
+.av-media {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  aspect-ratio: var(--av-media-ratio, 16 / 9);
+  background: rgb(var(--av-fg-rgb) / 0.06);
+}
+
+.av-media--1-1 { --av-media-ratio: 1 / 1; }
+.av-media--4-5 { --av-media-ratio: 4 / 5; }
+.av-media--3-4 { --av-media-ratio: 3 / 4; }
+.av-media--16-9 { --av-media-ratio: 16 / 9; }
+.av-media--21-9 { --av-media-ratio: 21 / 9; }
+
+.av-media__img,
+.av-media__video,
+.av-media__iframe,
+.av-media__placeholder,
+.av-media__facade {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.av-media__img,
+.av-media__video {
+  object-fit: cover;
+}
+
+.av-media--contain .av-media__img,
+.av-media--contain .av-media__video {
+  object-fit: contain;
+}
+
+.av-media__iframe {
+  border: 0;
+}
+
+.av-media__placeholder {
+  box-sizing: border-box;
+  padding: 12%;
+  color: rgb(var(--av-fg-rgb) / 0.4);
+  fill: currentColor;
+}
+
+.av-media__facade {
+  cursor: pointer;
+}
+
+.av-media__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--av-btn-bg);
+  color: var(--av-btn-fg);
+  box-shadow: var(--av-shadow-md);
+  text-decoration: none;
+  transform: translate(-50%, -50%);
+}
+
+.av-media__play .av-icon {
+  margin-left: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-animations="off"]) .av-media__play {
+    transition: transform var(--av-dur, 0.2s) var(--av-ease, ease);
+  }
+
+  html:not([data-animations="off"]) .av-media__facade:hover .av-media__play,
+  html:not([data-animations="off"]) .av-media__play:focus-visible {
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+
+/* 19. Price and stars (snippets/anvil-price, snippets/anvil-stars) -------- */
+.av-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--av-space-1) var(--av-space-2);
+  font-size: var(--av-text-md);
+  line-height: 1.3;
+}
+
+.av-price--sm { font-size: var(--av-text-sm); }
+.av-price--lg { font-size: var(--av-text-xl); }
+
+.av-price__current {
+  font-weight: 600;
+}
+
+.av-price--sale .av-price__current {
+  color: var(--av-price-sale, var(--av-accent));
+}
+
+.av-price--sold-out .av-price__current {
+  color: var(--av-fg-muted);
+}
+
+.av-price__compare {
+  color: var(--av-fg-muted);
+  font-weight: 400;
+  text-decoration-line: line-through;
+}
+
+.av-price__from {
+  font-size: 0.8em;
+  color: var(--av-fg-muted);
+}
+
+.av-price__unit {
+  flex-basis: 100%;
+  font-size: var(--av-text-xs);
+  color: var(--av-fg-muted);
+}
+
+.av-price__badge {
+  align-self: center;
+}
+
+/* stars */
+.av-stars {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 0;
+  color: var(--av-rating, var(--av-accent));
+}
+
+.av-stars__row {
+  display: flex;
+  gap: 0;
+  white-space: nowrap;
+}
+
+.av-stars__row--base {
+  color: rgb(var(--av-fg-rgb) / 0.25);
+}
+
+.av-stars__row--fill {
+  position: absolute;
+  inset: 0;
+  width: var(--av-stars-fill, 0%);
+  overflow: hidden;
+}
+
+.av-stars__star {
+  flex: none;
+  width: var(--av-stars-size, 18px);
+  height: var(--av-stars-size, 18px);
+}
+
+/* 20. Social pills (snippets/anvil-social-links) -------------------------- */
+.av-social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--av-space-2);
+}
+
+.av-social__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--av-space-3);
+  text-decoration: none;
+  border: var(--av-border-w-button) solid var(--av-border);
+  border-radius: var(--av-radius-pill);
+}
+
+.av-social__pill:hover {
+  border-color: currentColor;
 }

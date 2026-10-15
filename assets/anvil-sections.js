@@ -1,24 +1,32 @@
 /**
- * anvil-sections.js — Section Rendering API helpers (core module, imported by anvil-core.js).
+ * anvil-sections.js — Section Rendering API helpers (core module, loaded by anvil-core.js).
  *
  * Exports
  *   fetchSections(ids, url?) → Promise<{ [id]: html }>
  *       GET `url?sections=a,b` (default: current path + query), at most 5 ids; sections the server returned as
  *       null are left out of the result.
  *   swapSection(id, html) → Element | null
- *       Parses `html` with DOMParser and replaces the children of `#shopify-section-<id>` (or
- *       `[data-anvil-section="<id>"]`) with the matching wrapper's children from the parsed document (or the parsed
- *       body when the html has no wrapper). Keeps the focused control by `data-anvil-focus-key` (with its text
- *       selection), keeps the window scroll offset and the scroll offsets of descendants marked
- *       `data-anvil-scroll="<key>"`. Emits anvil:section:swapped {id, element}. Returns null when the target is
- *       not on the page.
+ *       The swap root is the element marked `data-anvil-section="<id>"`; only its children are replaced, so an open
+ *       <dialog>, a custom element's state or a live region that sits outside the root survives. When no such marker
+ *       exists the `#shopify-section-<id>` wrapper is used instead. The same lookup runs on the parsed response
+ *       (falling back to its body). Keeps the focused control by `data-anvil-focus-key` (with its text selection),
+ *       the window scroll offset and the scroll offsets of descendants marked `data-anvil-scroll="<key>"`.
+ *       Emits anvil:section:swapped {id, element}. Returns null when the target is not on the page.
+ *
+ * This module has no static imports: anvil-core.js loads every core module from its versioned asset URL, and
+ * events go through window.Anvil.events (or a plain document event before the bus exists).
  */
-import { emit } from './anvil-events.js';
+function emit(topic, detail) {
+  const bus = window.Anvil?.events;
+  if (bus?.emit) return bus.emit(topic, detail);
+  document.dispatchEvent(new CustomEvent(topic, { detail }));
+  return detail;
+}
 
 function wrapper(root, id) {
   return (
-    root.querySelector(`#${CSS.escape(`shopify-section-${id}`)}`) ||
-    root.querySelector(`[data-anvil-section="${CSS.escape(id)}"]`)
+    root.querySelector(`[data-anvil-section="${CSS.escape(id)}"]`) ||
+    root.querySelector(`#${CSS.escape(`shopify-section-${id}`)}`)
   );
 }
 

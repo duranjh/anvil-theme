@@ -611,6 +611,44 @@
         }
       }
     },
+    "dropdowns": {
+      "name": "Variant dropdowns",
+      "settings": {
+        "paragraph__1": {
+          "content": "Style of the dropdown menus shoppers use to pick a variant."
+        },
+        "dropdown_style": {
+          "label": "Style",
+          "options__1": {
+            "label": "Outline"
+          },
+          "options__2": {
+            "label": "Filled"
+          },
+          "options__3": {
+            "label": "Underline"
+          }
+        },
+        "dropdown_border_width": {
+          "label": "Border thickness"
+        },
+        "dropdown_radius": {
+          "label": "Corner radius"
+        },
+        "dropdown_shadow": {
+          "label": "Shadow",
+          "options__1": {
+            "label": "None"
+          },
+          "options__2": {
+            "label": "Small"
+          },
+          "options__3": {
+            "label": "Medium"
+          }
+        }
+      }
+    },
     "quantity": {
       "name": "Quantity picker",
       "settings": {
@@ -663,6 +701,9 @@
         },
         "slider_dot_size": {
           "label": "Dot size"
+        },
+        "slider_dot_gap": {
+          "label": "Space between dots"
         }
       }
     },
@@ -804,7 +845,7 @@
         },
         "block_devtools_shortcuts": {
           "label": "Block developer-tools shortcuts",
-          "info": "Cosmetic only: the tools still open from the browser menu."
+          "info": "Cosmetic only: the tools still open from the browser menu. It also blocks keyboard shortcuts some shoppers and assistive tools rely on (for example save and view source). Off is recommended."
         },
         "country_block_enabled": {
           "label": "Use a country rule",

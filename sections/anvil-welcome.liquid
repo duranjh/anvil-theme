@@ -1,9 +1,15 @@
 {%- liquid
   assign s = section.settings
 -%}
+{%- liquid
+  assign head_tag = 'h2'
+  if s.title_h1 and template.name == 'index'
+    assign head_tag = 'h1'
+  endif
+-%}
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-welcome' %}>
   <div class="av-section__inner">
-    {% render 'anvil-section-head', section: section %}
+    {% render 'anvil-section-head', section: section, tag: head_tag %}
     <div class="av-welcome av-welcome--{{ s.head_align }}">
       {%- if s.text != blank -%}
         <div class="av-welcome__text av-rte">{{ s.text }}</div>
@@ -69,6 +75,13 @@
     { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
     { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
     { "type": "header", "content": "Welcome" },
+    {
+      "type": "checkbox",
+      "id": "title_h1",
+      "label": "Use the heading as the page title (H1) on the homepage",
+      "info": "Each page needs exactly one H1. Turn this off when another section above already carries the page title.",
+      "default": true
+    },
     {
       "type": "richtext",
       "id": "text",

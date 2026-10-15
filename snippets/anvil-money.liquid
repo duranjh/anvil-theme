@@ -1,0 +1,11 @@
+{% doc %}
+  A money amount formatted the way Theme settings > Currency asks: with the currency code when
+  "Show currency code" is on, the plain money format otherwise. Use it for every price the cart and product
+  forms print so one page never mixes two styles.
+
+  @param {number} amount - Amount in the currency's subunit (cents), as Shopify returns prices
+
+  @example
+  {% render 'anvil-money', amount: item.final_line_price %}
+{% enddoc %}
+{%- if settings.show_currency_code -%}{{ amount | money_with_currency }}{%- else -%}{{ amount | money }}{%- endif -%}

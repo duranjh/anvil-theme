@@ -9,16 +9,21 @@
     assign atc_disabled = true
   endif
   assign media_sizes = '(min-width: 990px) 50vw, 100vw'
+  assign gallery_label = 'anvil.product.media_label' | t: title: product.title
+  assign table_label = 'anvil.a11y.scroll_table' | t
+  assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
 -%}
-{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
-{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-product' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
     <div class="av-product av-product--gallery-{{ s.gallery_position }}" data-anvil-product data-anvil-product-id="{{ product.id }}">
       <div class="av-product__gallery" data-anvil-gallery>
         {%- if product.media.size > 0 -%}
-          <ul class="av-product__media-list av-list-reset">
+          {%- comment -%}
+            Below 990 px this list scrolls sideways; it is a labelled, focusable region so keyboard users can
+            scroll it with the arrow keys and reach every image.
+          {%- endcomment -%}
+          <ul class="av-product__media-list av-list-reset"{% if product.media.size > 1 %} tabindex="0" role="region" aria-label="{{ gallery_label | escape }}"{% endif %}>
             {%- for media in product.media -%}
               {%- liquid
                 assign media_loading = 'lazy'
@@ -28,7 +33,7 @@
                   assign media_priority = true
                 endif
               -%}
-              <li class="av-product__media" data-media-id="{{ media.id }}"{% if forloop.first %} data-anvil-media-active{% endif %}>
+              <li class="av-product__media" data-anvil-media-id="{{ media.id }}"{% if forloop.first %} data-anvil-media-active{% endif %}>
                 {%- if media.media_type == 'video' or media.media_type == 'external_video' -%}
                   {% render 'anvil-media', video: media, ratio: 'adapt', loading: media_loading, class: 'av-product__media-el' %}
                 {%- else -%}
@@ -63,11 +68,12 @@
             {%- else -%}
               <div class="av-field">
                 <label class="av-field__label" for="{{ form_id }}-variant">{{ 'anvil.product.choose_variant' | t }}</label>
-                <div class="av-field__select">
+                <div class="av-field__select av-dropdown av-dropdown--{{ settings.dropdown_style }}">
                   <select class="av-field__input" id="{{ form_id }}-variant" name="id" data-anvil-variant-select>
+                    {%- comment -%} Sold-out variants stay selectable; the button then reads Sold out (SPEC §3.3). {%- endcomment -%}
                     {%- for variant in product.variants -%}
-                      <option value="{{ variant.id }}"{% if variant.id == current_variant.id %} selected{% endif %}{% unless variant.available %} disabled{% endunless %}>
-                        {{ variant.title | escape }} &mdash; {{ variant.price | money }}
+                      <option value="{{ variant.id }}"{% if variant.id == current_variant.id %} selected{% endif %}>
+                        {{ variant.title | escape }} &mdash; {% render 'anvil-money', amount: variant.price %}
                         {%- unless variant.available %} ({{ 'anvil.product.sold_out' | t }}){% endunless -%}
                       </option>
                     {%- endfor -%}
@@ -87,7 +93,7 @@
         </anvil-product-form>
 
         {%- if product.description != blank -%}
-          <div class="av-product__description av-prose">{{ product.description }}</div>
+          <div class="av-product__description av-prose">{{ product.description | replace: '<table', table_open | replace: '</table>', '</table></div>' }}</div>
         {%- endif -%}
       </div>
     </div>

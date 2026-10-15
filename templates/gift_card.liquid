@@ -2,7 +2,7 @@
 {%- liquid
   assign formatted_initial_value = gift_card.initial_value | money
   assign formatted_balance = gift_card.balance | money
-  assign page_title = shop.name | append: ' — Gift card'
+  assign page_title = 'anvil.gift_card.page_title' | t: shop: shop.name
 -%}
 <!doctype html>
 <html lang="{{ request.locale.iso_code }}">
@@ -12,7 +12,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>{{ page_title }}</title>
-    <meta name="description" content="Your {{ shop.name }} gift card worth {{ formatted_initial_value }}">
+    <meta name="description" content="{{ 'anvil.gift_card.description' | t: shop: shop.name, value: formatted_initial_value }}">
     <link rel="canonical" href="{{ canonical_url }}">
     {%- if settings.favicon != blank -%}
       <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
@@ -31,7 +31,6 @@
         line-height: 1.5;
         background: var(--av-bg, Canvas);
         color: var(--av-fg, CanvasText);
-        -webkit-font-smoothing: antialiased;
       }
       .av-gift-card {
         max-width: 560px;
@@ -175,7 +174,7 @@
   <body>
     <main class="av-gift-card" id="main">
       <p class="av-gift-card__shop">
-        <a href="{{ shop.url }}">
+        <a href="{{ routes.root_url }}">
           {%- if settings.logo != blank -%}
             {%- assign gc_logo_height = 180 | divided_by: settings.logo.aspect_ratio | round -%}
             {{ settings.logo | image_url: width: 360 | image_tag: widths: '180, 360', sizes: '180px', width: 180, height: gc_logo_height, loading: 'eager', alt: shop.name }}
@@ -184,35 +183,36 @@
           {%- endif -%}
         </a>
       </p>
-      <h1 class="av-gift-card__title">Here is your gift card</h1>
+      <h1 class="av-gift-card__title">{{ 'anvil.gift_card.title' | t }}</h1>
 
       {%- if gift_card.message != blank -%}
         <blockquote class="av-gift-card__message">{{ gift_card.message | escape }}</blockquote>
       {%- endif -%}
 
       <div class="av-gift-card__card">
-        <p class="av-gift-card__label">Gift card value</p>
+        <p class="av-gift-card__label">{{ 'anvil.gift_card.value' | t }}</p>
         <p class="av-gift-card__value">{{ formatted_initial_value }}</p>
         {%- if gift_card.balance != gift_card.initial_value -%}
-          <p class="av-gift-card__label">Remaining balance: {{ formatted_balance }}</p>
+          <p class="av-gift-card__label">{{ 'anvil.gift_card.balance' | t: balance: formatted_balance }}</p>
         {%- endif -%}
         {%- if gift_card.enabled == false or gift_card.expired -%}
-          <p class="av-gift-card__status">This gift card has expired.</p>
+          <p class="av-gift-card__status">{{ 'anvil.gift_card.expired' | t }}</p>
         {%- elsif gift_card.expires_on -%}
-          <p class="av-gift-card__label">Expires on {{ gift_card.expires_on | date: '%B %-d, %Y' }}</p>
+          {%- assign expires_on = gift_card.expires_on | date: format: 'anvil_date' -%}
+          <p class="av-gift-card__label">{{ 'anvil.gift_card.expires' | t: date: expires_on }}</p>
         {%- endif -%}
-        <p class="av-gift-card__label">Use this code at checkout</p>
+        <p class="av-gift-card__label">{{ 'anvil.gift_card.how_to_use' | t }}</p>
         <code class="av-gift-card__code" data-anvil-gift-code>{{ gift_card.code }}</code>
-        <div class="av-gift-card__qr" data-anvil-qr data-anvil-qr-text="{{ gift_card.qr_identifier | escape }}" aria-label="QR code for this gift card" role="img"></div>
+        <div class="av-gift-card__qr" data-anvil-qr data-anvil-qr-text="{{ gift_card.qr_identifier | escape }}" aria-label="{{ 'anvil.gift_card.qr_label' | t }}" role="img"></div>
       </div>
 
       <div class="av-gift-card__actions">
-        <a class="av-gift-card__btn" href="{{ shop.url }}">Start shopping</a>
-        <button type="button" class="av-gift-card__btn av-gift-card__btn--secondary av-gift-card__print" data-anvil-print>Print</button>
+        <a class="av-gift-card__btn" href="{{ routes.root_url }}">{{ 'anvil.gift_card.shop' | t }}</a>
+        <button type="button" class="av-gift-card__btn av-gift-card__btn--secondary av-gift-card__print" data-anvil-print>{{ 'anvil.gift_card.print' | t }}</button>
       </div>
       {%- if gift_card.pass_url -%}
         <a class="av-gift-card__wallet" href="{{ gift_card.pass_url }}">
-          <img src="{{ 'gift-card/add-to-apple-wallet.svg' | shopify_asset_url }}" width="120" height="40" alt="Add to Apple Wallet" loading="lazy">
+          <img src="{{ 'gift-card/add-to-apple-wallet.svg' | shopify_asset_url }}" width="120" height="40" alt="{{ 'anvil.gift_card.add_to_wallet' | t }}" loading="lazy">
         </a>
       {%- endif -%}
     </main>

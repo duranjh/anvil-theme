@@ -16,7 +16,7 @@
         "menu": {
           "type": "link_list",
           "settings": {
-            "heading": "Quick links",
+            "heading": "Shop",
             "menu": "footer"
           }
         },
@@ -28,7 +28,11 @@
           }
         }
       },
-      "block_order": ["brand", "menu", "newsletter"],
+      "block_order": [
+        "brand",
+        "menu",
+        "newsletter"
+      ],
       "settings": {
         "pad_top": 48,
         "pad_bottom": 24,
@@ -36,5 +40,7 @@
       }
     }
   },
-  "order": ["footer"]
+  "order": [
+    "footer"
+  ]
 }

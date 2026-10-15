@@ -1,14 +1,19 @@
 {%- liquid
   assign s = section.settings
+  assign banner_sizes = '100vw'
+  if s.width != 'full'
+    assign page_px = settings.page_width
+    assign bp = page_px | plus: 80
+    assign banner_sizes = '(min-width: ' | append: bp | append: 'px) ' | append: page_px | append: 'px, 100vw'
+  endif
 -%}
-{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-collection-banner' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
     <div class="av-collection-banner{% if s.show_image and collection.image %} av-collection-banner--has-image{% endif %}">
       {%- if s.show_image and collection.image -%}
         <div class="av-collection-banner__media">
-          {% render 'anvil-media', image: collection.image, ratio: '21:9', widths: '600, 1100, 1600, 2200', sizes: '100vw', loading: 'eager', priority: true, alt: collection.title, class: 'av-collection-banner__img' %}
+          {% render 'anvil-media', image: collection.image, ratio: '21:9', widths: '600, 1100, 1600, 2200', sizes: banner_sizes, loading: 'eager', priority: true, alt: collection.image.alt, class: 'av-collection-banner__img' %}
         </div>
       {%- endif -%}
       <div class="av-collection-banner__text">

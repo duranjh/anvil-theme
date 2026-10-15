@@ -1,8 +1,12 @@
 {%- liquid
   assign s = section.settings
+  assign card_ratio = settings.blog_card_image_ratio | default: '16:9'
+  assign card_style = settings.blog_card_style | default: 'flat'
+  assign above_fold = false
+  if section.index == nil or section.index <= 2
+    assign above_fold = true
+  endif
 -%}
-{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
-{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-blog' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
@@ -13,16 +17,26 @@
           <ul class="av-blog__grid av-blog__grid--{{ s.columns_desktop }} av-list-reset">
             {%- for article in blog.articles -%}
               <li class="av-blog__cell">
-                <article class="av-blog__card">
+                {%- liquid
+                  assign img_loading = 'lazy'
+                  assign img_priority = false
+                  if above_fold and forloop.index <= 3
+                    assign img_loading = 'eager'
+                    if forloop.first
+                      assign img_priority = true
+                    endif
+                  endif
+                -%}
+                <article class="av-blog__card av-blog__card--{{ card_style }}">
                   {%- if s.show_image -%}
                     <a class="av-blog__media" href="{{ article.url }}" tabindex="-1" aria-hidden="true">
-                      {% render 'anvil-media', image: article.image, ratio: '16:9', widths: '400, 600, 900', sizes: '(min-width: 990px) 33vw, 100vw', loading: 'lazy', placeholder: 'lifestyle-1', alt: article.title, class: 'av-blog__img' %}
+                      {% render 'anvil-media', image: article.image, ratio: card_ratio, widths: '300, 450, 600', sizes: '(min-width: 990px) 33vw, (min-width: 750px) 50vw, 100vw', loading: img_loading, priority: img_priority, placeholder: 'lifestyle-1', alt: '', class: 'av-blog__img' %}
                     </a>
                   {%- endif -%}
                   <div class="av-blog__body">
                     {%- if s.show_date or s.show_author -%}
                       <p class="av-blog__meta av-muted">
-                        {%- if s.show_date -%}{{ article.published_at | time_tag: '%B %-d, %Y' }}{%- endif -%}
+                        {%- if s.show_date -%}{{ article.published_at | time_tag: format: 'anvil_date' }}{%- endif -%}
                         {%- if s.show_date and s.show_author %} &middot; {% endif -%}
                         {%- if s.show_author -%}{{ article.author | escape }}{%- endif -%}
                       </p>
@@ -37,7 +51,7 @@
             {%- endfor -%}
           </ul>
         {%- else -%}
-          <p class="av-blog__empty">No posts yet.</p>
+          <p class="av-blog__empty">{{ 'anvil.blog.empty' | t }}</p>
         {%- endif -%}
         {% render 'anvil-pagination', paginate: paginate %}
       </div>
@@ -62,6 +76,15 @@
     flex-direction: column;
     gap: var(--av-space-3);
     height: 100%;
+    border-radius: var(--av-radius-card);
+  }
+  .av-blog__card--outlined {
+    padding: var(--av-space-3);
+    border: var(--av-border-w-card) solid var(--av-border);
+  }
+  .av-blog__card--raised {
+    padding: var(--av-space-3);
+    box-shadow: var(--av-shadow-card, var(--av-shadow-md));
   }
   .av-blog__media {
     display: block;
@@ -139,6 +162,7 @@
       "type": "checkbox",
       "id": "show_image",
       "label": "Show featured image",
+      "info": "Card style and image ratio are set under Theme settings > Cards > Blog cards.",
       "default": true
     },
     {

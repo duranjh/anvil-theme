@@ -2,7 +2,7 @@
 
 Anvil is a free, MIT-licensed Shopify Online Store 2.0 theme for conversion-focused, one-product and small-catalog stores: offer-ladder variant cards, sticky add-to-cart, a cart drawer with a free-shipping bar, gift-at-threshold and upsells, tickers, comparison tables, testimonials, FAQ, timelines and the rest of the sections dropshippers reach for.
 
-It is written from scratch against Shopify's public developer documentation. It is an independent, free alternative to Shrine-style conversion themes and is **not affiliated with Shrine Solutions, Shopify Inc., or the "Anvil – Product Options" app**.
+It is written from scratch against Shopify's public developer documentation: an independent, free, conversion-focused theme. See `NOTICE` for licences and affiliation.
 
 **Status:** in development (wave 0 of 7). Install instructions will land with the first release zip.
 

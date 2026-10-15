@@ -2,7 +2,8 @@
   Product card: media with a hover second image, sale / sold-out badges, vendor, title, rating stars from the
   reviews.rating metafield, price and an optional quick-add form that posts the first available variant without
   JavaScript (products with options link to the product instead). The title link covers the whole card.
-  A blank product renders a placeholder card. Sections load assets/anvil-card.css and assets/anvil-media.css once.
+  A blank product renders a placeholder card. Sections load assets/anvil-card.css once (media, price and stars styles
+  are in anvil-base.css). The hover image is only displayed, and so only downloaded, on devices that can hover.
 
   @param {object} [product] - Product; blank renders a placeholder card
   @param {boolean} [show_vendor] - Show product.vendor
@@ -10,6 +11,9 @@
   @param {boolean} [quick_add] - Show the add-to-cart form, or a "Choose options" link when options exist
   @param {string} [image_ratio] - adapt | 1:1 | 4:5 | 3:4 | 16:9 (default settings.card_image_ratio, then 4:5)
   @param {string} [sizes] - sizes attribute for the card image
+  @param {string} [loading] - lazy | eager (default lazy); pass eager for cards in the first visible row
+  @param {boolean} [priority] - First card on the page: eager plus fetchpriority high (it is usually the LCP image)
+  @param {string} [heading_tag] - h2 | h3 | h4 for the title (default h3); keep the page outline without gaps
   @param {number} [placeholder_index] - 1 to 6, picks the placeholder illustration (default 1)
   @param {string} [uid] - Suffix that keeps form ids unique when one product repeats on a page
   @param {string} [class] - Extra classes
@@ -29,6 +33,11 @@
   if settings.badge_show_soldout == false
     assign show_soldout = false
   endif
+  assign card_loading = loading | default: 'lazy'
+  if priority
+    assign card_loading = 'eager'
+  endif
+  assign title_tag = heading_tag | default: 'h3'
   assign ph_index = placeholder_index | default: 1
   assign ph_name = 'product-' | append: ph_index
 
@@ -89,9 +98,13 @@
   <div class="av-card__media av-media av-media-frame av-media--cover av-badges--{{ badge_pos }}" style="--av-media-ratio: {{ ratio_value }};">
     {%- if product != blank -%}
       {%- if main_image != blank -%}
-        {{ main_image | image_url: width: 600 | image_tag: widths: '200, 300, 400, 600', sizes: card_sizes, loading: 'lazy', alt: main_alt, class: 'av-media__img av-card__img' }}
+        {%- if priority -%}
+          {{ main_image | image_url: width: 600 | image_tag: widths: '300, 450, 600', sizes: card_sizes, loading: 'eager', fetchpriority: 'high', alt: main_alt, class: 'av-media__img av-card__img' }}
+        {%- else -%}
+          {{ main_image | image_url: width: 600 | image_tag: widths: '300, 450, 600', sizes: card_sizes, loading: card_loading, alt: main_alt, class: 'av-media__img av-card__img' }}
+        {%- endif -%}
         {%- if hover_image != blank -%}
-          {{ hover_image | image_url: width: 600 | image_tag: widths: '200, 300, 400, 600', sizes: card_sizes, loading: 'lazy', alt: '', class: 'av-media__img av-card__img av-card__img--hover' }}
+          {{ hover_image | image_url: width: 600 | image_tag: widths: '300, 450, 600', sizes: card_sizes, loading: 'lazy', alt: '', class: 'av-media__img av-card__img av-card__img--hover' }}
         {%- endif -%}
       {%- else -%}
         {{ ph_name | placeholder_svg_tag: 'av-media__placeholder' }}
@@ -112,25 +125,25 @@
   </div>
   <div class="av-card__body">
     {%- if show_vendor -%}
-      <p class="av-card__vendor">{% if product != blank %}{{ product.vendor }}{% else %}Example vendor{% endif %}</p>
+      <p class="av-card__vendor">{% if product != blank %}{{ product.vendor }}{% else %}{{ 'anvil.card.example_vendor' | t }}{% endif %}</p>
     {%- endif -%}
-    <h3 class="av-card__title">
+    <{{ title_tag }} class="av-card__title">
       {%- if product != blank -%}
         <a class="av-card__link" href="{{ product.url }}">{{ product.title }}</a>
       {%- else -%}
-        <span class="av-card__link">Example product</span>
+        <span class="av-card__link">{{ 'anvil.card.example_product' | t }}</span>
       {%- endif -%}
-    </h3>
+    </{{ title_tag }}>
     {%- if show_rating and rating != blank -%}
       <div class="av-card__rating">
         {%- render 'anvil-stars', rating: rating.rating, max: rating.scale_max, size: 14 -%}
-        {%- if rating_count != blank -%}<span class="av-card__rating-count">({{ rating_count }})</span>{%- endif -%}
+        {%- if rating_count != blank -%}<span class="av-card__rating-count" aria-hidden="true">({{ rating_count }})</span><span class="av-visually-hidden">{{ 'anvil.stars.count' | t: count: rating_count }}</span>{%- endif -%}
       </div>
     {%- endif -%}
     {%- if product != blank -%}
       {%- render 'anvil-price', product: product, show_badge: false, size: 'sm', class: 'av-card__price' -%}
     {%- else -%}
-      <div class="av-price av-price--sm av-card__price"><span class="av-price__current">{{ 2900 | money }}</span></div>
+      <div class="av-price av-price--sm av-card__price"><span class="av-price__current">{% render 'anvil-money', amount: 2900 %}</span></div>
     {%- endif -%}
     {%- if quick_add -%}
       <div class="av-card__actions">

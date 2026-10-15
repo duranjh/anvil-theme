@@ -1,9 +1,43 @@
+{% doc %}
+  Theme block: countdown to one real end date and time; hidden when no date is set or after it ends (unless a message is chosen). No evergreen or per-visitor mode. Loads assets/anvil-countdown.js.
+
+  Settings (id · type · values · default):
+  - ends_at · text
+  - timezone · text
+  - label · text · default "Offer ends in"
+  - expired · select · hide | text · default "hide"
+  - expired_text · text · default "This offer has ended"
+  - unit_days · text · default "Days"
+  - unit_hours · text · default "Hours"
+  - unit_minutes · text · default "Minutes"
+  - unit_seconds · text · default "Seconds"
+  - size · select · sm | md | lg · default "md"
+  - align · text_alignment · default "left"
+
+  @example
+  {"type": "anvil-countdown"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
   assign ends_at = s.ends_at | strip
+  assign zone = s.timezone | strip
   assign has_date = false
   assign remaining = 0
-  if ends_at != blank
+  assign end_s = 0
+  comment
+    Only a full date counts (YYYY-MM-DD…): a time on its own would be read as "today" and restart every day,
+    which is exactly the fake deadline Anvil refuses. Without a time zone the end is read in the store's time
+    zone and written out as one absolute instant (data-anvil-end), so every shopper counts down to the same moment.
+  endcomment
+  assign date_ok = false
+  if ends_at.size >= 10
+    assign dash_1 = ends_at | slice: 4, 1
+    assign dash_2 = ends_at | slice: 7, 1
+    if dash_1 == '-' and dash_2 == '-'
+      assign date_ok = true
+    endif
+  endif
+  if date_ok
     assign end_s = ends_at | date: '%s' | plus: 0
     assign now_s = 'now' | date: '%s' | plus: 0
     if end_s > 0
@@ -34,7 +68,7 @@
     endif
   endunless
 -%}
-<anvil-countdown class="av-countdown av-countdown--{{ s.size }} av-countdown--{{ s.align }}{% if is_expired %} is-expired{% endif %}" ends-at="{{ ends_at | escape }}"{% if s.timezone != blank %} timezone="{{ s.timezone | strip | escape }}"{% endif %} expired="{{ s.expired }}"{% if hide_root %} hidden{% endif %} {{ block.shopify_attributes }}>
+<anvil-countdown class="av-countdown av-countdown--{{ s.size }} av-countdown--{{ s.align }}{% if is_expired %} av-is-expired{% endif %}"{% if has_date %} ends-at="{{ ends_at | escape }}"{% endif %}{% if has_date and zone != blank %} timezone="{{ zone | escape }}"{% elsif has_date %} data-anvil-end="{{ end_s }}"{% endif %} expired="{{ s.expired }}"{% if hide_root %} hidden{% endif %} {{ block.shopify_attributes }}>
   {%- if has_date -%}
     {%- if s.label != blank -%}
       <p class="av-countdown__label">{{ s.label }}</p>
@@ -48,7 +82,7 @@
     {%- if s.expired == 'text' -%}
       <p class="av-countdown__expired" data-anvil-expired{% unless is_expired %} hidden{% endunless %}>{{ s.expired_text }}</p>
     {%- elsif is_expired and request.design_mode -%}
-      <p class="av-countdown__note">This countdown has ended and is hidden from shoppers.</p>
+      <p class="av-countdown__note">{{ 'anvil.editor.countdown_ended' | t }}</p>
     {%- endif -%}
     <script type="module" src="{{ 'anvil-countdown.js' | asset_url }}"></script>
   {%- elsif request.design_mode -%}
@@ -76,7 +110,7 @@
   "tag": null,
   "settings": [
     { "type": "text", "id": "ends_at", "label": "Ends at", "placeholder": "2026-12-31T23:59", "info": "Real end date and time only, written as YYYY-MM-DDTHH:MM. Anvil has no evergreen or per-visitor mode: a timer that restarts for each shopper is a fake deadline." },
-    { "type": "text", "id": "timezone", "label": "Time zone", "placeholder": "America/New_York", "info": "IANA time zone name for the end time. Leave empty to use the shopper's time zone." },
+    { "type": "text", "id": "timezone", "label": "Time zone", "placeholder": "America/New_York", "info": "IANA time zone name for the end time. Leave empty to use your store's time zone (Settings > General). Every shopper sees the same deadline." },
     { "type": "text", "id": "label", "label": "Label", "default": "Offer ends in" },
     { "type": "select", "id": "expired", "label": "When it ends", "options": [ { "value": "hide", "label": "Hide the block" }, { "value": "text", "label": "Show a message" } ], "default": "hide" },
     { "type": "text", "id": "expired_text", "label": "Message when ended", "default": "This offer has ended" },

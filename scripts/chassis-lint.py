@@ -27,9 +27,15 @@ Universal hygiene, applied to every sections/*.liquid and blocks/*.liquid
   * {% stylesheet %} body <= 6 KB; top-level selectors start with .av-<slug>
     (warning)
 Theme blocks (blocks/*.liquid) must print {{ block.shopify_attributes }}.
+
+Group-only and overlay sections (`enabled_on.groups` without `templates`, for
+example header, announcement bar, footer and the custom.overlay widgets) carry
+the REDUCED chassis (CONVENTIONS §4): exactly `color_scheme`, `pad_top`,
+`pad_bottom`, `pad_mobile`, `show_on` with the contract types and options, and
+none of the heading/width/reveal/anchor ids; skeleton = section-attrs + the
+av-section__inner wrapper (no section head).
 Exempt from the chassis checks (hygiene and schema limits still apply):
-main-* sections, static sections (no presets) and group-only sections
-(`enabled_on.groups` without `templates`, e.g. header, footer, overlay).
+main-* sections and static sections (no presets).
 
 Exit 1 when any error exists; warnings are printed with [W] and do not fail
 unless --strict. Output lines are path:line: [E|W] message.
@@ -64,6 +70,8 @@ CHASSIS = [
     ("anchor", "text", {}),
 ]
 CHASSIS_IDS = [c[0] for c in CHASSIS]
+REDUCED_IDS = ["color_scheme", "pad_top", "pad_bottom", "pad_mobile", "show_on"]
+REDUCED = [c for c in CHASSIS if c[0] in REDUCED_IDS]
 NON_SETTING_TYPES = {"header", "paragraph"}
 
 TAG = r"\{%-?\s*{name}\b[^%]*?-?%\}"
@@ -218,6 +226,51 @@ def check_hygiene(path, text, body, rep, slug=None, want_selector_prefix=False):
 
 
 # --------------------------------------------------------------------------- chassis
+def check_setting_spec(path, by_id, spec, line, rep, label):
+    sid, stype, extra = spec
+    s = by_id.get(sid)
+    if s is None:
+        rep.err(path, line, f"{label} setting `{sid}` ({stype}) is missing")
+        return
+    if s.get("type") != stype:
+        rep.err(path, line, f"{label} setting `{sid}` must be type `{stype}`, found `{s.get('type')}`")
+        return
+    if "options" in extra:
+        values = [o.get("value") for o in s.get("options", []) if isinstance(o, dict)]
+        if values != extra["options"]:
+            rep.err(path, line, f"{label} setting `{sid}` options must be {extra['options']}, found {values}")
+    for key in ("min", "max", "step", "unit"):
+        if key in extra and s.get(key) != extra[key]:
+            rep.err(path, line, f"{label} setting `{sid}` {key} must be {extra[key]!r}, found {s.get(key)!r}")
+    if "default" in extra and s.get("default") != extra["default"]:
+        rep.warn(path, line, f"{label} setting `{sid}` default is {s.get('default')!r}; contract says {extra['default']!r}")
+
+
+def check_reduced_chassis(path, schema, line, rep):
+    settings = schema.get("settings")
+    if not isinstance(settings, list):
+        rep.err(path, line, "schema has no `settings` array")
+        return
+    by_id = {}
+    real = []
+    for s in settings:
+        if not isinstance(s, dict) or s.get("type") in NON_SETTING_TYPES:
+            continue
+        real.append(s)
+        if "id" in s:
+            by_id.setdefault(s["id"], s)
+    if len(real) > MAX_SETTINGS:
+        rep.err(path, line, f"{len(real)} settings; Theme Check's ceiling is {MAX_SETTINGS}")
+    for spec in REDUCED:
+        check_setting_spec(path, by_id, spec, line, rep, "reduced chassis")
+    for sid in CHASSIS_IDS:
+        if sid not in REDUCED_IDS and sid in by_id:
+            rep.err(path, line, f"group-only/overlay section must not carry the full-chassis setting `{sid}` (reduced chassis, CONVENTIONS §4)")
+    first = [s.get("id") for s in real[: len(REDUCED_IDS)]]
+    if first != REDUCED_IDS:
+        rep.warn(path, line, f"reduced chassis settings should come first in the contract order {REDUCED_IDS}")
+
+
 def check_chassis_settings(path, schema, line, rep):
     settings = schema.get("settings")
     if not isinstance(settings, list):
@@ -396,10 +449,23 @@ def lint_section(path, rel, rep):
         return
     check_section_schema_limits(rel, schema, sline, rep)
 
+    if group_only and not is_main and base.startswith("anvil-"):
+        # reduced chassis: header, announcement bar, footer, overlay widgets
+        m = RENDER_ATTRS_RE.search(body)
+        if not m:
+            rep.err(rel, 1, "missing {% render 'anvil-section-attrs', section: section, type: '" + base + "' %}")
+        else:
+            tm = re.search(r"\btype\s*:\s*['\"]([^'\"]+)['\"]", m.group(1))
+            if not tm or tm.group(1) != base:
+                rep.err(rel, line_of(body, m.start()), f"anvil-section-attrs type must equal the file name '{base}'")
+        if "av-section__inner" not in body:
+            rep.err(rel, 1, "missing the `av-section__inner` wrapper")
+        check_reduced_chassis(rel, schema, sline, rep)
+        if has_presets:
+            check_presets(rel, schema, sline, rep)
+        return
     if not is_addable:
-        if group_only and has_presets:
-            rep.warn(rel, sline, f"group-only section (enabled_on.groups {scope.get('groups')}): chassis settings not enforced")
-        return  # main-*, static and group sections: hygiene + schema limits only
+        return  # main-* and static sections: hygiene + schema limits only
 
     # skeleton
     m = RENDER_ATTRS_RE.search(body)

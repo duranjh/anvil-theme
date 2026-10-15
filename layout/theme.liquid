@@ -31,6 +31,12 @@
           account: {{ routes.account_url | json }},
           login: {{ routes.account_login_url | json }}
         },
+        modules: {
+          events: {{ 'anvil-events.js' | asset_url | json }},
+          'cart-api': {{ 'anvil-cart-api.js' | asset_url | json }},
+          sections: {{ 'anvil-sections.js' | asset_url | json }},
+          dom: {{ 'anvil-dom.js' | asset_url | json }}
+        },
         moneyFormat: {{ shop.money_format | json }},
         moneyWithCurrencyFormat: {{ shop.money_with_currency_format | json }},
         currency: {{ cart.currency.iso_code | json }},
@@ -52,6 +58,7 @@
           cartCount: {{ 'anvil.cart.item_count.other' | t: count: '[count]' | json }},
           cartError: {{ 'anvil.cart.error' | t | json }},
           cartUpdating: {{ 'anvil.cart.updating' | t | json }},
+          cartUpdated: {{ 'anvil.cart.updated' | t | json }},
           free: {{ 'anvil.cart.free' | t | json }},
           codeInvalid: {{ 'anvil.cart.code_invalid' | t | json }},
           codeApplied: {{ 'anvil.cart.code_applied' | t | json }},
@@ -61,6 +68,7 @@
           slideOf: {{ 'anvil.a11y.slide_of' | t: index: '[index]', total: '[total]' | json }},
           carousel: {{ 'anvil.a11y.carousel' | t | json }},
           goToSlide: {{ 'anvil.a11y.go_to_slide' | t: index: '[index]' | json }},
+          chooseSlide: {{ 'anvil.a11y.choose_slide' | t | json }},
           play: {{ 'anvil.a11y.play' | t | json }},
           pause: {{ 'anvil.a11y.pause' | t | json }},
           loading: {{ 'anvil.a11y.loading' | t | json }},
@@ -81,6 +89,10 @@
         }
       };
     </script>
+    <link rel="modulepreload" href="{{ 'anvil-events.js' | asset_url }}">
+    <link rel="modulepreload" href="{{ 'anvil-cart-api.js' | asset_url }}">
+    <link rel="modulepreload" href="{{ 'anvil-sections.js' | asset_url }}">
+    <link rel="modulepreload" href="{{ 'anvil-dom.js' | asset_url }}">
     <script type="module" src="{{ 'anvil-core.js' | asset_url }}"></script>
     {%- if request.design_mode -%}
       <script type="module" src="{{ 'anvil-editor.js' | asset_url }}"></script>

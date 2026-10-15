@@ -1,3 +1,19 @@
+{% doc %}
+  Theme block: one button or text link (snippets/anvil-button). Use inside @theme containers.
+
+  Settings (id · type · values · default):
+  - label · text · default "Shop now"
+  - url · url
+  - external · checkbox · default false
+  - style · select · primary | secondary | ghost | link · default "primary"
+  - size · select · sm | md | lg · default "md"
+  - full · checkbox · default false
+  - align · text_alignment · default "left"
+  - icon · select · none | arrow-right | chevron-right | shopping-cart | shopping-bag | check | gift | zap | play | download | external-link | mail | phone | message-circle · default "none"
+
+  @example
+  {"type": "anvil-button"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
   assign icon_name = s.icon

@@ -1,3 +1,18 @@
+{% doc %}
+  Theme block: "rated X on <platform>" badge. Every part of it (stars, number, wording, logo) renders only with a source link shoppers can follow.
+
+  Settings (id · type · values · default):
+  - logo · image_picker
+  - text · text · default "Example: rated by our customers on — replace with your real wording"
+  - rating · range · 0–5 step 0.1 · default 5
+  - source_url · url
+  - show_stars · checkbox · default true
+  - show_number · checkbox · default true
+  - align · text_alignment · default "left"
+
+  @example
+  {"type": "anvil-review-stars"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
   assign has_source = false
@@ -5,11 +20,15 @@
     assign has_source = true
   endif
   assign logo_alt = s.logo.alt | default: ''
+  comment
+    Everything in this badge is a rating claim (stars, number, wording, platform logo), so all of it renders only
+    with a source link shoppers can follow to check it (docs/HONEST.md, CONVENTIONS section 10).
+  endcomment
   capture badge_inner
-    if has_source and s.show_stars
+    if s.show_stars
       render 'anvil-stars', rating: s.rating, size: 18, class: 'av-review-stars__stars'
     endif
-    if has_source and s.show_number
+    if s.show_number
       echo '<span class="av-review-stars__number">'
       echo s.rating
       echo '/5</span>'
@@ -26,9 +45,9 @@
 -%}
 <div class="av-review-stars av-review-stars--{{ s.align }}" {{ block.shopify_attributes }}>
   {%- if has_source -%}
-    <a class="av-review-stars__link" href="{{ s.source_url }}" target="_blank" rel="noopener">{{ badge_inner }}</a>
-  {%- else -%}
-    {{ badge_inner }}
+    <a class="av-review-stars__link" href="{{ s.source_url }}" target="_blank" rel="noopener">{{ badge_inner }}<span class="av-visually-hidden"> {{ 'anvil.a11y.new_window' | t }}</span></a>
+  {%- elsif request.design_mode -%}
+    <p class="av-review-stars__note">{{ 'anvil.editor.review_stars_no_source' | t }}</p>
   {%- endif -%}
 </div>
 {% stylesheet %}
@@ -40,6 +59,7 @@
 .av-review-stars__link:hover .av-review-stars__text{text-decoration:underline}
 .av-review-stars__number{font-weight:600}
 .av-review-stars__logo{height:1.5em;width:auto;max-width:120px;object-fit:contain}
+.av-review-stars__note{margin:0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
 {% endstylesheet %}
 {% schema %}
 {
@@ -47,9 +67,9 @@
   "tag": null,
   "settings": [
     { "type": "image_picker", "id": "logo", "label": "Platform logo", "info": "Upload a logo you are entitled to use. Anvil ships no third-party logos." },
-    { "type": "text", "id": "text", "label": "Text", "default": "Example: rated by our customers on — replace with your real wording" },
+    { "type": "text", "id": "text", "label": "Text", "default": "Example: rated by our customers on — replace with your real wording", "info": "Do not type a rating or review count here. The number shows only from the rating below, and the whole badge only with a source link shoppers can check." },
     { "type": "range", "id": "rating", "label": "Rating", "min": 0, "max": 5, "step": 0.1, "default": 5 },
-    { "type": "url", "id": "source_url", "label": "Source link", "info": "The page where shoppers can verify this rating. Stars and the number show only when this link is set." },
+    { "type": "url", "id": "source_url", "label": "Source link", "info": "The page where shoppers can verify this rating. Nothing in this badge shows until this link is set." },
     { "type": "checkbox", "id": "show_stars", "label": "Show stars", "default": true },
     { "type": "checkbox", "id": "show_number", "label": "Show the number", "default": true },
     { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" }

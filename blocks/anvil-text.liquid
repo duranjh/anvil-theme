@@ -1,3 +1,16 @@
+{% doc %}
+  Theme block: rich text in the theme's type scale.
+
+  Settings (id · type · values · default):
+  - text · richtext · default "<p>Example paragraph — replace it with your own words. Only state things that are true for your store.</p>"
+  - size · select · sm | md | lg · default "md"
+  - align · text_alignment · default "left"
+  - width · select · full | medium | narrow · default "full"
+  - muted · checkbox · default false
+
+  @example
+  {"type": "anvil-text"}
+{% enddoc %}
 {%- liquid
   assign s = block.settings
 -%}

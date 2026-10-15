@@ -7,7 +7,7 @@ An accordion of up to 30 questions and answers. Each item is a native `<details>
 
 ## Markup (shopper view)
 ```
-div#anchor.av-section.av-scheme--… .anvil-faq            ← anvil-section-attrs
+div#anchor.av-section.av-scheme--… .av-s-anvil-faq       ← anvil-section-attrs
   div.av-section__inner
     .av-section-head (h2 + subheading)                   ← anvil-section-head
     anvil-collapsible.av-faq.av-faq--lines|cards.av-faq--icon-plus|chevron[.av-faq--two-col][single]
@@ -25,7 +25,7 @@ The 13 chassis settings come first, verbatim (see CONVENTIONS §4). Then:
 
 | id | type | default | effect |
 |---|---|---|---|
-| `open_first` | checkbox | `true` | first `<details>` is rendered with the `open` attribute (works without JS) |
+| `open_first` | checkbox | `true` | the first item actually rendered (a blank question is skipped on the storefront) gets the `open` attribute (works without JS) |
 | `single_open` | checkbox | `false` | adds the `single` attribute to `<anvil-collapsible>`; with JS, opening one item closes the others. Without JS every item can stay open |
 | `icon_style` | select `plus` / `chevron` | `plus` | plus/minus pair swapped by CSS on `[open]`, or one chevron rotated 180° on `[open]` |
 | `item_style` | select `lines` / `cards` | `lines` | divider lines between items, or boxed items using the card radius/border tokens |
@@ -46,12 +46,12 @@ Local block `item` (name "Question"), `max_blocks: 30`:
 
 ## Behaviour
 - **Without JS:** native disclosure; `open_first` works; icons swap via `[open]`; `single_open` has no effect (all items can be open); no animation.
-- **With JS:** `<anvil-collapsible>` intercepts summary clicks, animates the answer's height using `--av-dur`/`--av-ease`, adds `is-animating`/`is-closing` while it runs, and dispatches `anvil:collapsible:toggle`. The icon CSS uses `[open]:not(.is-closing)` so the icon flips back the moment a close starts rather than when the animation ends.
+- **With JS:** `<anvil-collapsible>` intercepts summary clicks, animates the answer's height using `--av-dur`/`--av-ease`, adds `av-is-animating`/`av-is-closing` while it runs, and dispatches `anvil:collapsible:toggle`. The icon CSS uses `[open]:not(.av-is-closing)` so the icon flips back the moment a close starts rather than when the animation ends.
 - **Keyboard:** `summary` is natively focusable; Enter/Space toggle; the global `:focus-visible` ring applies.
 - **Reduced motion / animations off:** the chevron transition uses `--av-dur`, which `anvil-css-tokens` sets to `0ms` when the merchant turns animations off; the transition itself is wrapped in `@media (prefers-reduced-motion: no-preference)`. The core element skips the height animation under both conditions (`motionOff()`).
 - **Icons** are rendered once with `anvil-icon` (`plus`, `minus` or `chevron-down`) and captured, then printed per item, so 30 items do not trigger 60 snippet renders.
 - **Blank question:** on the storefront the item is skipped (a disclosure without a name is an accessibility failure). In the editor it is kept with the placeholder `anvil.faq.untitled_question` so the merchant can still select and fix it.
-- **No blocks:** nothing renders beyond the heading; in the editor a one-line note (`anvil.faq.empty_editor_note`) explains how to add a question.
+- **No blocks:** nothing renders beyond the heading; in the editor the shared one-line note `anvil.editor.empty_section` asks for blocks.
 - **Editor:** block select opens the item (core.js); section/padding/scheme behave through the chassis.
 
 ## Structured data (`json_ld`)
@@ -80,13 +80,13 @@ The setting's `info` says to use it on one FAQ section per page and only for gen
 ## Locale keys added (`locales/en.default.json`, under `anvil.faq`)
 | key | English |
 |---|---|
-| `anvil.faq.empty_editor_note` | Add a question with the + button in the editor. The storefront shows nothing here until you do. |
+| `anvil.editor.empty_section` | Add blocks to show content here. (shared key, DECISIONS 25) |
 | `anvil.faq.untitled_question` | Untitled question — add the question text in this block's settings |
 
 Both are rendered only in `request.design_mode`; the storefront reads no fixed string from this section.
 
 ## Contract assumptions (other clusters)
-- `<anvil-collapsible>` from `assets/anvil-core.js`: wraps `<details>` children, `single` attribute closes siblings, animates `:scope > :not(summary)` (so the answer is the single element after `summary`), toggles `is-animating` / `is-closing`, reads `--av-dur` from computed style.
+- `<anvil-collapsible>` from `assets/anvil-core.js`: wraps `<details>` children, `single` attribute closes siblings, animates `:scope > :not(summary)` (so the answer is the single element after `summary`), toggles `av-is-animating` / `av-is-closing`, reads `--av-dur` from computed style.
 - `anvil-section-attrs` / `anvil-section-head` signatures per CONVENTIONS §5; `anvil-icon` has `plus`, `minus`, `chevron-down` and marks them `aria-hidden`.
 - `anvil-base.css` provides `summary { list-style: none }` + marker removal, `.av-rte`, `.av-example-note`, the `:focus-visible` ring and the `h3` defaults that `.av-faq__question` resets.
 - `anvil-css-tokens` sets `--av-dur` to `0ms` when `settings.animations_enabled` is off.
@@ -99,3 +99,9 @@ Both are rendered only in `request.design_mode`; the storefront reads no fixed s
 4. **Native exclusive accordion** (`<details name="…">`) was not used for `single_open`: it would snap siblings closed before `<anvil-collapsible>` can animate them. Could be added later for a JS-off single-open mode if wanted.
 5. **Answer HTML in JSON-LD.** Kept as HTML (what shoppers see). Switch to `strip_html` if a consumer other than Google is the target.
 6. **Preset width `narrow`.** Chosen for readability; two-column mode on a narrow width is tight, so a merchant turning on `two_columns` may also want `width: page`.
+
+## Changes in the 2026-10-14 fix pass
+- `open_first` tracks the first rendered item with a flag, so a blank first question no longer leaves every item closed.
+- State classes renamed to `av-is-*`; the root's type class is `av-s-anvil-faq` (DECISIONS 31).
+- `templates/page.faq.json` now uses two FAQ sections (anchors `shipping` and `product`); only the first emits `FAQPage` JSON-LD (owner decision G, DECISIONS 26). Other templates carry example FAQ sections with `json_ld: false`.
+- The height animation is the documented exception in CONVENTIONS §8 (owner decision B, DECISIONS 21).

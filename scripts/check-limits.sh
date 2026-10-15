@@ -15,6 +15,9 @@
 #     per section, block_order agrees with blocks; section groups carry
 #     type/name/sections/order
 #   - blocks/ holds at most 300 files
+#   - gzip budgets for theme assets (DECISIONS 20): the core modules anvil-core, anvil-events, anvil-cart-api,
+#     anvil-sections and anvil-dom together <= 15360 B; anvil-slider.js <= 5120; anvil-marquee.js <= 1536;
+#     every other assets/anvil-*.js <= 4096; anvil-base.css <= 20480; every other assets/anvil-*.css <= 8192
 #
 # Usage: scripts/check-limits.sh [--root DIR]
 
@@ -73,6 +76,38 @@ done
 if [ -d blocks ]; then
   n="$(find blocks -maxdepth 1 -type f -name '*.liquid' | wc -l | tr -d ' ')"
   [ "$n" -le 300 ] || note blocks 1 "blocks/ holds $n files; limit 300"
+fi
+
+# --- gzip budgets (assets) ------------------------------------------------------
+gz_size() { gzip -9 -c "$1" | wc -c | tr -d ' '; }
+if [ -d assets ]; then
+  core_total=0
+  for name in anvil-core anvil-events anvil-cart-api anvil-sections anvil-dom; do
+    f="assets/$name.js"
+    [ -f "$f" ] || continue
+    core_total=$((core_total + $(gz_size "$f")))
+  done
+  [ "$core_total" -le 15360 ] || note assets/anvil-core.js 1 "core modules (anvil-core, -events, -cart-api, -sections, -dom) are $core_total B gzipped together; budget 15360"
+  for f in assets/anvil-*.js; do
+    [ -f "$f" ] || continue
+    case "$(basename "$f")" in
+      anvil-core.js|anvil-events.js|anvil-cart-api.js|anvil-sections.js|anvil-dom.js) continue ;;
+      anvil-slider.js) limit=5120 ;;
+      anvil-marquee.js) limit=1536 ;;
+      *) limit=4096 ;;
+    esac
+    s="$(gz_size "$f")"
+    [ "$s" -le "$limit" ] || note "$f" 1 "$s B gzipped; budget $limit"
+  done
+  for f in assets/anvil-*.css; do
+    [ -f "$f" ] || continue
+    case "$(basename "$f")" in
+      anvil-base.css) limit=20480 ;;
+      *) limit=8192 ;;
+    esac
+    s="$(gz_size "$f")"
+    [ "$s" -le "$limit" ] || note "$f" 1 "$s B gzipped; budget $limit"
+  done
 fi
 
 # --- JSON validity, structure and locale key counts ---------------------------
