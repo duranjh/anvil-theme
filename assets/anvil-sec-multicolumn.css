@@ -1,0 +1,38 @@
+/* sections/anvil-multicolumn.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* Columns, gap and the centred last row from the shared .av-grid on the list; boxes from .av-surface. */
+.av-multicolumn{--av-multicolumn-pad:var(--av-space-4);--av-multicolumn-title:var(--av-text-lg);--av-multicolumn-text:var(--av-text-md);--av-slider-gap:var(--av-grid-space,var(--av-grid-gap))}
+.av-multicolumn--m2{--av-grid-space:var(--av-space-3);--av-multicolumn-pad:var(--av-space-3);--av-multicolumn-title:var(--av-text-md);--av-multicolumn-text:var(--av-text-sm)}
+.av-multicolumn__list{padding:0;list-style:none}
+.av-multicolumn__item{display:flex;margin:0}
+.av-multicolumn__card{display:flex;flex:1;flex-direction:column;min-width:0;color:var(--av-fg)}
+/* Boxed: the image reaches the card edges and the card clips it to its own radius. */
+.av-multicolumn--boxed .av-multicolumn__card{overflow:hidden}
+.av-multicolumn--boxed .av-multicolumn__media{border-width:0;border-radius:0;box-shadow:none}
+.av-multicolumn__body{display:flex;flex:1 1 auto;flex-direction:column;gap:var(--av-space-3);min-width:0}
+.av-multicolumn__media + .av-multicolumn__body{margin-top:var(--av-space-4)}
+.av-multicolumn--boxed .av-multicolumn__body{margin-top:0;padding:var(--av-multicolumn-pad)}
+.av-multicolumn__icon{flex:none;align-self:flex-start;display:inline-flex;width:var(--av-multicolumn-icon,40px);height:var(--av-multicolumn-icon,40px);color:var(--av-accent)}
+.av-multicolumn__icon > svg,.av-multicolumn__icon > img{display:block;width:100%;height:100%;object-fit:contain}
+.av-multicolumn .av-multicolumn__title{margin:0;font-size:var(--av-multicolumn-title);line-height:1.25;overflow-wrap:anywhere}
+.av-multicolumn .av-multicolumn__text{min-width:0;font-size:var(--av-multicolumn-text);overflow-wrap:break-word}
+.av-multicolumn__action{display:flex;flex-wrap:wrap;margin-top:auto;padding-top:var(--av-space-1)}
+.av-multicolumn--align-center .av-multicolumn__body{text-align:center}
+.av-multicolumn--align-center .av-multicolumn__icon{align-self:center}
+.av-multicolumn--align-center .av-multicolumn__action{justify-content:center}
+.av-multicolumn--align-right .av-multicolumn__body{text-align:right}
+.av-multicolumn--align-right .av-multicolumn__icon{align-self:flex-end}
+.av-multicolumn--align-right .av-multicolumn__action{justify-content:flex-end}
+.av-multicolumn__link{color:inherit;text-decoration:none}
+.av-multicolumn__link:hover{text-decoration:underline;text-decoration-thickness:0.06em;text-underline-offset:0.15em}
+.av-multicolumn__empty{margin:0}
+/* Swipe row on phones: the scrolling track clips what overflows it, so it keeps room for the 4 px focus ring
+   (and the card shadow below). Snap points start at the padding edge. */
+.av-multicolumn--swipe > [data-slider-track]{flex-wrap:nowrap;justify-content:flex-start;padding:var(--av-space-1);scroll-padding-inline:var(--av-space-1)}
+.av-multicolumn--swipe.av-multicolumn--boxed > [data-slider-track]{padding-bottom:var(--av-space-3)}
+@media (min-width: 750px){
+.av-multicolumn,.av-multicolumn--m2{--av-grid-space:initial;--av-multicolumn-pad:var(--av-space-5);--av-multicolumn-title:var(--av-text-lg);--av-multicolumn-text:var(--av-text-md)}
+/* Swipe is a phone layout: from 750 px the slider track wraps into the same grid. */
+.av-multicolumn--swipe > [data-slider-track]{flex-wrap:wrap;overflow:visible;scroll-snap-type:none;padding:0;scroll-padding-inline:0}
+.av-multicolumn--swipe > .av-grid--center{justify-content:center}
+.av-multicolumn--swipe > [data-slider-track] > .av-multicolumn__item{flex:0 0 calc((100% - (var(--av-grid-n) - 1) * var(--av-grid-space,var(--av-grid-gap))) / var(--av-grid-n))}
+}

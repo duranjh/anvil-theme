@@ -1,0 +1,7 @@
+/* sections/anvil-faq.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* Rows, toggle and cards come from the shared accordion (assets/anvil-accordion.css); only the two-column layout is here. */
+@media (min-width: 990px){
+.av-faq--two-col{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--av-space-7)}
+.av-faq--two-col.av-accordion--lines{border-top:0;border-bottom:1px solid var(--av-border)}
+.av-faq--two-col.av-accordion--lines .av-accordion__item{border-top:1px solid var(--av-border);border-bottom:0}
+}

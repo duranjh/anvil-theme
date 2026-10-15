@@ -1,3 +1,4 @@
+{{ 'anvil-sec-pricing.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -32,33 +33,30 @@
       {% render 'anvil-section-head', section: section %}
       {% render 'anvil-editor-empty' %}
     {%- endif -%}
-    {%- if swipe -%}
-      {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
-      <anvil-slider {% render 'anvil-slider-attrs', count: plan_count, per_view: 1, per_view_tablet: plan_count, per_view_desktop: plan_count, peek: 'auto', dots: true, label: list_label, class: 'av-pricing__slider' %}>
-        <div class="{{ grid_class }}" data-slider-track>
-          {%- content_for 'blocks' -%}
-        </div>
-        <div class="av-slider__dots" data-slider-dots></div>
-      </anvil-slider>
-      <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
-    {%- else -%}
-      <div class="{{ grid_class }}" role="list">
+    {%- comment -%}
+      Shopify accepts one {% content_for 'blocks' %} per file (upload error "Duplicate entries"), so both layouts
+      share one block area; only the wrapper's tag and the track's attributes change.
+    {%- endcomment -%}
+    {%- liquid
+      if swipe
+        assign wrap_tag = 'anvil-slider'
+      else
+        assign wrap_tag = 'div'
+      endif
+    -%}
+    {%- if swipe -%}{{ 'anvil-slider.css' | asset_url | stylesheet_tag }}{%- endif -%}
+    <{{ wrap_tag }}
+      {%- if swipe %} {% render 'anvil-slider-attrs', count: plan_count, per_view: 1, per_view_tablet: plan_count, per_view_desktop: plan_count, peek: 'auto', dots: true, label: list_label, class: 'av-pricing__slider' %}{% else %} class="av-pricing__static"{% endif -%}
+    >
+      <div class="{{ grid_class }}" {% if swipe %}data-slider-track{% else %}role="list"{% endif %}>
         {%- content_for 'blocks' -%}
       </div>
-    {%- endif -%}
+      {%- if swipe -%}<div class="av-slider__dots" data-slider-dots></div>{%- endif -%}
+    </{{ wrap_tag }}>
+    {%- if swipe -%}<script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>{%- endif -%}
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-/* Columns and the centred last row from the shared .av-grid; the swipe row is <anvil-slider> on phones. */
-.av-pricing>*{max-width:30rem}
-.av-pricing:not(:has(>*)){display:none}
-.av-pricing--swipe{flex-wrap:nowrap;justify-content:flex-start;padding-block:var(--av-space-1)}
-@media (min-width: 750px){
-.av-pricing__slider > .av-pricing--swipe{flex-wrap:wrap;justify-content:center;overflow:visible;scroll-snap-type:none}
-.av-pricing__slider > .av-pricing--swipe > *{flex:0 0 calc((100% - (var(--av-grid-n) - 1) * var(--av-grid-space,var(--av-grid-gap))) / var(--av-grid-n))}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Pricing table",

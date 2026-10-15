@@ -1,3 +1,4 @@
+{{ 'anvil-sec-video.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -140,24 +141,6 @@
     </div>
   </div>
 </div>
-{% stylesheet %}
-.av-video{display:block}
-.av-video__figure{margin:0 auto;max-width:100%}
-.av-video__caption{margin-top:var(--av-space-3);font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted);overflow-wrap:anywhere}
-.av-video__caption--left{text-align:left}
-.av-video__caption--center{text-align:center}
-.av-video__caption--right{text-align:right}
-.av-video__caption a{color:inherit;text-decoration:underline;text-underline-offset:0.15em}
-.av-video__note{margin:var(--av-space-3) 0 0;text-align:center}
-/* Edge to edge (full width, 16:9): the box grows into the gutters; the frame's corners, border and shadow go. */
-.av-video--bleed .av-video__media{width:calc(100% + 2 * var(--av-gutter));margin-inline:calc(var(--av-gutter) * -1);border-width:0;border-radius:0;box-shadow:none}
-/* From 750 px, portrait and square boxes stay within the screen height (svh where supported). */
-@media (min-width: 750px){
-.av-video--9-16 .av-video__figure{max-width:min(100%,calc(85vh * 9 / 16));max-width:min(100%,calc(85svh * 9 / 16))}
-.av-video--4-5 .av-video__figure{max-width:min(100%,calc(85vh * 4 / 5));max-width:min(100%,calc(85svh * 4 / 5))}
-.av-video--1-1 .av-video__figure{max-width:min(100%,85vh);max-width:min(100%,85svh)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Video",

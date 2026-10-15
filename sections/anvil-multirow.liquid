@@ -1,3 +1,4 @@
+{{ 'anvil-sec-multirow.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -178,38 +179,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-.av-multirow{--av-multirow-media:50%;--av-multirow-gap:64px;display:grid;grid-template-columns:minmax(0,1fr);row-gap:calc(var(--av-multirow-gap) * 0.6);margin:0;padding:0;list-style:none}
-.av-multirow__row{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-5);align-items:center;min-width:0}
-.av-multirow--valign-top .av-multirow__row{align-items:start}
-.av-multirow--valign-bottom .av-multirow__row{align-items:end}
-.av-multirow__media{min-width:0}
-.av-multirow__content{display:flex;flex-direction:column;gap:var(--av-space-3);width:100%;max-width:36rem;min-width:0}
-.av-multirow--align-center .av-multirow__content{margin-inline:auto;text-align:center}
-.av-multirow--align-right .av-multirow__content{margin-inline-start:auto;text-align:right}
-.av-multirow__eyebrow{margin:0;font-size:var(--av-text-sm);font-weight:600;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;color:var(--av-fg-muted);overflow-wrap:break-word}
-.av-multirow__title{margin:0;font-size:var(--av-text-2xl);line-height:1.2;overflow-wrap:break-word}
-.av-multirow--title-sm .av-multirow__title{font-size:var(--av-text-lg)}
-.av-multirow--title-md .av-multirow__title{font-size:var(--av-text-xl)}
-.av-multirow--title-xl .av-multirow__title{font-size:var(--av-text-3xl)}
-.av-multirow__text{min-width:0;overflow-wrap:break-word}
-.av-multirow__action{display:flex;flex-wrap:wrap;padding-top:var(--av-space-2)}
-.av-multirow--align-center .av-multirow__action{justify-content:center}
-.av-multirow--align-right .av-multirow__action{justify-content:flex-end}
-/* Two columns from 750 px. Tablets cap the image at half the row. Right rows place both items explicitly,
-   so an image-only row still sits in its own column; DOM (reading) order stays image, then text. */
-@media (min-width: 750px){
-.av-multirow{row-gap:var(--av-multirow-gap)}
-.av-multirow__row{--av-multirow-col:min(var(--av-multirow-media),50%);grid-template-columns:var(--av-multirow-col) minmax(0,1fr);column-gap:clamp(var(--av-space-6),4vw,var(--av-space-8))}
-.av-multirow__row--media-right{grid-template-columns:minmax(0,1fr) var(--av-multirow-col)}
-.av-multirow__row--media-right .av-multirow__media{grid-column:2;grid-row:1}
-.av-multirow__row--media-right .av-multirow__content{grid-column:1;grid-row:1}
-}
-/* From 990 px the chosen share applies, but never past the point that leaves the text (and gap) less than 20rem of the row. */
-@media (min-width: 990px){
-.av-multirow__row{--av-multirow-col:min(var(--av-multirow-media),max(50%,100% - 20rem))}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Multirow",

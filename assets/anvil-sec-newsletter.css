@@ -1,0 +1,29 @@
+/* sections/anvil-newsletter.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+.av-newsletter{position:relative;display:flex;flex-direction:column;justify-content:center}
+.av-newsletter--h-sm{min-height:240px}
+.av-newsletter--h-md{min-height:320px}
+.av-newsletter--h-lg{min-height:400px}
+.av-newsletter--image{overflow:hidden;padding:var(--av-space-8) var(--av-gutter)}
+.av-newsletter__media{position:absolute;inset:0}
+.av-newsletter__img{display:block;width:100%;height:100%;object-fit:cover}
+.av-newsletter__content{position:relative;z-index:1;width:100%;max-width:var(--av-newsletter-w,640px);margin-inline:auto}
+.av-newsletter--left .av-newsletter__content{margin-left:0;margin-right:auto;text-align:left}
+.av-newsletter--right .av-newsletter__content{margin-left:auto;margin-right:0;text-align:right}
+.av-newsletter--center .av-newsletter__content{text-align:center}
+.av-newsletter__content.av-box{padding:var(--av-space-6) var(--av-space-5)}
+.av-newsletter__content > .av-section-head{margin-bottom:var(--av-space-5)}
+.av-newsletter__form{display:grid;gap:var(--av-space-3);text-align:start;scroll-margin-top:var(--av-space-8)}
+.av-newsletter__row{display:flex;flex-direction:column;gap:var(--av-space-2)}
+.av-newsletter--inline .av-newsletter__row{flex-flow:row wrap}
+.av-newsletter--inline .av-newsletter__input{flex:999 1 12rem;min-width:0}
+.av-newsletter--inline .av-newsletter__button{flex:1 0 auto}
+.av-newsletter__content .av-newsletter__print{margin-top:var(--av-space-4);font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted)}
+.av-newsletter__content .av-newsletter__print a{color:inherit;text-decoration:underline;text-underline-offset:0.15em}
+.av-newsletter--image .av-newsletter__content:not(.av-box) .av-newsletter__notice{background:rgb(var(--av-bg-rgb))}
+@media (min-width: 750px){
+.av-newsletter--h-sm{min-height:320px}
+.av-newsletter--h-md{min-height:440px}
+.av-newsletter--h-lg{min-height:560px}
+.av-newsletter--image{padding-block:var(--av-space-9)}
+.av-newsletter__content.av-box{padding:var(--av-space-7)}
+}

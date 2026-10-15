@@ -1,3 +1,4 @@
+{{ 'anvil-sec-main-customers-register.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign submit_label = 'anvil.customer.register.submit' | t
@@ -37,18 +38,6 @@
     </div>
   </div>
 </div>
-{% stylesheet %}
-.av-customers-register{max-width:520px;margin:0 auto}
-.av-customers-register__title{margin:0 0 var(--av-space-4);font-size:var(--av-text-2xl)}
-.av-customers-register__form{display:flex;flex-direction:column;gap:var(--av-space-3)}
-.av-customers-register__row{display:grid;grid-template-columns:1fr;gap:var(--av-space-3)}
-.av-customers-register__actions{margin-top:var(--av-space-2)}
-.av-customers-register__alt{margin:var(--av-space-4) 0 0;font-size:var(--av-text-sm)}
-.av-customers-register__link{color:inherit;text-underline-offset:0.2em}
-@media (min-width: 480px){
-.av-customers-register__row{grid-template-columns:1fr 1fr}
-}
-{% endstylesheet %}
 
 {% schema %}
 {

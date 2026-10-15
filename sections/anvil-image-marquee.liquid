@@ -1,3 +1,4 @@
+{{ 'anvil-sec-image-marquee.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign total = section.blocks.size
@@ -219,38 +220,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-.av-image-marquee{--av-image-marquee-h:var(--av-image-marquee-h-m,160px);display:grid;grid-template-columns:minmax(0,1fr);row-gap:var(--av-image-marquee-gap,16px)}
-.av-image-marquee--bleed{margin-inline:calc(var(--av-gutter) * -1)}
-/* Room for the focus ring of a linked image: the strip clips at its padding box. */
-.av-image-marquee .av-image-marquee__row{padding-block:var(--av-space-2);margin-block:calc(var(--av-space-2) * -1)}
-.av-image-marquee__track{margin:0;padding:0;list-style:none}
-.av-image-marquee__item{flex:none;margin:0}
-.av-image-marquee__media{display:block;height:var(--av-image-marquee-h);overflow:hidden;background:rgb(var(--av-fg-rgb) / 0.06);color:inherit;text-decoration:none}
-.av-image-marquee--rounded .av-image-marquee__media{border-radius:var(--av-radius-media)}
-.av-image-marquee__img{width:auto;max-width:none;height:100%}
-.av-image-marquee--shaped .av-image-marquee__media,.av-image-marquee__media--ph{width:calc(var(--av-image-marquee-h) * var(--av-image-marquee-ar, 1.3333))}
-.av-image-marquee--shaped .av-image-marquee__img{width:100%;object-fit:cover}
-.av-image-marquee__ph{width:100%;height:100%;box-sizing:border-box;padding:12%;color:rgb(var(--av-fg-rgb) / 0.4);fill:currentColor}
-.av-image-marquee__media[href]:hover .av-image-marquee__img{opacity:0.85}
-.av-image-marquee__note{margin:var(--av-space-3) 0 0;text-align:center}
-/* A static wrapped row (reduced motion, animations off): the strip keeps the gutter, and an image wider than the
-   content box is cropped to fit instead of being cut off on both sides. */
-@media (prefers-reduced-motion: reduce){
-.av-image-marquee--bleed{margin-inline:0}
-.av-image-marquee__item,.av-image-marquee__media{max-width:100%}
-.av-image-marquee__img{max-width:100%;object-fit:cover}
-}
-html[data-animations="off"] .av-image-marquee--bleed{margin-inline:0}
-html[data-animations="off"] .av-image-marquee :is(.av-image-marquee__item,.av-image-marquee__media){max-width:100%}
-html[data-animations="off"] .av-image-marquee__img{max-width:100%;object-fit:cover}
-@media (prefers-reduced-motion: no-preference){
-html:not([data-animations="off"]) .av-image-marquee__img{transition:opacity var(--av-dur) var(--av-ease)}
-}
-@media (min-width: 750px){
-.av-image-marquee{--av-image-marquee-h:var(--av-image-marquee-h-d,240px)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Scrolling images",

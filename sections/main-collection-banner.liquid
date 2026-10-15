@@ -1,3 +1,4 @@
+{{ 'anvil-sec-main-collection-banner.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign banner_sizes = '100vw'
@@ -25,14 +26,6 @@
     </div>
   </div>
 </div>
-{% stylesheet %}
-.av-collection-banner{display:flex;flex-direction:column;gap:var(--av-space-4)}
-.av-collection-banner__media{border-radius:var(--av-radius-media);overflow:hidden}
-.av-collection-banner__img{display:block;width:100%;height:auto}
-.av-collection-banner__title{margin:0;font-size:var(--av-text-3xl)}
-.av-collection-banner__description{max-width:65ch;color:var(--av-fg-muted)}
-.av-collection-banner__description p:first-child{margin-top:var(--av-space-2)}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Collection banner",

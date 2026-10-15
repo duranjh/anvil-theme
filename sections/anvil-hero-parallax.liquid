@@ -1,3 +1,4 @@
+{{ 'anvil-sec-hero-parallax.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -254,46 +255,6 @@
     <script type="module" src="{{ 'anvil-hero-parallax.js' | asset_url }}"></script>
   {%- endif -%}
 </div>
-{% stylesheet %}
-/* The hero is a one-cell grid: the media and the overlay fill it, the content sets its height above the minimum. */
-.av-hero-parallax{position:relative;display:grid;grid-template-columns:minmax(0,1fr);isolation:isolate;min-height:var(--av-hero-parallax-min-m,440px);background:rgb(var(--av-fg-rgb) / 0.06)}
-.av-hero-parallax--hm-full{min-height:100vh;min-height:100svh}
-.av-hero-parallax--framed{border-radius:var(--av-radius-media)}
-.av-hero-parallax__media{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
-.av-hero-parallax__layer{position:absolute;inset:0}
-.av-hero-parallax__picture,.av-hero-parallax__img,.av-hero-parallax__placeholder{position:absolute;inset:0;display:block;width:100%;height:100%}
-.av-hero-parallax__picture{object-position:var(--av-hero-parallax-pos-m,50% 50%)}
-.av-hero-parallax__img{object-fit:cover}
-.av-hero-parallax__placeholder{box-sizing:border-box;padding:8%;color:rgb(var(--av-fg-rgb) / 0.35);fill:currentColor}
-.av-hero-parallax__overlay{z-index:1;border-radius:inherit}
-.av-hero-parallax__content{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:var(--av-hero-parallax-v-m,center);width:100%;max-width:var(--av-page-width);margin-inline:auto;padding:calc(var(--av-space-6) + var(--av-overlap-pad,0px)) var(--av-gutter) var(--av-space-6)}
-.av-hero-parallax__box{display:flex;flex-direction:column;gap:var(--av-hero-parallax-gap,24px);width:100%;text-align:center}
-.av-hero-parallax__box--left{text-align:left}
-.av-hero-parallax__box--right{text-align:right}
-.av-hero-parallax__box>*{min-width:0}
-.av-hero-parallax__box .av-section-head{margin:0}
-.av-hero-parallax__box .av-section-head__sub{color:inherit}
-@media (min-width: 750px){
-.av-hero-parallax{min-height:var(--av-hero-parallax-min-d,560px)}
-.av-hero-parallax--hd-full{min-height:100vh;min-height:100svh}
-.av-hero-parallax__picture{object-position:var(--av-hero-parallax-pos-d,50% 50%)}
-.av-hero-parallax__content{justify-content:var(--av-hero-parallax-v-d,center);align-items:var(--av-hero-parallax-h-d,center);padding-block:calc(var(--av-space-8) + var(--av-overlap-pad,0px)) var(--av-space-8)}
-.av-hero-parallax__box{max-width:var(--av-hero-parallax-box-w,640px)}
-.av-hero-parallax__box.av-box{padding:var(--av-space-7)}
-}
-/* Movement: only on a hovering, fine pointer with motion allowed. The layer grows by strength x height above and
-   below, then travels from -shift (hero entering at the bottom) to +shift (leaving at the top), so the image moves
-   slower than the page. Browsers with scroll-driven animations run it here; assets/anvil-hero-parallax.js writes
-   the same transform elsewhere. */
-@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine){
-html:not([data-animations="off"]) .av-hero-parallax--move .av-hero-parallax__layer{inset:calc(var(--av-hero-parallax-s,0) * -100%) 0;will-change:transform}
-@supports (animation-timeline: view()){
-html:not([data-animations="off"]) .av-hero-parallax--move .av-hero-parallax__media{view-timeline:--av-hero-parallax block}
-html:not([data-animations="off"]) .av-hero-parallax--move .av-hero-parallax__layer{animation:av-hero-parallax 1ms linear both;animation-timeline:--av-hero-parallax}
-}
-}
-@keyframes av-hero-parallax{from{transform:translate3d(0,calc(var(--av-hero-parallax-shift,0%) * -1),0)}to{transform:translate3d(0,var(--av-hero-parallax-shift,0%),0)}}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Parallax hero",

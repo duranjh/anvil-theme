@@ -1,0 +1,4 @@
+/* sections/anvil-related-products.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* The product row (grid or slider) is snippets/anvil-product-row with its rules in assets/anvil-card.css. */
+.av-related-products{display:block}
+.av-related-products__note{margin:0 0 var(--av-space-4);text-align:center}

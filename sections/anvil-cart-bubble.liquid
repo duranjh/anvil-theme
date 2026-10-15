@@ -3,10 +3,6 @@
   bubble slot is swapped with this markup. Not addable (no presets) and not placed in any template.
 {%- endcomment -%}
 {%- render 'anvil-cart-bubble' -%}
-{% stylesheet %}
-.av-cart-bubble-slot{display:contents}
-.av-cart-bubble__count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;font-size:var(--av-text-xs);font-weight:700;line-height:1;color:var(--av-on-accent);background:var(--av-accent);border-radius:var(--av-radius-pill)}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Cart bubble",

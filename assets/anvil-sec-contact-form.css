@@ -1,0 +1,9 @@
+/* sections/anvil-contact-form.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+.av-contact-form{max-width:720px;margin:0 auto}
+.av-contact-form__grid{display:grid;grid-template-columns:1fr;gap:var(--av-space-4);margin-bottom:var(--av-space-4)}
+.av-contact-form__notice{margin-bottom:var(--av-space-4)}
+.av-contact-form__actions{display:flex;justify-content:flex-start}
+@media (min-width: 750px){
+.av-contact-form__grid{grid-template-columns:1fr 1fr}
+.av-contact-form__field--full{grid-column:1 / -1}
+}

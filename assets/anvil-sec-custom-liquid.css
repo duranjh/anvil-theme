@@ -1,0 +1,18 @@
+/* sections/anvil-custom-liquid.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+.av-custom-liquid{min-width:0;overflow-wrap:break-word}
+/* Base CSS zeroes prose margins: 1em above a prose block after a rendered sibling; widgets untouched; :where() lets merchant classes win */
+.av-custom-liquid>:where(:not(script):not(style):not(link)+p),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h1),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h2),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h3),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h4),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h5),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h6),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+ul),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+ol),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+dl),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+blockquote),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+figure),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+pre),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+table){margin-top:1em}
+.av-custom-liquid+.av-custom-liquid__empty{margin-top:var(--av-space-4)}

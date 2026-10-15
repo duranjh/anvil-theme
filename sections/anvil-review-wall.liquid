@@ -1,3 +1,4 @@
+{{ 'anvil-sec-review-wall.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -306,51 +307,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-/* Read more and Show more key on :defined, so without the module every review shows in full. */
-/* Columns and gap from the shared .av-grid (theme grid gap); card boxes from .av-surface. */
-.av-review-wall{display:block}
-.av-review-wall__summary{display:flex;justify-content:center;margin:0 0 var(--av-space-6);font-size:var(--av-text-md);line-height:1.4}
-.av-review-wall__summary--left{justify-content:flex-start}
-.av-review-wall__summary--right{justify-content:flex-end}
-.av-review-wall__platform{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:inherit;gap:var(--av-space-2) var(--av-space-3);min-height:24px;color:inherit;text-decoration:none}
-.av-review-wall__platform:hover .av-review-wall__count{text-decoration:underline;text-underline-offset:0.15em}
-.av-review-wall__score,.av-review-wall__brand{font-weight:700}
-.av-review-wall__dot{color:var(--av-fg-muted)}
-.av-review-wall__logo{display:block;width:auto;height:var(--av-review-wall-logo,24px);max-width:200px;object-fit:contain}
-/* Editor-only preview of the summary while the platform link is empty. */
-.av-review-wall__summary--preview{flex-wrap:wrap}
-.av-review-wall__summary--preview .av-review-wall__platform{opacity:0.6}
-.av-review-wall__preview-note{flex-basis:100%;margin:var(--av-space-1) 0 0}
-.av-review-wall__grid{padding:0;list-style:none}
-.av-review-wall--masonry .av-review-wall__grid{display:block;columns:var(--av-grid-n);column-gap:var(--av-grid-gap)}
-.av-review-wall__card{display:flex;min-width:0;margin:0;border-radius:var(--av-radius-card)}
-.av-review-wall--masonry .av-review-wall__card{break-inside:avoid;margin-bottom:var(--av-grid-gap)}
-.av-review-wall:defined .av-review-wall__card--extra:not(.av-is-shown){display:none}
-.av-review-wall__review{display:flex;flex:1;flex-direction:column;align-items:flex-start;gap:var(--av-space-3);min-width:0;margin:0;padding:var(--av-space-5);border-radius:var(--av-radius-card);text-align:start}
-.av-review-wall:not(.av-review-wall--boxed) .av-review-wall__review{padding:0;border-radius:0}
-.av-review-wall__media{align-self:stretch;flex:none}
-.av-review-wall__stars{display:flex;line-height:0}
-.av-review-wall__quote{max-width:100%;margin:0}
-.av-review-wall__text{margin:0;font-size:var(--av-text-sm);line-height:1.6;overflow-wrap:break-word}
-/* MDN: line clamping still needs the -webkit- box properties. */
-.av-review-wall--clamp:defined .av-review-wall__grid .av-review-wall__text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--av-review-wall-lines,5);overflow:hidden}
-.av-review-wall__read{display:inline-flex;align-items:center;min-height:24px;padding:0;border:0;background:none;color:var(--av-accent);font:inherit;font-size:var(--av-text-sm);font-weight:600;text-decoration:underline;text-underline-offset:0.15em;cursor:pointer}
-.av-review-wall__read:hover{text-decoration-thickness:2px}
-.av-review-wall__by{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-1) var(--av-space-3);max-width:100%;margin-top:auto;font-size:var(--av-text-xs);line-height:1.4;color:var(--av-fg-muted)}
-.av-review-wall__name{font-size:var(--av-text-sm);font-weight:600;color:var(--av-fg);overflow-wrap:anywhere}
-.av-review-wall__source{display:inline-flex;align-items:center;min-height:24px;color:inherit;text-decoration:underline;text-underline-offset:0.15em}
-.av-review-wall__source:hover{color:var(--av-fg)}
-.av-review-wall__foot{display:flex;justify-content:center;margin-top:var(--av-space-6)}
-.av-review-wall__note{margin:var(--av-space-4) 0 0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
-.av-review-wall__empty{margin:0}
-.av-review-wall__dialog .av-review-wall__review{padding:0;border:0;border-radius:0;background:none;box-shadow:none}
-.av-review-wall__dialog .av-review-wall__text{font-size:var(--av-text-md)}
-.av-review-wall__dialog .av-review-wall__media{max-width:420px}
-@media (min-width: 990px){
-.av-review-wall--boxed .av-review-wall__review{padding:var(--av-space-6)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Review wall",

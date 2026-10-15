@@ -1,3 +1,4 @@
+{{ 'anvil-sec-social-cards.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -437,50 +438,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-/* Grid columns and gap from the shared .av-grid (masonry reads the same column count); the slider from
-   <anvil-slider> (snippets/anvil-slider-attrs); card boxes from .av-surface. */
-.av-social-cards--grid,.av-social-cards--masonry{padding:0;list-style:none}
-.av-social-cards--masonry{display:block;columns:var(--av-grid-n);column-gap:var(--av-grid-gap)}
-.av-social-cards__item{display:flex;min-width:0;margin:0;container-type:inline-size}
-.av-social-cards--masonry .av-social-cards__item{break-inside:avoid;margin-bottom:var(--av-grid-gap)}
-.av-social-cards__post{display:flex;flex:1;flex-direction:column;gap:var(--av-space-3);min-width:0;padding:var(--av-space-5);border-radius:var(--av-radius-card);text-align:start}
-.av-social-cards--slider.av-social-cards--boxed > [data-slider-track]{padding:var(--av-space-2) var(--av-space-3) var(--av-space-5);scroll-padding-inline:var(--av-space-3)}
-.av-social-cards:not(.av-social-cards--boxed) .av-social-cards__post{padding:0;border-radius:0}
-.av-social-cards__head{display:flex;align-items:center;gap:var(--av-space-3);min-width:0}
-.av-social-cards__avatar{flex:none;display:grid;place-items:center;width:44px;height:44px;overflow:hidden;border-radius:50%;background:rgb(var(--av-fg-rgb) / 0.08);font-size:var(--av-text-sm);font-weight:600;line-height:1}
-.av-social-cards__avatar img{width:100%;height:100%;object-fit:cover}
-.av-social-cards__who{display:flex;flex:1;flex-direction:column;gap:2px;min-width:0}
-.av-social-cards__name{font-size:var(--av-text-sm);font-weight:600;line-height:1.3;overflow-wrap:anywhere}
-.av-social-cards__meta{font-size:var(--av-text-xs);line-height:1.4;color:var(--av-fg-muted);overflow-wrap:anywhere}
-.av-social-cards__network{flex:none;margin-inline-start:auto;line-height:0}
-.av-social-cards__network img{display:block;width:auto;height:20px;max-width:40px;object-fit:contain}
-.av-social-cards__text{margin:0;font-size:var(--av-text-sm);line-height:1.6;overflow-wrap:break-word}
-.av-social-cards--t-md .av-social-cards__text{font-size:var(--av-text-md)}
-.av-social-cards--t-lg .av-social-cards__text{font-size:var(--av-text-lg);line-height:1.5}
-.av-social-cards__tag{color:var(--av-accent)}
-.av-social-cards__media{flex:none;align-self:stretch}
-.av-social-cards__foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--av-space-2) var(--av-space-4);margin-top:auto}
-.av-social-cards__counts{display:flex;flex-wrap:wrap;gap:var(--av-space-2) var(--av-space-4);margin:0;padding:0;list-style:none}
-.av-social-cards__count{display:inline-flex;align-items:center;gap:var(--av-space-1);font-size:var(--av-text-xs);font-weight:600;line-height:1}
-.av-social-cards__count svg{flex:none;color:var(--av-fg-muted)}
-.av-social-cards__link{display:inline-flex;align-items:center;min-height:24px;margin-inline-start:auto;font-size:var(--av-text-xs);color:var(--av-fg-muted);text-decoration:underline;text-underline-offset:0.15em}
-.av-social-cards__link:hover{color:var(--av-fg)}
-.av-social-cards__empty{margin:0}
-.av-social-cards__note{margin:var(--av-space-4) 0 0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
-@media (min-width: 990px){
-.av-social-cards--boxed .av-social-cards__post{padding:var(--av-space-6)}
-}
-/* Narrow cards (two columns on a phone, four on a small desktop); after the media queries so it wins: less padding, the name gets the full width under the avatar. */
-@container (max-width: 239px){
-.av-social-cards__post{padding:var(--av-space-4)}
-.av-social-cards__head{flex-wrap:wrap;gap:var(--av-space-2)}
-.av-social-cards__avatar{width:36px;height:36px}
-.av-social-cards__who{flex-basis:100%;order:1}
-.av-social-cards__name{overflow-wrap:break-word}
-.av-social-cards__counts{gap:var(--av-space-2) var(--av-space-3)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Social cards",

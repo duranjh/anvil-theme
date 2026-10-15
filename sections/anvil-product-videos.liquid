@@ -1,3 +1,4 @@
+{{ 'anvil-sec-product-videos.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -226,28 +227,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-/* Columns and gap from the shared .av-grid; the slider from <anvil-slider> (snippets/anvil-slider-attrs); the video
-   shape from anvil-media (9:16 included); the buy control from snippets/anvil-quick-buy. */
-.av-product-videos{display:block}
-.av-product-videos__grid{padding:0;list-style:none}
-.av-product-videos__card{display:flex;flex-direction:column;gap:var(--av-space-3);min-width:0;margin:0}
-.av-product-videos__figure{display:flex;flex-direction:column;gap:var(--av-space-2);margin:0}
-/* Deferred card: the lazy poster and, without JavaScript, the noscript video share one cell; the video paints on top. */
-.av-product-videos__defer{display:grid}
-.av-product-videos__defer > *{grid-area:1 / 1;min-width:0}
-.av-product-videos__caption{font-size:var(--av-text-sm);line-height:1.4;color:var(--av-fg-muted);overflow-wrap:anywhere}
-.av-product-videos__product{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-2) var(--av-space-3);align-items:center;margin-top:auto}
-.av-product-videos__product--thumb{grid-template-columns:48px minmax(0,1fr)}
-.av-product-videos__thumb{display:block;width:48px;height:48px;overflow:hidden;border-radius:var(--av-radius-media);background:rgb(var(--av-fg-rgb) / 0.06);color:rgb(var(--av-fg-rgb) / 0.4)}
-.av-product-videos__thumb > img,.av-product-videos__thumb > svg{display:block;width:100%;height:100%;object-fit:cover}
-.av-product-videos__thumb-ph{fill:currentColor}
-.av-product-videos__info{display:grid;gap:var(--av-space-1);min-width:0}
-.av-product-videos__title{margin:0;font-family:var(--av-font-body);font-size:var(--av-text-sm);font-weight:600;line-height:1.35;letter-spacing:normal;text-transform:none;overflow-wrap:anywhere}
-.av-product-videos__title a{color:inherit;text-decoration:none}
-.av-product-videos__title a:hover{text-decoration:underline;text-underline-offset:0.15em}
-.av-product-videos__buy{grid-column:1 / -1;min-width:0}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Product videos",

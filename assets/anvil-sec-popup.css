@@ -1,0 +1,27 @@
+/* sections/anvil-popup.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* The root (.av-s-anvil-popup) holds only the closed dialog: no page padding, no band of colour. */
+.av-s-anvil-popup.av-section{padding:0;background:none}
+.av-popup{display:block}
+.av-popup .av-popup__dialog{padding:0;background-image:var(--av-bg-gradient)}
+.av-popup__close{position:sticky;top:var(--av-space-2);z-index:2;display:grid;place-items:center;width:44px;height:44px;margin-block:var(--av-space-2) calc(-44px - var(--av-space-2));margin-inline:auto var(--av-space-2);padding:0;border:0;border-radius:var(--av-radius-pill);background:rgb(var(--av-bg-rgb) / 0.85);color:var(--av-fg);cursor:pointer}
+.av-popup__close:hover{background:var(--av-bg)}
+.av-popup__layout{display:flex;flex-direction:column}
+.av-popup__media{position:relative;aspect-ratio:var(--av-popup-ratio,16 / 9);max-height:30dvh;overflow:hidden;background:rgb(var(--av-fg-rgb) / 0.06)}
+.av-popup__img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover}
+.av-popup__placeholder{box-sizing:border-box;padding:8%;color:rgb(var(--av-fg-rgb) / 0.4);fill:currentColor}
+.av-popup__body{display:flex;flex-direction:column;justify-content:center;gap:var(--av-popup-gap,16px);min-width:0;padding:max(calc(var(--av-pad-top) * var(--av-pad-mobile)), 52px) var(--av-space-5) calc(var(--av-pad-bottom) * var(--av-pad-mobile))}
+.av-popup__body > *{margin-block:0}
+.av-popup__dismiss{align-self:center}
+@media (max-width: 749px){
+.av-popup:not(.av-popup--img-m) .av-popup__media,.av-popup__note-d{display:none}
+.av-popup--img-m .av-popup__body{padding-top:calc(var(--av-pad-top) * var(--av-pad-mobile))}
+}
+@media (min-width: 750px){
+.av-popup__note-m{display:none}
+.av-popup__media{max-height:40dvh}
+.av-popup__body{padding:max(var(--av-pad-top), 52px) var(--av-space-7) var(--av-pad-bottom)}
+.av-popup--img-top .av-popup__body{padding-top:var(--av-pad-top)}
+.av-popup--img-left .av-popup__layout,.av-popup--img-right .av-popup__layout{display:grid;grid-template-columns:minmax(0,45fr) minmax(0,55fr);min-height:min(400px, 80dvh)}
+.av-popup--img-right .av-popup__media{order:2}
+.av-popup--img-left .av-popup__media,.av-popup--img-right .av-popup__media{aspect-ratio:auto;max-height:none}
+}

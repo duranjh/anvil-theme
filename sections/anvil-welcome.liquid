@@ -1,3 +1,4 @@
+{{ 'anvil-sec-welcome.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 -%}
@@ -30,15 +31,6 @@
     </div>
   </div>
 </div>
-{% stylesheet %}
-.av-welcome{display:flex;flex-direction:column;gap:var(--av-space-5);align-items:center;text-align:center}
-.av-welcome--left{align-items:flex-start;text-align:left}
-.av-welcome--right{align-items:flex-end;text-align:right}
-.av-welcome__text{max-width:60ch;font-size:var(--av-text-md);line-height:1.6}
-.av-welcome__text p:first-child{margin-top:0}
-.av-welcome__text p:last-child{margin-bottom:0}
-.av-welcome__actions{display:flex;flex-wrap:wrap;gap:var(--av-space-3)}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Welcome",

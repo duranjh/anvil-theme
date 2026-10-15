@@ -9,7 +9,7 @@
   },
   "scripts": {
     "check": "shopify theme check --fail-level warning",
-    "lint": "bash scripts/cleanroom-lint.sh && python3 scripts/asset-audit.py && python3 scripts/chassis-lint.py && bash scripts/check-limits.sh && python3 scripts/check-schema-ranges.py && python3 scripts/check-templates.py && python3 scripts/sections-index.py --check",
+    "lint": "bash scripts/cleanroom-lint.sh && python3 scripts/asset-audit.py && python3 scripts/chassis-lint.py && bash scripts/check-limits.sh && python3 scripts/check-schema-ranges.py && python3 scripts/extract-section-css.py --check && python3 scripts/check-templates.py && python3 scripts/sections-index.py --check",
     "templates:check": "python3 scripts/check-templates.py",
     "test": "node --test 'tests/*.test.mjs'",
     "blocks": "python3 scripts/sync-block-schemas.py",

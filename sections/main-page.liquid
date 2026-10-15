@@ -1,3 +1,4 @@
+{{ 'anvil-sec-main-page.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign table_label = 'anvil.a11y.scroll_table' | t
@@ -17,13 +18,6 @@
     </article>
   </div>
 </div>
-{% stylesheet %}
-.av-page{max-width:var(--av-narrow-width, 72ch);margin:0 auto}
-.av-page--left{margin-left:0;text-align:left}
-.av-page--center{text-align:center}
-.av-page__title{margin:0 0 var(--av-space-5);font-size:var(--av-text-3xl)}
-.av-page--center .av-page__content{text-align:left}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Page",

@@ -1,0 +1,19 @@
+/* sections/anvil-columns.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* Columns and gap from the shared .av-grid; column boxes from .av-surface (rendered by each column block). */
+.av-columns{align-items:stretch}
+.av-columns>*{min-width:0}
+.av-columns__col{box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-start;gap:var(--av-columns-block-gap,16px);min-width:0;border-radius:var(--av-radius-card);color:var(--av-fg)}
+.av-columns__col>*{min-width:0}
+.av-columns--v-center .av-columns__col{justify-content:center}
+.av-columns--v-bottom .av-columns__col{justify-content:flex-end}
+.av-columns--v-last .av-columns__col>:last-child{margin-top:auto}
+.av-columns--v-last .av-columns__col>:nth-last-child(1 of :not([hidden]):not(script):not(style):not(template):not(link)){margin-top:auto}
+.av-columns--boxed .av-columns__col,.av-columns__col--scheme{padding:var(--av-space-5)}
+.av-columns .av-columns__col.av-columns__col--empty{display:none;padding:0;border:0;background:none;box-shadow:none}
+.av-columns .av-columns__col:not(:has(>:not([hidden]):not(script):not(style):not(template):not(link))){display:none;padding:0;border:0;background:none;box-shadow:none}
+.av-columns__col>.av-editor-empty{margin-block:auto}
+.av-columns__note+.av-columns__note,.av-columns__note+.av-columns{margin-top:var(--av-space-5)}
+@media (min-width: 750px){
+.av-columns .av-columns__col.av-columns__col--empty{display:flex}
+.av-columns .av-columns__col:not(:has(>:not([hidden]):not(script):not(style):not(template):not(link))){display:flex}
+}

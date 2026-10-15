@@ -1,3 +1,4 @@
+{{ 'anvil-sec-divider.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -154,34 +155,6 @@
     {% endstyle %}
   {%- endif -%}
 </div>
-{% stylesheet %}
-.av-divider__art{color:var(--av-border);--av-divider-band:var(--av-divider-h,40px)}
-.av-divider__art--c-accent{color:var(--av-accent)}
-.av-divider__art--c-text{color:var(--av-fg)}
-.av-divider__art--c-scheme{color:var(--av-bg)}
-/* Shapes: the filled edge overlaps its neighbour by 1px so no hairline seam shows at fractional pixel positions. */
-.av-divider__art--shape{height:var(--av-divider-band);margin-bottom:-1px}
-.av-divider__art--flip{margin-top:-1px;margin-bottom:0}
-.av-divider__art--bleed{margin-inline:calc(var(--av-gutter) * -1)}
-.av-divider__svg{display:block;width:100%;height:100%;fill:currentColor}
-.av-divider__art--flip .av-divider__svg{transform:scaleY(-1)}
-.av-divider__art--mirror .av-divider__svg{transform:scaleX(-1)}
-.av-divider__art--flip.av-divider__art--mirror .av-divider__svg{transform:scale(-1)}
-/* Lines and icons: the rule is centred in the band; an icon taller than the band grows it. */
-.av-divider__art--line,.av-divider__art--icon{display:flex;align-items:center;gap:var(--av-space-4);width:var(--av-divider-w,100%);min-height:var(--av-divider-band);margin-inline:auto}
-.av-divider__art--line::before,.av-divider__art--icon::before,.av-divider__art--icon::after{content:"";flex:1 1 0;min-width:0;border-top:var(--av-divider-t,1px) var(--av-divider-ls,solid) currentColor}
-.av-divider__mark{flex:none;display:inline-flex;align-items:center;justify-content:center}
-.av-divider__mark > svg,.av-divider__mark > img{display:block;width:var(--av-divider-icon,24px);height:var(--av-divider-icon,24px);object-fit:contain}
-/* A flipped shape comes before the heading; the heading's own bottom margin would escape a section with 0 padding. */
-.av-divider__art + .av-section-head{margin-top:var(--av-space-6);margin-bottom:0}
-@media (min-width: 750px){
-.av-divider__art{--av-divider-band:var(--av-divider-hd,64px)}
-}
-/* High contrast forces the fill to CanvasText and every background to Canvas; a solid bar there means nothing, so the band stays empty. */
-@media (forced-colors: active){
-.av-divider__art--shape{visibility:hidden}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Section divider",

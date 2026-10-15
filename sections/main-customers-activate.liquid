@@ -1,3 +1,4 @@
+{{ 'anvil-sec-main-customers-activate.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign activate_label = 'anvil.customer.activate.submit' | t
@@ -29,13 +30,6 @@
     </div>
   </div>
 </div>
-{% stylesheet %}
-.av-customers-activate{max-width:480px;margin:0 auto}
-.av-customers-activate__title{margin:0 0 var(--av-space-2);font-size:var(--av-text-2xl)}
-.av-customers-activate__hint{margin:0 0 var(--av-space-4);color:var(--av-fg-muted)}
-.av-customers-activate__form{display:flex;flex-direction:column;gap:var(--av-space-3)}
-.av-customers-activate__actions{display:flex;flex-direction:column;align-items:center;gap:var(--av-space-3);margin-top:var(--av-space-2)}
-{% endstylesheet %}
 
 {% schema %}
 {

@@ -11,9 +11,10 @@
  *       exists the `#shopify-section-<id>` wrapper is used instead. The same lookup runs on the parsed response
  *       (falling back to its body). Keeps the focused control by `data-anvil-focus-key` (with its text selection),
  *       the window scroll offset and the scroll offsets of descendants marked `data-anvil-scroll="<key>"`.
- *       Shopify subsets {% stylesheet %} CSS to the files rendered on the page and sends a re-rendered section's
- *       CSS as <style data-section-stylesheet> in the response; since only the root's children are copied, every
- *       such style is appended to <head> once (deduplicated by its text).
+ *       Section CSS lives in assets/anvil-sec-<name>.css, loaded by a <link> at the top of the section (Shopify
+ *       ships every {% stylesheet %} on every page, DECISIONS 3). Only the root's children are copied, so every
+ *       stylesheet <link> in the response is appended to <head> once (by href), and any
+ *       <style data-section-stylesheet> once (by text), before the swap.
  *       Emits anvil:section:swapped {id, element}. Returns null when the target is not on the page.
  *
  * This module has no static imports: anvil-core.js loads every core module from its versioned asset URL, and
@@ -58,6 +59,12 @@ export function swapSection(id, html) {
     if (css.trim() && !styles.has(css)) {
       styles.add(css);
       document.head.append(style);
+    }
+  }
+  for (const link of doc.querySelectorAll('link[rel="stylesheet"][href]')) {
+    const href = link.getAttribute('href');
+    if (![...document.querySelectorAll('link[rel="stylesheet"]')].some((l) => l.getAttribute('href') === href)) {
+      document.head.append(link);
     }
   }
 

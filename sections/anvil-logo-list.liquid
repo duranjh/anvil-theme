@@ -1,3 +1,4 @@
+{{ 'anvil-sec-logo-list.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign total = section.blocks.size
@@ -192,60 +193,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-.av-logo-list{--av-logo-list-h:var(--av-logo-list-h-m,32px);--av-logo-list-max-w:var(--av-logo-list-max-w-m,160px);--av-logo-list-g:calc(var(--av-logo-list-gap,48px) * 0.5)}
-.av-logo-list--bleed{margin-inline:calc(var(--av-gutter) * -1)}
-.av-logo-list__grid,.av-logo-list__track{margin:0;padding:0;list-style:none}
-.av-logo-list__grid{display:flex;flex-wrap:wrap;align-items:center;justify-content:var(--av-logo-list-justify,center);gap:var(--av-logo-list-g)}
-.av-logo-list--gm .av-logo-list__grid{display:grid;grid-template-columns:repeat(var(--av-logo-list-cm,2),minmax(0,1fr))}
-.av-logo-list__item{flex:none;display:flex;min-width:0;margin:0}
-/* min-block-size keeps a linked logo's target at least 24 px tall (WCAG 2.5.8). */
-.av-logo-list__logo{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-width:0;min-block-size:24px;border-radius:inherit;color:inherit;text-decoration:none}
-/* Fixed height, width from the image's ratio (image_tag writes width/height, so nothing shifts while it loads); a wide
-   wordmark is fitted inside the cap. */
-.av-logo-list__img{display:block;width:auto;max-width:var(--av-logo-list-max-w);height:var(--av-logo-list-h);object-fit:contain;opacity:var(--av-logo-list-opacity,1)}
-.av-logo-list__ph{display:block;width:calc(var(--av-logo-list-h) * 2.5);max-width:var(--av-logo-list-max-w);height:var(--av-logo-list-h);padding:2px;border-radius:var(--av-radius-media);background:rgb(var(--av-fg-rgb) / 0.06);color:rgb(var(--av-fg-rgb) / 0.4);fill:currentColor}
-/* Grid cells have a definite width, so a percentage cap is safe there. */
-.av-logo-list--gm :is(.av-logo-list__img,.av-logo-list__ph){max-width:min(100%,var(--av-logo-list-max-w))}
-.av-logo-list--grey .av-logo-list__img{filter:grayscale(1)}
-.av-logo-list--hover .av-logo-list__logo:focus-visible .av-logo-list__img{filter:none;opacity:1}
-/* Tiles: the shared surface (outlined, one tint); slim padding on phones leaves room for the logo in 3 or 4 columns. */
-.av-logo-list--tiles .av-logo-list__logo{padding:var(--av-space-3) var(--av-space-2)}
-/* The strip clips at its padding box: the padding leaves room for the focus ring, and the height keeps the 44 px pause
-   button inside the strip. The gap comes inline (--av-marquee-gap). */
-.av-logo-list__strip{align-items:center;min-height:44px;padding-block:var(--av-space-2)}
-/* The static row follows the heading alignment; a moving track is max-content wide, so this does nothing while it moves. */
-.av-logo-list.av-logo-list--marquee .av-logo-list__strip > [data-marquee-track]{justify-content:var(--av-logo-list-justify,center)}
-.av-logo-list__note{margin:var(--av-space-4) 0 0;text-align:center}
-@media (hover: hover){
-.av-logo-list--hover .av-logo-list__item:hover .av-logo-list__img{filter:none;opacity:1}
-}
-@media (prefers-reduced-motion: no-preference){
-html:not([data-animations="off"]) .av-logo-list__img{transition:opacity var(--av-dur) var(--av-ease)}
-}
-/* A static strip (reduced motion, animations off, no JavaScript) stays inside the gutter. */
-@media (prefers-reduced-motion: reduce){
-.av-logo-list--bleed{margin-inline:0}
-}
-html[data-animations="off"] .av-logo-list--bleed{margin-inline:0}
-@media (scripting: none){
-.av-logo-list--bleed{margin-inline:0}
-.av-logo-list .av-logo-list__strip{flex-wrap:wrap}
-.av-logo-list .av-logo-list__strip > [data-marquee-track]{flex:1 1 100%;flex-wrap:wrap;min-width:0}
-}
-@media (min-width: 750px){
-.av-logo-list{--av-logo-list-h:var(--av-logo-list-h-d,40px);--av-logo-list-max-w:var(--av-logo-list-max-w-d,160px);--av-logo-list-g:var(--av-logo-list-gap,48px)}
-.av-logo-list--tiles .av-logo-list__logo{padding:var(--av-space-4) var(--av-space-5)}
-.av-logo-list--fd .av-logo-list__grid{display:flex}
-.av-logo-list--fd :is(.av-logo-list__img,.av-logo-list__ph){max-width:var(--av-logo-list-max-w)}
-.av-logo-list--gd .av-logo-list__grid{display:grid;grid-template-columns:repeat(var(--av-logo-list-ct,4),minmax(0,1fr))}
-.av-logo-list--gd :is(.av-logo-list__img,.av-logo-list__ph){max-width:min(100%,var(--av-logo-list-max-w))}
-}
-@media (min-width: 990px){
-.av-logo-list--gd .av-logo-list__grid{grid-template-columns:repeat(var(--av-logo-list-cd,4),minmax(0,1fr))}
-.av-logo-list--tiles.av-logo-list--dense .av-logo-list__logo{padding-inline:var(--av-space-3)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Logo list",

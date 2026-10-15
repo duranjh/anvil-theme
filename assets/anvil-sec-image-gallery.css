@@ -1,0 +1,41 @@
+/* sections/anvil-image-gallery.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* Columns and gap from the shared .av-grid (masonry reads the same column count); the slider from <anvil-slider>;
+   zoom on hover from the shared .av-hover-zoom. */
+.av-image-gallery{display:block}
+.av-image-gallery__list{padding:0;list-style:none}
+.av-image-gallery--grid .av-image-gallery__list{align-items:start}
+.av-image-gallery--masonry .av-image-gallery__list{display:block;columns:var(--av-grid-n);column-gap:var(--av-grid-space);margin-bottom:calc(-1 * var(--av-grid-space))}
+.av-image-gallery__item{min-width:0;margin:0}
+.av-image-gallery--masonry .av-image-gallery__item{display:block;margin:0 0 var(--av-grid-space);break-inside:avoid}
+.av-image-gallery__figure{margin:0}
+.av-image-gallery__cap{margin-top:var(--av-space-2);font-size:var(--av-text-sm);line-height:1.45;color:var(--av-fg-muted);overflow-wrap:anywhere}
+.av-image-gallery__open{position:relative;display:block;color:inherit;cursor:zoom-in}
+/* Focus ring drawn inside the link, above the positioned media: the slider track clips anything outside the slide. */
+.av-image-gallery__open::after{content:"";position:absolute;inset:0;pointer-events:none}
+.av-image-gallery__open:focus-visible{outline:2px solid transparent}
+.av-image-gallery__open:focus-visible::after{outline:2px solid var(--av-accent);outline-offset:-2px}
+.av-image-gallery__zoom{position:absolute;inset-block-end:var(--av-space-2);inset-inline-end:var(--av-space-2);display:grid;place-items:center;width:32px;height:32px;border-radius:var(--av-radius-pill);background:var(--av-bg);color:var(--av-fg);box-shadow:var(--av-shadow-sm);pointer-events:none}
+@media (hover:hover){
+.av-image-gallery__zoom{opacity:0}
+.av-image-gallery__open:hover .av-image-gallery__zoom,.av-image-gallery__open:focus-visible .av-image-gallery__zoom{opacity:1}
+}
+/* Lightbox: a full-screen native dialog in the section's colour scheme; slides are built by anvil-image-gallery.js. */
+.av-image-gallery__lb{width:100%;height:100%;max-width:100%;max-height:100%;margin:0;padding:0;border:0;overflow:hidden;background:var(--av-bg);color:var(--av-fg)}
+.av-image-gallery__lb[open]{display:grid;grid-template-rows:minmax(0,1fr) auto}
+.av-image-gallery__lb-track{position:relative;display:flex;min-height:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior:contain;scrollbar-width:none}
+.av-image-gallery__lb-track::-webkit-scrollbar{display:none}
+.av-image-gallery__lb-track:focus-visible{outline-offset:-4px}
+.av-image-gallery__lb-slide{flex:0 0 100%;display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0;margin:0;padding:calc(44px + var(--av-space-5)) var(--av-space-4) 0;scroll-snap-align:center;scroll-snap-stop:always}
+.av-image-gallery__lb-slide img{display:block;width:100%;height:100%;object-fit:contain}
+.av-image-gallery__lb-cap{max-width:60ch;margin:var(--av-space-3) auto 0;font-size:var(--av-text-sm);line-height:1.45;text-align:center;color:var(--av-fg-muted)}
+.av-image-gallery__lb-bar{display:flex;align-items:center;justify-content:center;gap:var(--av-space-3);padding:var(--av-space-3) var(--av-space-4) calc(var(--av-space-3) + env(safe-area-inset-bottom,0px))}
+.av-image-gallery__lb-btn,.av-image-gallery__lb-close{display:grid;place-items:center;width:44px;height:44px;padding:0;border:var(--av-border-w-button) solid var(--av-border);border-radius:var(--av-radius-button);background:var(--av-bg);color:var(--av-fg);cursor:pointer}
+.av-image-gallery__lb-btn[hidden]{display:none}
+.av-image-gallery__lb-btn svg:dir(rtl){scale:-1 1}
+.av-image-gallery__lb-close{position:absolute;z-index:1;top:calc(var(--av-space-3) + env(safe-area-inset-top,0px));inset-inline-end:var(--av-space-3)}
+.av-image-gallery__lb-count{min-width:7ch;margin:0;font-size:var(--av-text-sm);font-variant-numeric:tabular-nums;text-align:center}
+@media (min-width:990px){.av-image-gallery__lb-slide{padding-inline:var(--av-space-9)}}
+@media (prefers-reduced-motion:no-preference){
+html:not([data-animations="off"]) .av-image-gallery__lb[open]{animation:av-image-gallery-in var(--av-dur) var(--av-ease)}
+}
+@keyframes av-image-gallery-in{from{opacity:0}}

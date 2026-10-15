@@ -1,0 +1,17 @@
+/* sections/anvil-before-after.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* The figure carries the shape: phones use the phone shape when one is set.
+   Its width is capped at 80% of the screen height times the shape, so the
+   whole pair is always in view while the shopper drags. */
+.av-before-after{--av-before-after-cur:var(--av-before-after-r-m, var(--av-before-after-r, 1.3333));max-width:calc(80vh * var(--av-before-after-cur));max-width:calc(80svh * var(--av-before-after-cur));margin-inline:auto}
+/* Pinch-zoom on the slider comes from the shared rule (anvil-compare.css). */
+.av-before-after__compare{--av-compare-ratio:var(--av-before-after-cur)}
+/* Opaque base under the darker tint, so the before illustration does not
+   show through the after half. */
+.av-before-after .av-before-after__ph--after{background-color:var(--av-bg);background-image:linear-gradient(rgb(var(--av-fg-rgb) / 0.14), rgb(var(--av-fg-rgb) / 0.14))}
+.av-before-after__grip{position:absolute;top:50%;left:50%;z-index:1;display:flex;color:var(--av-fg);translate:-50% -50%}
+.av-before-after__grip svg{display:block;width:16px;height:16px}
+.av-before-after__compare[vertical] .av-before-after__grip{rotate:90deg}
+.av-before-after__caption{margin-top:var(--av-space-4);font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted);text-align:center}
+@media (min-width: 750px){
+.av-before-after{--av-before-after-cur:var(--av-before-after-r, 1.3333)}
+}

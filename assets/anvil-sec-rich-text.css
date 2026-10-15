@@ -1,0 +1,6 @@
+/* sections/anvil-rich-text.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+.av-rich-text{max-width:var(--av-rich-text-w,800px);margin-inline:auto;text-align:center;--av-justify:center}
+.av-rich-text--left{margin-left:0;text-align:left;--av-justify:flex-start}
+.av-rich-text--right{margin-right:0;text-align:right;--av-justify:flex-end}
+.av-rich-text__blocks{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-rich-text-gap,24px)}
+.av-rich-text__blocks>*{min-width:0}

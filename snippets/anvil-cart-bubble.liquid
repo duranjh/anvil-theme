@@ -15,3 +15,8 @@
     <span class="av-visually-hidden">{{ 'anvil.cart.item_count' | t: count: cart.item_count }}</span>
   </anvil-cart-bubble>
 </span>
+
+{% stylesheet %}
+.av-cart-bubble-slot{display:contents}
+.av-cart-bubble__count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;font-size:var(--av-text-xs);font-weight:700;line-height:1;color:var(--av-on-accent);background:var(--av-accent);border-radius:var(--av-radius-pill)}
+{% endstylesheet %}

@@ -1,0 +1,54 @@
+/* sections/anvil-hero-slideshow.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* Root = <anvil-slider> (assets/anvil-slider.css); each slide is the private block's root, its frame is what shoppers see. */
+.av-hero-slideshow__head--bleed{padding-inline:var(--av-gutter)}
+.av-hero-slideshow--framed > [data-slider-track]{border-radius:var(--av-radius-media)}
+.av-hero-slideshow__slide{display:grid;grid-template-columns:minmax(0,1fr);aspect-ratio:var(--av-hero-slideshow-ar-m,auto);min-height:var(--av-hero-slideshow-min-m,auto)}
+/* The frame paints its own solid background, so a fading frame never shows another slide's backdrop. */
+.av-hero-slideshow__slide > .av-hero-slideshow__frame{position:relative;display:grid;grid-template-columns:minmax(0,1fr);isolation:isolate;background:linear-gradient(rgb(var(--av-fg-rgb) / 0.06),rgb(var(--av-fg-rgb) / 0.06)) var(--av-bg);color:var(--av-fg)}
+.av-hero-slideshow__media,.av-hero-slideshow__picture,.av-hero-slideshow__img,.av-hero-slideshow__placeholder{position:absolute;inset:0;display:block;width:100%;height:100%}
+.av-hero-slideshow__media{overflow:hidden}
+.av-hero-slideshow__picture{object-position:var(--av-hero-slideshow-pos-m,50% 50%)}
+.av-hero-slideshow__img{object-fit:cover}
+.av-hero-slideshow__placeholder{box-sizing:border-box;padding:8%;color:rgb(var(--av-fg-rgb) / 0.35);fill:currentColor}
+/* Slide link under the content (z-index, not DOM order: it follows the content so the heading gives it context). */
+.av-hero-slideshow__link{position:absolute;inset:0;z-index:1}
+.av-hero-slideshow__link:focus-visible{outline:2px solid var(--av-accent);outline-offset:-6px;box-shadow:inset 0 0 0 4px var(--av-bg)}
+.av-hero-slideshow__note{position:absolute;z-index:3;inset-block-start:var(--av-space-3);inset-inline-start:var(--av-space-3);max-width:calc(100% - 2 * var(--av-space-3));margin:0;padding:var(--av-space-1) var(--av-space-3);border-radius:var(--av-radius-badge);background:var(--av-bg)}
+.av-hero-slideshow__content{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:var(--av-hero-slideshow-v-m,center);align-items:stretch;width:100%;max-width:var(--av-page-width);margin-inline:auto;padding:calc(var(--av-space-6) + var(--av-overlap-pad,0px)) var(--av-gutter) var(--av-space-6)}
+.av-hero-slideshow--controls .av-hero-slideshow__content{padding-block-end:calc(var(--av-space-6) + 56px)}
+.av-hero-slideshow--arrows-always .av-hero-slideshow__content{padding-inline:max(var(--av-gutter),calc(var(--av-slider-arrow,44px) + var(--av-space-5)))}
+.av-hero-slideshow__frame--linked .av-hero-slideshow__content{pointer-events:none}
+.av-hero-slideshow__frame--linked .av-hero-slideshow__box{pointer-events:auto}
+.av-hero-slideshow__box{display:flex;flex-direction:column;gap:var(--av-space-4);width:100%}
+.av-hero-slideshow__box > *{min-width:0}
+/* Controls sit on the slides (the slider's av-slider--overlay); arrows follow arrows="desktop" or "all". */
+/* Without JavaScript there are no arrows or dots: a non-auto scrollbar-width brings the track's scrollbar back. */
+@media (scripting: none){
+.av-hero-slideshow > [data-slider-track]{scrollbar-width:thin}
+}
+@media (min-width: 750px){
+.av-hero-slideshow__slide{aspect-ratio:var(--av-hero-slideshow-ar-d,auto);min-height:var(--av-hero-slideshow-min-d,auto)}
+.av-hero-slideshow__picture{object-position:var(--av-hero-slideshow-pos-d,50% 50%)}
+.av-hero-slideshow__content{justify-content:var(--av-hero-slideshow-v-d,center);align-items:var(--av-hero-slideshow-h-d,center);padding-block:calc(var(--av-space-8) + var(--av-overlap-pad,0px)) var(--av-space-8)}
+.av-hero-slideshow--controls .av-hero-slideshow__content{padding-block-end:calc(var(--av-space-8) + 40px)}
+.av-hero-slideshow--arrows .av-hero-slideshow__content{padding-inline:max(var(--av-gutter),calc(var(--av-slider-arrow,44px) + var(--av-space-5)))}
+.av-hero-slideshow__box{max-width:var(--av-hero-slideshow-box-w,560px)}
+.av-hero-slideshow__box.av-box{padding:var(--av-space-7)}
+}
+/* Fade: the track still scrolls (swipe, keys, dots, autoplay), but a view timeline on each slide holds its frame in
+   place and cross-fades it. Without scroll-driven animations or JavaScript, under reduced motion, with animations off
+   and on right-to-left pages (Chrome maps their view progress from the other edge) slides slide. visibility is
+   switched, not animated, so an off-stage frame takes no click or focus; assets/anvil-hero-slideshow.js keeps focus. */
+@supports (animation-timeline: view()){
+@media (prefers-reduced-motion: no-preference) and (scripting: enabled){
+html:not([data-animations="off"]) .av-hero-slideshow--fade:dir(ltr) .av-hero-slideshow__slide{view-timeline:--av-hero-slideshow inline}
+html:not([data-animations="off"]) .av-hero-slideshow--fade:dir(ltr) .av-hero-slideshow__frame{animation-name:av-hero-slideshow-fade;animation-duration:1ms;animation-timing-function:linear;animation-fill-mode:both;animation-timeline:--av-hero-slideshow}
+}
+}
+@keyframes av-hero-slideshow-fade{
+0%{transform:translateX(-100%);opacity:0;visibility:hidden}
+2%{opacity:0;visibility:hidden}
+50%{transform:none;opacity:1;visibility:visible}
+98%{visibility:hidden}
+100%{transform:translateX(100%);visibility:hidden}
+}

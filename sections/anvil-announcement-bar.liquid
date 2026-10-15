@@ -1,3 +1,4 @@
+{{ 'anvil-sec-announcement-bar.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign multi = false
@@ -127,21 +128,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-.av-announcement-bar__bar{display:block;text-align:center;font-size:var(--av-text-sm);line-height:1.4}
-.av-announcement-bar--size-md{font-size:var(--av-text-md)}
-.av-announcement-bar__track{display:flex;gap:var(--av-space-4)}
-/* The rotating bar is <anvil-slider> with its inline controls (av-slider--inline, assets/anvil-slider.css). */
-.av-announcement-bar__item{flex:0 0 100%;display:flex;align-items:center;justify-content:center;gap:var(--av-space-2);min-height:1.5em;padding-inline:var(--av-space-2)}
-.av-announcement-bar__text p{margin:0;white-space:normal;text-wrap:balance}
-.av-announcement-bar__link{text-decoration:underline;text-underline-offset:0.15em}
-.av-announcement-bar__offer,.av-announcement-bar__socials{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--av-space-2)}
-.av-announcement-bar__code{font-family:inherit;font-weight:700;letter-spacing:0.04em;padding:0.1em var(--av-space-2);border:var(--av-border-w-button) solid var(--av-border);border-radius:var(--av-radius-badge)}
-.av-announcement-bar__copy{display:inline-flex;align-items:center;min-height:24px;padding:0.2em var(--av-space-3);font-size:var(--av-text-xs);text-decoration:none;background:var(--av-btn-bg);color:var(--av-btn-fg);border:var(--av-border-w-button) solid var(--av-btn-border);border-radius:var(--av-radius-pill)}
-.av-announcement-bar__copy.av-is-copied{background:var(--av-accent);color:var(--av-on-accent);border-color:var(--av-accent)}
-.av-announcement-bar__social-list .av-social__pill{min-height:24px}
-.av-announcement-bar__note{margin-top:var(--av-space-1);text-align:center}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Announcement bar",

@@ -1,0 +1,48 @@
+/* sections/anvil-hotspots.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* Dot colour, size and pulse: the component's .av-hotspots-dots--* modifiers (assets/anvil-hotspots.css). The list
+   badges follow the dot colour here. */
+.av-hotspots{--av-hotspots-badge-bg:var(--av-hotspots-dot-bg,var(--av-accent));--av-hotspots-badge-fg:var(--av-hotspots-dot-fg,var(--av-on-accent));--av-hotspots-badge-border:var(--av-hotspots-badge-bg);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-6)}
+.av-hotspots--c-light{--av-hotspots-badge-bg:transparent;--av-hotspots-badge-border:var(--av-fg)}
+/* The figure is the popovers' width container; z-index keeps an open popover above the next section. */
+.av-hotspots__figure{position:relative;z-index:1;container:av-hotspots / inline-size;min-width:0}
+.av-hotspots .av-hotspots__stage>*{--av-hotspots-x:clamp(16px,var(--av-spot-x,50%),calc(100% - 16px));--av-hotspots-y:clamp(16px,var(--av-spot-y,50%),calc(100% - 16px))}
+.av-hotspots .av-hotspots__spot-wrap{left:var(--av-hotspots-x);top:var(--av-hotspots-y)}
+/* A focused dot paints above an open popover (z-index 2): WCAG 2.4.11. */
+.av-hotspots .av-hotspots__spot-wrap:focus-within{z-index:3}
+.av-hotspots__marker{display:grid;place-items:center;width:calc(44px - 2 * var(--av-hotspots-inset,8px));height:calc(44px - 2 * var(--av-hotspots-inset,8px));border-radius:var(--av-radius-pill);background:var(--av-hotspots-dot-bg,var(--av-accent));color:var(--av-hotspots-dot-fg,var(--av-on-accent));box-shadow:var(--av-shadow-sm);font-size:var(--av-text-xs);font-weight:700;line-height:1}
+.av-hotspots-dots--lg .av-hotspots__marker{font-size:var(--av-text-sm)}
+/* Popovers sit in the stage, under the dot or above it low down: a panel as wide as a narrow image, a 280 px card
+   from 560 px of image width. */
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop{top:calc(var(--av-hotspots-y) + var(--av-space-5));bottom:auto;left:var(--av-space-2);right:var(--av-space-2);width:auto;translate:none}
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop.av-is-flip-y{top:auto;bottom:calc(100% - var(--av-hotspots-y) + var(--av-space-5))}
+@container av-hotspots (min-width: 560px){
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop{left:var(--av-hotspots-x);right:auto;width:min(280px,60%);translate:-50% 0}
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop.av-is-left{left:max(0px,calc(var(--av-hotspots-x) - 22px));translate:none}
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop.av-is-right{left:auto;right:max(0px,calc(100% - var(--av-hotspots-x) - 22px));translate:none}
+}
+.av-hotspots .av-hotspots__pop-title{display:flex;align-items:center;gap:var(--av-space-2)}
+.av-hotspots__pop-num,.av-hotspots__badge{flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:var(--av-radius-pill);font-family:var(--av-font-body);font-size:var(--av-text-xs);font-weight:700;line-height:1}
+.av-hotspots__pop-num{background:var(--av-accent);color:var(--av-on-accent)}
+.av-hotspots .av-hotspots__pop-text{font-size:var(--av-text-sm);line-height:1.5}
+.av-hotspots__list{display:grid;gap:var(--av-space-4);align-content:start;margin:0;padding:0;list-style:none}
+.av-hotspots__item{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--av-space-3);align-items:start;margin:0}
+.av-hotspots__badge{width:28px;height:28px;border:2px solid var(--av-hotspots-badge-border);background:var(--av-hotspots-badge-bg);color:var(--av-hotspots-badge-fg)}
+.av-hotspots__body{display:flex;flex-direction:column;gap:var(--av-space-1);min-width:0;padding-top:2px}
+.av-hotspots__title{font-weight:600;font-size:var(--av-text-md);line-height:1.35;overflow-wrap:anywhere}
+.av-hotspots .av-hotspots__text{font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted)}
+/* Titles-only list: copy stays for screen readers, and shows while a link in it has focus or when the spot has no title. */
+.av-hotspots--titles:has(.av-hotspots__stage:defined) .av-hotspots__text:not(:focus-within,.av-hotspots__text--lead){position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media (min-width: 750px){
+.av-hotspots{gap:var(--av-space-7)}
+.av-hotspots--left:not(.av-hotspots--solo){grid-template-columns:minmax(0,var(--av-hotspots-media,55%)) minmax(0,1fr)}
+.av-hotspots--right:not(.av-hotspots--solo){grid-template-columns:minmax(0,1fr) minmax(0,var(--av-hotspots-media,55%))}
+.av-hotspots--right .av-hotspots__figure{order:2}
+.av-hotspots--v-center{align-items:center}
+.av-hotspots--v-top{align-items:start}
+.av-hotspots--top .av-hotspots__list{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--av-space-5) var(--av-space-6)}
+}
+@media (min-width: 990px){
+.av-hotspots{gap:var(--av-space-8)}
+.av-hotspots--top{gap:var(--av-space-7)}
+.av-hotspots--top .av-hotspots__list{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

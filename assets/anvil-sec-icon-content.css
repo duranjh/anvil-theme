@@ -1,0 +1,51 @@
+/* sections/anvil-icon-content.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* Columns, gap and the centred last row come from the shared .av-grid; boxes from .av-surface; icon frames from
+   .av-icon-frame (anvil-base.css). role="list" keeps list semantics in WebKit. */
+.av-icon-content{list-style:none;padding:0}
+.av-icon-content__item{display:flex;margin:0}
+.av-icon-content__card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:var(--av-space-4);width:100%;min-width:0;color:var(--av-fg);border-radius:var(--av-radius-card)}
+.av-icon-content--start .av-icon-content__card{flex-direction:row}
+.av-icon-content--boxed .av-icon-content__card{padding:var(--av-space-5)}
+.av-icon-content__note{margin:0;align-self:stretch}
+.av-icon-content__icon{max-width:100%}
+.av-icon-content__icon > svg{max-width:100%}
+/* Image: fixed width, height from its ratio. */
+.av-icon-content__image{flex:none;display:block;width:var(--av-icon-content-img,64px);max-width:100%}
+.av-icon-content--start .av-icon-content__image,.av-icon-content__head .av-icon-content__image{max-width:40%}
+.av-icon-content__image img{display:block;width:100%;height:auto;border-radius:var(--av-radius-media)}
+.av-icon-content__body{display:flex;flex:1 1 auto;flex-direction:column;align-self:stretch;gap:var(--av-space-3);min-width:0}
+.av-icon-content--start .av-icon-content__body{flex-basis:0}
+.av-icon-content__head{display:flex;align-items:center;gap:var(--av-space-3);min-width:0}
+.av-icon-content__title{margin:0;font-size:var(--av-text-lg);line-height:1.25;overflow-wrap:anywhere}
+.av-icon-content--title-sm .av-icon-content__title{font-size:var(--av-text-md)}
+.av-icon-content--title-lg .av-icon-content__title{font-size:var(--av-text-xl)}
+.av-icon-content__text{min-width:0;overflow-wrap:break-word}
+.av-icon-content__action{display:flex;flex-wrap:wrap;margin-top:auto;padding-top:var(--av-space-1)}
+/* Centre and right are physical (also in right-to-left stores). */
+.av-icon-content--align-center .av-icon-content__card{text-align:center}
+.av-icon-content--align-right .av-icon-content__card{text-align:right}
+.av-icon-content--top.av-icon-content--align-center .av-icon-content__card{align-items:center}
+.av-icon-content--top.av-icon-content--align-right :is(.av-icon-content__icon,.av-icon-content__image){margin-left:auto}
+.av-icon-content--align-center :is(.av-icon-content__head,.av-icon-content__action){justify-content:center}
+.av-icon-content--align-right :is(.av-icon-content__head,.av-icon-content__action){justify-content:right}
+.av-icon-content__link{color:inherit;text-decoration:none}
+.av-icon-content__link:hover,.av-icon-content__card--linked:hover .av-icon-content__link{text-decoration:underline;text-decoration-thickness:0.06em;text-underline-offset:0.15em}
+/* Whole-card link: the heading link covers the card; text links stay on top. */
+.av-icon-content__card--linked .av-icon-content__link::after{content:"";position:absolute;inset:0}
+.av-icon-content__card--linked .av-icon-content__text a{position:relative}
+.av-icon-content__cue{pointer-events:none}
+.av-icon-content__card--linked:has(.av-icon-content__link:focus-visible){outline:2px solid var(--av-accent);outline-offset:3px}
+@supports selector(:has(*)){.av-icon-content__card--linked .av-icon-content__link:focus-visible{outline-color:transparent}}
+@media (max-width:749px){
+.av-icon-content--m2{--av-grid-space:var(--av-space-3)}
+.av-icon-content--m2.av-icon-content--boxed .av-icon-content__card{padding:var(--av-space-4) var(--av-space-3)}
+.av-icon-content--m2 .av-icon-content__text{font-size:var(--av-text-sm)}
+.av-icon-content--m2.av-icon-content--start .av-icon-content__card{flex-direction:column}
+.av-icon-content--m2.av-icon-content--start .av-icon-content__image{max-width:100%}
+}
+@media (min-width:750px){
+.av-icon-content--boxed .av-icon-content__card{padding:var(--av-space-6) var(--av-space-5)}
+.av-icon-content--start.av-grid--c3{--av-cols-tablet:2}
+}
+/* Beside the text, 4 columns wait for 1200 px: below it the text column would be too narrow. */
+@media (min-width:990px) and (max-width:1199px){.av-icon-content--start.av-grid--c4{--av-cols:3}}

@@ -1,0 +1,43 @@
+/* sections/anvil-image-banner.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* Adapt height: aspect-ratio with min-height auto and no overflow clipping on the root, so long content makes the banner taller. */
+.av-image-banner{position:relative;display:grid;grid-template-columns:minmax(0,1fr);isolation:isolate;aspect-ratio:var(--av-image-banner-ar-m,auto);min-height:var(--av-image-banner-min-m,auto);background:rgb(var(--av-fg-rgb) / 0.06)}
+.av-image-banner--hm-full{min-height:100vh;min-height:100svh}
+.av-image-banner--framed{border-radius:var(--av-radius-media)}
+.av-image-banner__media,.av-image-banner__picture,.av-image-banner__img,.av-image-banner__placeholder{position:absolute;inset:0;display:block;width:100%;height:100%}
+.av-image-banner__media,.av-image-banner__overlay{overflow:hidden;border-radius:inherit}
+.av-image-banner__picture{object-position:var(--av-image-banner-pos-m,50% 50%)}
+.av-image-banner__img{object-fit:cover}
+.av-image-banner__placeholder{box-sizing:border-box;padding:8%;color:rgb(var(--av-fg-rgb) / 0.35);fill:currentColor}
+/* Stretched link under the content: the whole banner follows it, while buttons and text links keep their own. */
+.av-image-banner__link{position:absolute;inset:0;z-index:1;border-radius:inherit}
+.av-image-banner__link:focus-visible{outline:2px solid var(--av-accent);outline-offset:-6px;box-shadow:inset 0 0 0 4px var(--av-bg)}
+.av-image-banner__content{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:var(--av-image-banner-v-m,center);align-items:stretch;width:100%;max-width:var(--av-page-width);margin-inline:auto;padding:calc(var(--av-space-6) + var(--av-overlap-pad,0px)) var(--av-gutter) var(--av-space-6)}
+.av-image-banner--linked .av-image-banner__content{pointer-events:none}
+.av-image-banner--linked .av-image-banner__content a,.av-image-banner--linked .av-image-banner__content button{pointer-events:auto}
+.av-image-banner__box{display:flex;flex-direction:column;align-items:center;gap:var(--av-space-4);width:100%;text-align:center}
+.av-image-banner__box--left{align-items:flex-start;text-align:left}
+.av-image-banner__box--right{align-items:flex-end;text-align:right}
+.av-image-banner__box > *{max-width:100%;margin:0}
+.av-image-banner__box .av-section-head{align-self:stretch;gap:var(--av-space-3);margin:0}
+.av-image-banner__box .av-section-head__sub{color:inherit}
+.av-image-banner__eyebrow{font-size:var(--av-text-sm);font-weight:600;line-height:1.3;letter-spacing:0.08em;text-transform:uppercase}
+.av-image-banner__eyebrow--accent{color:var(--av-accent)}
+.av-image-banner__eyebrow--pill{padding:var(--av-space-1) var(--av-space-3);border-radius:var(--av-radius-pill);background:var(--av-accent);color:var(--av-on-accent)}
+.av-image-banner__heading.av-text--4xl{line-height:1.05}
+.av-image-banner__text{max-width:65ch}
+.av-image-banner__text--sm{font-size:var(--av-text-sm)}
+.av-image-banner__text--lg{font-size:var(--av-text-lg)}
+/* Consecutive button blocks share one row. */
+.av-image-banner__buttons{display:flex;flex-wrap:wrap;gap:var(--av-space-3)}
+.av-image-banner__buttons:empty{display:none}
+.av-image-banner__button{display:inline-flex}
+.av-image-banner__box--center .av-image-banner__buttons{justify-content:center}
+.av-image-banner__box--right .av-image-banner__buttons{justify-content:flex-end}
+@media (min-width: 750px){
+.av-image-banner{aspect-ratio:var(--av-image-banner-ar-d,auto);min-height:var(--av-image-banner-min-d,auto)}
+.av-image-banner--hd-full{min-height:100vh;min-height:100svh}
+.av-image-banner__picture{object-position:var(--av-image-banner-pos-d,50% 50%)}
+.av-image-banner__content{justify-content:var(--av-image-banner-v-d,center);align-items:var(--av-image-banner-h-d,center);padding-block:calc(var(--av-space-8) + var(--av-overlap-pad,0px)) var(--av-space-8)}
+.av-image-banner__box{max-width:var(--av-image-banner-box-w,560px)}
+.av-image-banner__box.av-box{padding:var(--av-space-7)}
+}

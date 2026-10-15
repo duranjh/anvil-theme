@@ -47,6 +47,8 @@ jobs:
 
       - name: Range settings as Shopify's upload validates them
         run: python3 scripts/check-schema-ranges.py
+      - name: Section CSS outside the global bundle
+        run: python3 scripts/extract-section-css.py --check
 
       - name: Templates and section groups against the section schemas
         run: python3 scripts/check-templates.py

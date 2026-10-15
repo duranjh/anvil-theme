@@ -1,3 +1,4 @@
+{{ 'anvil-sec-collapsible.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign untitled_label = 'anvil.collapsible.untitled_row' | t
@@ -253,28 +254,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-/* Rows, toggle and cards come from the shared accordion (assets/anvil-accordion.css); the image layout is here. */
-.av-collapsible{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-6);align-items:start}
-.av-collapsible--m-bottom .av-collapsible__media{order:1}
-.av-collapsible__icon{flex:none;display:inline-flex;width:var(--av-collapsible-icon,24px);height:var(--av-collapsible-icon,24px);color:var(--av-accent)}
-.av-collapsible__rows--icon-text .av-collapsible__icon{color:inherit}
-.av-collapsible__icon > svg,.av-collapsible__icon > img{display:block;width:100%;height:100%;object-fit:contain}
-.av-collapsible__content > * + *{margin-top:var(--av-space-4)}
-.av-collapsible__text > :first-child,.av-collapsible__page > :first-child{margin-top:0}
-.av-collapsible__text > :last-child,.av-collapsible__page > :last-child{margin-bottom:0}
-@media (min-width: 750px){
-.av-collapsible--image{--av-collapsible-gap:var(--av-space-7);--av-collapsible-col:max(30%,min(var(--av-collapsible-media,50%),calc(100% - 20rem - var(--av-collapsible-gap))));grid-template-columns:var(--av-collapsible-col) minmax(0,1fr);gap:var(--av-collapsible-gap)}
-.av-collapsible--image.av-collapsible--right{grid-template-columns:minmax(0,1fr) var(--av-collapsible-col)}
-.av-collapsible--image .av-collapsible__media{order:0}
-.av-collapsible--right .av-collapsible__media{order:1}
-.av-collapsible--image.av-collapsible--solo{grid-template-columns:minmax(0,1fr)}
-.av-collapsible__media--sticky{position:sticky;top:calc(var(--av-header-h, 0px) + var(--av-space-5))}
-}
-@media (min-width: 990px){
-.av-collapsible--image{--av-collapsible-gap:var(--av-space-8)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Collapsible content",

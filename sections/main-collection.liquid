@@ -1,3 +1,4 @@
+{{ 'anvil-sec-main-collection.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign sort_by = collection.sort_by | default: collection.default_sort_by
@@ -172,33 +173,6 @@
   </div>
 </div>
 <script type="module" src="{{ 'anvil-facets.js' | asset_url }}"></script>
-{% stylesheet %}
-.av-collection{display:grid;grid-template-columns:1fr;gap:var(--av-space-5)}
-.av-collection__facets,.av-collection__facets-body,.av-collection__filters{display:flex;flex-direction:column;gap:var(--av-space-3)}
-.av-collection__filters{gap:var(--av-space-2)}
-.av-collection__active-list{display:flex;flex-wrap:wrap;gap:var(--av-space-2);margin-bottom:var(--av-space-2)}
-.av-collection__active{display:inline-flex;align-items:center;gap:var(--av-space-1);min-height:28px;padding:0 var(--av-space-3);font-size:var(--av-text-xs);text-decoration:none;border:1px solid var(--av-border);border-radius:var(--av-radius-pill)}
-.av-collection__clear{display:inline-flex;align-items:center;min-height:28px;font-size:var(--av-text-xs)}
-.av-collection__filter{border-top:1px solid var(--av-border)}
-.av-collection__filter-summary{padding:var(--av-space-3) 0;font-weight:600}
-.av-collection__filter-body{padding-bottom:var(--av-space-3)}
-.av-collection__values{display:flex;flex-direction:column;gap:var(--av-space-2)}
-.av-collection__count{font-size:var(--av-text-xs)}
-.av-collection__price{display:grid;grid-template-columns:1fr 1fr;gap:var(--av-space-2)}
-.av-collection__results[aria-busy="true"]{opacity:0.6}
-.av-collection__summary{margin-bottom:var(--av-space-3);font-size:var(--av-text-sm)}
-.av-collection__grid{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:var(--av-grid-gap, var(--av-space-4))}
-.av-collection__empty{padding:var(--av-space-8) 0;text-align:center}
-@media (min-width: 750px){
-.av-collection__grid{grid-template-columns:repeat(3, minmax(0, 1fr))}
-}
-@media (min-width: 990px){
-.av-collection--has-filters{grid-template-columns:260px minmax(0, 1fr);align-items:start}
-.av-collection__grid--2{grid-template-columns:repeat(2, minmax(0, 1fr))}
-.av-collection__grid--3{grid-template-columns:repeat(3, minmax(0, 1fr))}
-.av-collection__grid--4{grid-template-columns:repeat(4, minmax(0, 1fr))}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Collection",

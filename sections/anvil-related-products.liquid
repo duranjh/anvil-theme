@@ -1,3 +1,4 @@
+{{ 'anvil-sec-related-products.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -110,11 +111,6 @@
   </div>
 </div>
 {%- endunless -%}
-{% stylesheet %}
-/* The product row (grid or slider) is snippets/anvil-product-row with its rules in assets/anvil-card.css. */
-.av-related-products{display:block}
-.av-related-products__note{margin:0 0 var(--av-space-4);text-align:center}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Related products",

@@ -1,3 +1,4 @@
+{{ 'anvil-sec-main-customers-account.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 -%}
@@ -60,32 +61,6 @@
     </div>
   </div>
 </div>
-{% stylesheet %}
-.av-customers-account__head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--av-space-3);margin-bottom:var(--av-space-6)}
-.av-customers-account__title{margin:0;font-size:var(--av-text-3xl)}
-.av-customers-account__logout,.av-customers-account__link{color:inherit;text-underline-offset:0.2em}
-.av-customers-account__layout{display:grid;grid-template-columns:1fr;gap:var(--av-space-6)}
-.av-customers-account__subtitle{margin:0 0 var(--av-space-3);font-size:var(--av-text-lg)}
-.av-customers-account__table{width:100%;border-collapse:collapse;font-size:var(--av-text-sm)}
-.av-customers-account__thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.av-customers-account__table tr{display:grid;grid-template-columns:1fr 1fr;gap:var(--av-space-1) var(--av-space-3);padding:var(--av-space-3) 0;border-bottom:1px solid var(--av-border)}
-.av-customers-account__table td{padding:0}
-.av-customers-account__cell-label{display:block;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
-.av-customers-account__empty{color:var(--av-fg-muted)}
-.av-customers-account__name,.av-customers-account__email{margin:0 0 var(--av-space-1)}
-.av-customers-account__address{font-style:normal;margin:var(--av-space-3) 0;color:var(--av-fg-muted)}
-@media (min-width: 750px){
-.av-customers-account__thead{position:static;width:auto;height:auto;overflow:visible;clip-path:none;white-space:normal}
-.av-customers-account__table th{text-align:left;font-size:var(--av-text-xs);text-transform:uppercase;letter-spacing:0.08em;color:var(--av-fg-muted);padding:0 var(--av-space-3) var(--av-space-2) 0;border-bottom:1px solid var(--av-border)}
-.av-customers-account__table tr{display:table-row}
-.av-customers-account__table td{padding:var(--av-space-3) var(--av-space-3) var(--av-space-3) 0;border-bottom:1px solid var(--av-border)}
-.av-customers-account__cell-label{display:none}
-.av-customers-account__num{text-align:right;padding-right:0}
-}
-@media (min-width: 990px){
-.av-customers-account__layout{grid-template-columns:minmax(0, 2fr) minmax(0, 1fr)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Customer account",

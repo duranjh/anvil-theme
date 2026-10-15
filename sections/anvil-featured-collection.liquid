@@ -1,3 +1,4 @@
+{{ 'anvil-sec-featured-collection.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -152,14 +153,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-/* The product row (grid or slider) is snippets/anvil-product-row with its rules in assets/anvil-card.css. */
-.av-featured-collection__note{margin:0 0 var(--av-space-4);text-align:center}
-.av-featured-collection__foot{margin-top:var(--av-space-6)}
-@media (min-width: 750px){
-.av-featured-collection__foot{margin-top:var(--av-space-7)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Featured collection",

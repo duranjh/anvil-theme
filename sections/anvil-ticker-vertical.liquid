@@ -1,3 +1,4 @@
+{{ 'anvil-sec-ticker-vertical.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign design = request.design_mode
@@ -120,50 +121,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-.av-ticker-vertical{--av-ticker-vertical-btn:var(--av-inline-control,32px);position:relative;display:block;font-size:var(--av-text-md);line-height:1.4}
-.av-ticker-vertical--sm{font-size:var(--av-text-sm)}
-.av-ticker-vertical--lg{font-size:var(--av-text-lg)}
-.av-ticker-vertical--xl{font-size:var(--av-text-xl)}
-.av-ticker-vertical--upper{text-transform:uppercase;letter-spacing:0.06em}
-/* Room for the pause button on both sides keeps centred lines centred; reserved from the first paint so nothing moves
-   when the button appears. */
-.av-ticker-vertical--multi{padding-inline:calc(var(--av-ticker-vertical-btn) + var(--av-space-2))}
-/* Every line sits in the same grid cell, so the strip is as tall as its tallest line (or the height setting) and never
-   changes height while it rotates. overflow: clip cannot be scrolled by focus, unlike hidden. */
-.av-ticker-vertical__viewport{display:grid;min-height:var(--av-ticker-vertical-h,40px);padding:var(--av-space-1);overflow:hidden;overflow:clip}
-.av-ticker-vertical__item{grid-area:1 / 1;display:flex;align-items:center;justify-content:center;min-width:0;text-align:center;opacity:0;pointer-events:none}
-.av-ticker-vertical--left .av-ticker-vertical__item{justify-content:flex-start;text-align:start}
-.av-ticker-vertical--right .av-ticker-vertical__item{justify-content:flex-end;text-align:end}
-.av-ticker-vertical__item.av-is-current{opacity:1;pointer-events:auto}
-/* Waiting lines sit just below the viewport's padding box, lines that left just above it. */
-.av-ticker-vertical--slide .av-ticker-vertical__item{transform:translateY(calc(100% + var(--av-space-1)))}
-.av-ticker-vertical--slide .av-ticker-vertical__item.av-is-leaving{transform:translateY(calc(-100% - var(--av-space-1)))}
-.av-ticker-vertical--slide .av-ticker-vertical__item.av-is-current{transform:none}
-/* A focused link in a hidden line brings that line forward, with or without JavaScript. The swap is instant
-   (transition: none on both sides), so the focused link is visible at once and two lines never overlap. */
-.av-ticker-vertical__viewport:focus-within .av-ticker-vertical__item:not(:focus-within){opacity:0;pointer-events:none;transition:none}
-.av-ticker-vertical .av-ticker-vertical__item:focus-within{opacity:1;pointer-events:auto;transform:none;transition:none}
-/* Slide: both lines move together. Fade: the old line fades out first, then the new one fades in, so two lines never
-   overlap. Only when the shopper allows motion and Theme settings keep animations on. */
-@media (prefers-reduced-motion: no-preference){
-html:not([data-animations="off"]) .av-ticker-vertical__item{transition:opacity var(--av-dur) var(--av-ease),transform var(--av-dur) var(--av-ease)}
-html:not([data-animations="off"]) .av-ticker-vertical--fade .av-ticker-vertical__item{transition-duration:calc(var(--av-dur) / 2)}
-html:not([data-animations="off"]) .av-ticker-vertical--fade .av-ticker-vertical__item.av-is-current{transition-delay:calc(var(--av-dur) / 2)}
-}
-.av-ticker-vertical .av-ticker-vertical__item.av-is-instant{transition:none}
-.av-ticker-vertical__text{min-width:0;overflow-wrap:anywhere}
-.av-ticker-vertical__text a,.av-ticker-vertical__link{color:inherit;text-decoration:underline;text-underline-offset:0.15em}
-.av-ticker-vertical__link:hover{text-decoration-thickness:2px}
-/* The global ring (2px at a 3px offset) would reach 5px past the link and lose its outer edge to the viewport's 4px
-   padding and clip; at a 1px offset it ends 3px out, inside the padding. */
-.av-ticker-vertical__text a:focus-visible,.av-ticker-vertical__link:focus-visible{outline-offset:1px}
-/* Pause button: the theme's inline control (32 px, borderless pill), like the announcement bar's. */
-.av-ticker-vertical__toggle{position:absolute;z-index:1;inset-block-start:50%;inset-inline-end:0;display:grid;place-items:center;width:var(--av-ticker-vertical-btn);height:var(--av-ticker-vertical-btn);padding:0;border:0;border-radius:var(--av-radius-pill);background:none;color:inherit;translate:0 -50%;cursor:pointer}
-.av-ticker-vertical__toggle:hover{background:rgb(var(--av-fg-rgb) / 0.08)}
-.av-ticker-vertical__toggle .av-ticker-vertical__ico-play,.av-ticker-vertical.av-is-paused .av-ticker-vertical__ico-pause{display:none}
-.av-ticker-vertical.av-is-paused .av-ticker-vertical__ico-play{display:block}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Ticker (vertical)",

@@ -25,6 +25,7 @@ Never hard-code a colour, font, radius or shadow. Opacity variants use `rgb(var(
 
 ## 3. Section skeleton (mandatory; checked by `scripts/chassis-lint.py`)
 ```liquid
+{{ 'anvil-sec-<name>.css' | asset_url | stylesheet_tag }}  {%- comment -%} section CSS file, never {% stylesheet %} (DECISIONS 3) {%- endcomment -%}
 {%- liquid
   assign s = section.settings
 -%}
@@ -34,9 +35,6 @@ Never hard-code a colour, font, radius or shadow. Opacity variants use `rgb(var(
     <!-- body: local blocks loop with {{ block.shopify_attributes }} on each, or {% content_for 'blocks' %} -->
   </div>
 </div>
-{% stylesheet %}
-/* section-only CSS, ≤ 6 KB, every selector starts with .av-<slug> */
-{% endstylesheet %}
 {% schema %}
 { ... }
 {% endschema %}
@@ -155,7 +153,7 @@ Semantic elements first (`<table>` for comparison tables, `<ol>` for steps, `<de
 No evergreen or per-visitor timers. No typed stock numbers; inventory only from Shopify's tracked inventory. No manual "you save"; savings only from compare-at or "applied at checkout". "FREE" only when Shopify prices the line at zero. Star numbers only from the rating metafields or with a source URL. Badges like "Most popular" only behind a "backed by sales data" checkbox. No bundled platform logos; merchants upload what they are entitled to use. Example content must read as an example. Every setting that could mislead carries a one-sentence `info`.
 
 ## 11. Performance budgets
-Lighthouse mobile ≥ 80 performance, ≥ 95 accessibility on home, product and landing. `{% stylesheet %}` ≤ 6 KB per section (minified); section JS ≤ 2 KB gz; images always via `image_tag` with `widths` and `sizes`, max width 2200 (full-bleed), 1100 (half), 600 (cards: `300, 450, 600`), logos and avatars twice their displayed width, at most 640 (DECISIONS 71); `loading="lazy"` except media in the first two template sections (`section.location` is `template` or `content_for_index`, blank under the Section Rendering API, and `section.index <= 2` or nil; `index` restarts in every section group, so a footer or overlay section is never eager), where the first visible row is eager and the likely LCP image gets `fetchpriority: 'high'`; take the decision from `snippets/anvil-above-fold` (DECISIONS 85), never a local copy; fonts preload with `crossorigin`; no raster files in `assets/`; zero third-party requests.
+Lighthouse mobile ≥ 80 performance, ≥ 95 accessibility on home, product and landing. section CSS in `assets/anvil-sec-<name>.css` ≤ 6 KB minified, loaded by the section with `stylesheet_tag` (never `{% stylesheet %}` in a section: Shopify ships that bundle on every page, DECISIONS 3; theme blocks and snippets may keep a small `{% stylesheet %}`); section JS ≤ 2 KB gz; images always via `image_tag` with `widths` and `sizes`, max width 2200 (full-bleed), 1100 (half), 600 (cards: `300, 450, 600`), logos and avatars twice their displayed width, at most 640 (DECISIONS 71); `loading="lazy"` except media in the first two template sections (`section.location` is `template` or `content_for_index`, blank under the Section Rendering API, and `section.index <= 2` or nil; `index` restarts in every section group, so a footer or overlay section is never eager), where the first visible row is eager and the likely LCP image gets `fetchpriority: 'high'`; take the decision from `snippets/anvil-above-fold` (DECISIONS 85), never a local copy; fonts preload with `crossorigin`; no raster files in `assets/`; zero third-party requests.
 
 ## 12. Placeholders and defaults
 Empty image settings render `placeholder_svg_tag` (`product-1…6`, `collection-1…6`, `lifestyle-1`, `lifestyle-2`, `image`). Empty product lists render four placeholder cards. Default text the merchant must replace, and every claim, starts with "Example: " ("Example: a review a real customer wrote, copied exactly"); neutral headings may be plain (DECISIONS 108). Presets include enough example blocks to look finished.

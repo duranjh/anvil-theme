@@ -1,3 +1,4 @@
+{{ 'anvil-sec-audio.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -104,65 +105,6 @@
 {%- if show_player -%}
   <script type="module" src="{{ 'anvil-audio.js' | asset_url }}"></script>
 {%- endif -%}
-{% stylesheet %}
-/* The section root takes no height; only the player is drawn, fixed to the viewport. */
-.av-section.av-s-anvil-audio{padding:0;background:none}
-.av-audio{position:fixed;z-index:50;left:max(var(--av-gutter),env(safe-area-inset-left,0px));bottom:calc(var(--av-pad-bottom,48px) * var(--av-pad-mobile,1) + var(--av-sticky-bar-h,0px) + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:var(--av-space-1);max-width:calc(100vw - 2 * var(--av-gutter));padding:var(--av-space-1);color:var(--av-fg);background-color:var(--av-bg);background-image:var(--av-bg-gradient);border:1px solid var(--av-border);border-radius:var(--av-radius-popup);box-shadow:var(--av-shadow-lg)}
-.av-audio:not(:defined){display:none}
-/* In the editor the player shows even before its module runs, so the setup hint is never hidden. */
-.av-design-mode .av-audio:not(:defined){display:flex}
-.av-audio--right{left:auto;right:max(var(--av-gutter),env(safe-area-inset-right,0px))}
-.av-audio--center{right:var(--av-gutter);left:var(--av-gutter);width:fit-content;margin-inline:auto}
-/* The page keeps room at its foot for the player (--av-audio-space, written by anvil-audio.js) on top of the sticky
-   add-to-cart bar's room, so the footer stays reachable and focus never hides under the player (WCAG 2.4.11). These
-   selectors outrank html.av-is-sticky-shown (anvil-sticky-bar.css), so the two add up instead of replacing each other. */
-html:has(anvil-audio:defined) body{padding-bottom:calc(var(--av-audio-space,0px) + var(--av-sticky-bar-h,0px))}
-html:has(anvil-audio:defined){scroll-padding-bottom:calc(var(--av-audio-space,0px) + var(--av-sticky-bar-h,0px))}
-.av-audio__panel{display:flex;align-items:center;gap:var(--av-space-1);min-width:0}
-.av-audio__panel[hidden]{display:none}
-/* Sizing for every control; Play takes its look from .av-btn--primary, the others are plain icon buttons. */
-.av-audio__btn{flex:none;display:inline-grid;place-items:center;width:44px;height:44px;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-.av-audio__btn > *{grid-area:1 / 1}
-.av-audio__btn:not(.av-btn){color:inherit;background:none;border:0;border-radius:var(--av-radius-button);cursor:pointer}
-.av-audio__btn:not(.av-btn):hover{background:rgb(var(--av-fg-rgb) / 0.08)}
-.av-audio__btn:not(.av-btn):disabled{opacity:0.5;cursor:not-allowed}
-.av-audio__play[aria-pressed="true"] .av-audio__i-play,.av-audio__play:not([aria-pressed="true"]) .av-audio__i-pause,.av-audio__mute[aria-pressed="true"] .av-audio__i-sound,.av-audio__mute:not([aria-pressed="true"]) .av-audio__i-muted,.av-audio__toggle[aria-expanded="true"] .av-audio__i-music,.av-audio__toggle[aria-expanded="true"] .av-audio__eq,.av-audio__toggle[aria-expanded="false"] .av-audio__i-fold,.av-audio:not(.av-is-playing) .av-audio__eq,.av-audio.av-is-playing .av-audio__i-music{display:none}
-.av-audio--left .av-audio__i-fold{transform:rotate(90deg)}
-.av-audio--right .av-audio__i-fold{transform:rotate(-90deg)}
-.av-audio__meta,.av-audio__hint{flex:1 1 auto;min-width:0;max-width:14rem;padding-inline:var(--av-space-2);line-height:1.3}
-.av-audio__title,.av-audio__artist,.av-audio__hint,.av-audio__status{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.av-audio__title{font-size:var(--av-text-sm);font-weight:600}
-.av-audio__artist,.av-audio__hint,.av-audio__status{font-size:var(--av-text-xs);color:var(--av-fg-muted)}
-.av-audio__hint,.av-audio__status{white-space:normal}
-/* The error line uses the scheme's own text colour, so it keeps the scheme's contrast on any player background. */
-.av-audio__status{color:var(--av-fg);font-weight:600}
-/* Three bars that tell a folded player is playing; they stand still unless motion is allowed. */
-.av-audio__eq{display:inline-flex;align-items:flex-end;gap:2px;width:16px;height:16px}
-.av-audio__eq > span{flex:1;height:100%;border-radius:1px;background:currentColor;transform-origin:50% 100%;transform:scaleY(0.55)}
-.av-audio__eq > span:nth-child(2){transform:scaleY(1)}
-.av-audio__eq > span:nth-child(3){transform:scaleY(0.75)}
-.av-audio--native{flex-direction:column;align-items:stretch;gap:var(--av-space-2);padding:var(--av-space-2)}
-.av-audio--native .av-audio__title,.av-audio--native .av-audio__artist{padding-inline:var(--av-space-2)}
-.av-audio--native audio{display:block;width:min(300px, calc(100vw - 2 * var(--av-gutter) - 2 * var(--av-space-2)))}
-@media (min-width: 750px){
-.av-audio{bottom:calc(var(--av-pad-bottom,48px) + var(--av-sticky-bar-h,0px) + env(safe-area-inset-bottom,0px))}
-.av-audio__meta,.av-audio__hint{max-width:16rem}
-}
-@media (prefers-reduced-motion: no-preference){
-html:not([data-animations="off"]) .av-audio__eq > span{animation:av-audio-eq 0.9s var(--av-ease) infinite alternate}
-html:not([data-animations="off"]) .av-audio__eq > span:nth-child(2){animation-delay:-0.3s}
-html:not([data-animations="off"]) .av-audio__eq > span:nth-child(3){animation-delay:-0.6s}
-}
-@keyframes av-audio-eq{from{transform:scaleY(0.25)}to{transform:scaleY(1)}}
-@media (forced-colors: active){
-.av-audio{border-color:CanvasText}
-.av-audio__btn{border:1px solid ButtonText}
-.av-audio__eq > span{forced-color-adjust:none;background:ButtonText}
-}
-@media print{
-.av-audio{display:none}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Music player",

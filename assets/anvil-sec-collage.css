@@ -1,0 +1,45 @@
+/* sections/anvil-collage.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+/* Phones: two columns, the first tile spans both columns and two rows; tablets and desktop: a big tile over two
+   rows beside the others (left or right). Every tile fills its grid area, so nothing shifts while images load. Row
+   heights are minimums: image, collection and video tiles only hold absolutely positioned content and keep them;
+   a product card that needs more room grows its row instead of spilling onto the next tile. */
+.av-collage{--av-collage-row-m:210px;--av-collage-row:280px;--av-collage-radius:var(--av-radius-media);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(var(--av-collage-row-m),auto);gap:var(--av-collage-gap,12px);margin:0;padding:0;list-style:none}
+.av-collage--h-sm{--av-collage-row-m:180px;--av-collage-row:220px}
+.av-collage--h-lg{--av-collage-row-m:250px;--av-collage-row:340px}
+.av-collage--square{--av-collage-radius:0}
+.av-collage__tile{position:relative;min-width:0;min-height:0;margin:0;border-radius:var(--av-collage-radius)}
+.av-collage__tile:focus-within{z-index:1}
+.av-collage__tile:first-child{grid-column:1/-1;grid-row:span 2}
+.av-collage--n2 .av-collage__tile:last-child,.av-collage--n4 .av-collage__tile:last-child{grid-column:1/-1}
+.av-collage .av-media{border-radius:var(--av-collage-radius)}
+.av-collage .av-collage__media{position:absolute;inset:0;height:100%;aspect-ratio:auto}
+.av-collage__fill{position:absolute;inset:0;display:block;margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:start;text-decoration:none}
+.av-collage .av-collage__fill{border-radius:var(--av-collage-radius)}
+.av-collage__host{position:absolute;inset:0;display:block}
+.av-collage__tile--link .av-collage__fill{cursor:pointer}
+.av-collage__label{position:absolute;inset-inline-start:var(--av-space-3);inset-block-end:var(--av-space-3);display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-1) var(--av-space-2);max-width:calc(100% - 2 * var(--av-space-3));box-sizing:border-box;padding:var(--av-space-2) var(--av-space-3);border-radius:var(--av-radius-button);background:var(--av-bg);color:var(--av-fg);box-shadow:var(--av-shadow-sm);font-size:var(--av-text-sm);font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.av-collage__label .av-icon{flex:none}
+.av-collage__title{font-size:var(--av-text-md);line-height:1.25}
+.av-collage__count{flex-basis:100%;font-size:var(--av-text-xs);font-weight:400;color:var(--av-fg-muted)}
+.av-collage__note{position:absolute;inset:var(--av-space-2) var(--av-space-2) auto;margin:0;padding:var(--av-space-2) var(--av-space-3);border-radius:var(--av-radius-button);background:var(--av-bg)}
+/* Product tiles: the card fills the tile; its av-card--fill variant (anvil-card.css) gives the image the room the
+   text leaves, shown whole. */
+.av-collage__tile--product{display:flex;flex-direction:column}
+.av-collage__tile--product>.av-card{flex:1 1 auto;min-height:0}
+/* The top padding keeps the close button off the video; anvil-dialog.css has no padding token yet. */
+.av-collage__dialog.av-dialog{--av-dialog-width:min(1040px,calc((100dvh - 9rem) * var(--av-collage-ratio,1.7778) + 2 * var(--av-space-4)));padding:calc(44px + var(--av-space-3)) var(--av-space-4) var(--av-space-4)}
+@media (min-width:750px){
+.av-collage{grid-template-columns:minmax(0,3fr) minmax(0,2fr);grid-auto-rows:minmax(calc(var(--av-collage-row) * 0.8),auto)}
+.av-collage--big-right{grid-template-columns:minmax(0,2fr) minmax(0,3fr)}
+.av-collage--n1{grid-template-columns:minmax(0,1fr)}
+.av-collage--n4,.av-collage--n5{grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr))}
+.av-collage--n4.av-collage--big-right,.av-collage--n5.av-collage--big-right{grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,2fr)}
+.av-collage__tile:first-child{grid-column:1;grid-row:1/span 2}
+.av-collage--big-right .av-collage__tile:first-child{grid-column:-2}
+.av-collage--n2 .av-collage__tile:last-child{grid-column:auto;grid-row:span 2}
+.av-collage--n4 .av-collage__tile:nth-child(2){grid-column:span 2}
+.av-collage--n4 .av-collage__tile:last-child{grid-column:auto}
+}
+@media (min-width:990px){
+.av-collage{grid-auto-rows:minmax(var(--av-collage-row),auto)}
+}

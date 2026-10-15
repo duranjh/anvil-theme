@@ -1,0 +1,25 @@
+/* sections/anvil-group.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+.av-group{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-group-space,24px);align-items:stretch}
+.av-group>*{min-width:0}
+.av-group--v-top{align-items:start}
+.av-group--v-center{align-items:center}
+.av-group--v-bottom{align-items:end}
+.av-group--span>:not(.av-group-block){grid-column:1/-1}
+.av-group--r1-1{--av-group-cols:minmax(0,1fr) minmax(0,1fr)}
+.av-group--r3-2{--av-group-cols:minmax(0,3fr) minmax(0,2fr)}
+.av-group--r2-3{--av-group-cols:minmax(0,2fr) minmax(0,3fr)}
+.av-group--r2-1{--av-group-cols:minmax(0,2fr) minmax(0,1fr)}
+.av-group--r1-2{--av-group-cols:minmax(0,1fr) minmax(0,2fr)}
+.av-group__panel--box.av-box{padding:min(var(--av-group-box-pad,32px),var(--av-space-5))}
+.av-group__note{margin:0 0 var(--av-space-4);padding:var(--av-space-5);text-align:center;border:1px dashed var(--av-border);border-radius:var(--av-radius-card)}
+/* Phones: boxes keep room for their content however deep they nest. */
+.av-group--compact>.av-group-block{padding:min(var(--av-group-pad,24px),var(--av-space-5))}
+.av-group--compact .av-group-block .av-group-block{padding:min(var(--av-group-pad,24px),var(--av-space-3))}
+@media (min-width: 750px){
+.av-group--t{grid-template-columns:var(--av-group-cols)}
+.av-group__panel--box.av-box{padding:var(--av-group-box-pad,32px)}
+.av-group--compact>.av-group-block,.av-group--compact .av-group-block .av-group-block{padding:var(--av-group-pad,24px)}
+}
+@media (min-width: 990px){
+.av-group--d{grid-template-columns:var(--av-group-cols)}
+}

@@ -1,3 +1,4 @@
+{{ 'anvil-sec-track-order.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign mode = s.mode | default: 'account'
@@ -217,35 +218,6 @@
     {%- endif -%}
   </div>
 </div>
-{% stylesheet %}
-.av-track-order{display:flex;flex-direction:column;align-items:flex-start}
-.av-track-order--center{align-items:center;text-align:center}
-.av-track-order--right{align-items:flex-end;text-align:end}
-.av-track-order__panel{container-type:inline-size;display:grid;gap:var(--av-space-4);width:100%;max-width:36rem}
-.av-track-order--embed .av-track-order__panel{max-width:none}
-.av-track-order--box .av-track-order__panel{padding:var(--av-space-5)}
-.av-track-order__tool,.av-track-order__form{display:block;min-width:0}
-.av-track-order__form .av-field{text-align:start}
-/* Layout comes from the shared .av-field--inline pair; below 26rem it stacks. */
-.av-track-order__row{flex-direction:column}
-/* The button ships disabled for path templates and the module enables it; until then it looks normal, not faded. */
-.av-track-order__tool:not(:defined) .av-track-order__submit[disabled]{opacity:1;cursor:default}
-.av-track-order__fallback{margin:var(--av-space-3) 0 0;font-size:var(--av-text-sm);text-align:start}
-.av-track-order__fallback a{color:inherit;text-underline-offset:0.15em}
-.av-track-order__help{font-size:var(--av-text-sm);color:var(--av-fg-muted)}
-.av-track-order__help>:first-child{margin-top:0}
-.av-track-order__help>:last-child{margin-bottom:0}
-.av-track-order__embed{min-width:0;overflow-x:auto;text-align:start}
-.av-track-order__embed iframe{max-width:100%}
-.av-track-order__note{margin:0}
-@container (min-width: 26rem){
-.av-track-order__row{flex-direction:row}
-.av-track-order__submit{flex:none}
-}
-@media (min-width: 750px){
-.av-track-order--box .av-track-order__panel{padding:var(--av-space-6)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Track order",

@@ -1,3 +1,4 @@
+{{ 'anvil-sec-stories.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
   assign total = section.blocks.size
@@ -214,68 +215,6 @@
     {%- endif -%}
   </div>
 </div>
-{% stylesheet %}
-.av-stories{--av-stories-size:max(56px,calc(var(--av-stories-d,76px) * .8));display:block}
-.av-stories__list{display:flex;gap:var(--av-space-4);margin:0 calc(-1 * var(--av-gutter));padding:var(--av-space-2) var(--av-gutter);list-style:none;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:var(--av-gutter);scrollbar-width:thin}
-.av-stories--center .av-stories__item:first-child{margin-inline-start:auto}
-.av-stories--center .av-stories__item:last-child{margin-inline-end:auto}
-.av-stories__item{flex:none;width:calc(var(--av-stories-size) + var(--av-space-3));scroll-snap-align:start}
-.av-stories__open{display:flex;flex-direction:column;align-items:center;gap:var(--av-space-2);width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-decoration:none;cursor:pointer}
-.av-stories__ring{display:block;width:var(--av-stories-size);aspect-ratio:1;padding:var(--av-stories-ring-w);border-radius:50%;background:var(--av-stories-ring)}
-.av-stories__thumb{display:block;width:100%;height:100%;overflow:hidden;border:min(2px,var(--av-stories-ring-w)) solid var(--av-bg);border-radius:50%;background:rgb(var(--av-fg-rgb) / .06)}
-.av-stories__thumb > *{display:block;width:100%;height:100%;object-fit:cover}
-.av-stories__ph{box-sizing:border-box;padding:14%;color:rgb(var(--av-fg-rgb) / .4);fill:currentColor}
-.av-stories__label,.av-stories__name span{display:-webkit-box;overflow:hidden;overflow-wrap:anywhere;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.av-stories__label{max-width:100%;font-size:var(--av-text-sm);line-height:1.3;text-align:center}
-.av-stories__open:hover .av-stories__label{text-decoration:underline;text-underline-offset:.15em}
-@media (min-width:750px){
-.av-stories{--av-stories-size:var(--av-stories-d,76px)}
-.av-stories__list{margin-inline:calc(-1 * var(--av-space-2));padding-inline:var(--av-space-2);scroll-padding-inline:var(--av-space-2)}
-.av-stories--wrap .av-stories__list{flex-wrap:wrap;row-gap:var(--av-space-5);overflow:visible}
-.av-stories--wrap.av-stories--center .av-stories__list{justify-content:center}
-.av-stories--wrap .av-stories__item:nth-child(n){margin-inline:0}
-}
-.av-stories__viewer{width:100%;height:100%;max-width:100%;max-height:100%;margin:0;padding:0;border:0;overflow:hidden}
-.av-stories__viewer[open]{display:grid;place-items:center}
-.av-stories__frame{position:relative;width:100%;height:100%;overflow:hidden;background:rgb(var(--av-fg-rgb) / .08)}
-.av-stories__slide,.av-stories__media{position:absolute;inset:0}
-.av-stories__media > *{display:block;width:100%;height:100%;object-fit:cover}
-.av-stories__viewer--contain .av-stories__media > *{object-fit:contain}
-.av-stories__frame::before{content:"";position:absolute;z-index:2;inset:0 0 auto;height:96px;background:linear-gradient(rgb(var(--av-bg-rgb) / .6),transparent);pointer-events:none}
-.av-stories__bars{position:absolute;z-index:3;inset:calc(var(--av-space-3) + env(safe-area-inset-top)) var(--av-space-3) auto;display:flex;gap:4px}
-.av-stories__bar{flex:1;height:3px;overflow:hidden;border-radius:var(--av-radius-pill);background:rgb(var(--av-fg-rgb) / .35)}
-.av-stories__fill{display:block;height:100%;background:var(--av-fg);transform:scaleX(0);transform-origin:0 50%}
-.av-stories__fill:dir(rtl){transform-origin:100% 50%}
-.av-stories__controls,.av-stories__name{position:absolute;z-index:3;top:calc(var(--av-space-5) + env(safe-area-inset-top))}
-.av-stories__controls{inset-inline-end:var(--av-space-2);display:flex;gap:var(--av-space-1)}
-.av-stories__btn,.av-stories__arrow{display:grid;place-items:center}
-.av-stories__btn{width:44px;height:44px;padding:0;border:0;border-radius:var(--av-radius-pill);background:rgb(var(--av-bg-rgb) / .35);color:var(--av-fg);cursor:pointer}
-.av-stories__btn[aria-pressed=true] .av-stories__i-off,.av-stories__btn[aria-pressed=false] .av-stories__i-on{display:none}
-.av-stories__name,.av-stories__note{margin:0;border-radius:var(--av-radius-badge);background:rgb(var(--av-bg-rgb) / .75);font-weight:600}
-.av-stories__name{inset-inline-start:var(--av-space-4);max-width:calc(100% - 3 * 44px - 3 * var(--av-space-4));padding:calc(22px - .625em) var(--av-space-3);line-height:1.25;pointer-events:none}
-.av-stories__zone{position:absolute;z-index:1;inset-block:0;display:flex;align-items:center;width:34%;padding:0 var(--av-space-2);border:0;background:none;color:var(--av-fg);cursor:pointer}
-.av-stories__zone--prev{inset-inline-start:0}
-.av-stories__zone--next{inset-inline-end:0;justify-content:flex-end;width:66%}
-.av-stories__zone:focus-visible{outline-offset:-6px}
-.av-stories__arrow{width:40px;height:40px;border-radius:50%;background:rgb(var(--av-bg-rgb) / .5);opacity:0}
-.av-stories__arrow svg:dir(rtl){scale:-1 1}
-.av-stories__zone:focus-visible .av-stories__arrow{opacity:1}
-.av-stories__foot{position:absolute;z-index:2;inset:auto var(--av-space-4) calc(var(--av-space-6) + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:var(--av-space-3);pointer-events:none}
-.av-stories__note{padding:var(--av-space-1) var(--av-space-3);font-size:var(--av-text-sm);text-align:center}
-.av-stories__cta{pointer-events:auto}
-@media (hover:hover){.av-stories__zone:hover .av-stories__arrow{opacity:1}}
-@media (min-width:750px) and (min-height:600px){
-.av-stories__frame{width:auto;height:calc(100% - 2 * var(--av-space-6));max-height:960px;aspect-ratio:9 / 16;border-radius:var(--av-radius-media)}
-}
-@media (orientation:landscape) and (max-height:599px){.av-stories__media > *{object-fit:contain}}
-@media (prefers-reduced-motion:no-preference){
-html:not([data-animations="off"]) .av-stories__ring{transition:transform var(--av-dur) var(--av-ease)}
-html:not([data-animations="off"]) .av-stories__open:hover .av-stories__ring{transform:scale(1.04)}
-html:not([data-animations="off"]) .av-stories__viewer[open]{animation:av-stories-in var(--av-dur) var(--av-ease)}
-html:not([data-animations="off"]) .av-stories__fill{transition:transform .25s linear}
-}
-@keyframes av-stories-in{from{opacity:0;transform:scale(.98)}}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Stories",

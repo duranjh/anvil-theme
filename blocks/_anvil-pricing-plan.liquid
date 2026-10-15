@@ -169,11 +169,14 @@
     {%- endif -%}
   </div>
   <div class="av-pricing-plan__rows">
-    {%- if p != blank -%}
-      {%- content_for 'blocks', closest.product: p -%}
-    {%- else -%}
-      {%- content_for 'blocks' -%}
-    {%- endif -%}
+    {%- comment -%} One block area per file (Shopify upload rule); the plan's product, else the surrounding one. {%- endcomment -%}
+    {%- liquid
+      assign ctx_product = p
+      if ctx_product == blank
+        assign ctx_product = closest.product
+      endif
+    -%}
+    {%- content_for 'blocks', closest.product: ctx_product -%}
   </div>
   {%- case btn_mode -%}
     {%- when 'link' -%}

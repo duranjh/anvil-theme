@@ -1,3 +1,4 @@
+{{ 'anvil-sec-collection-list.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -221,50 +222,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-/* Grid columns and gap from the shared .av-grid; the slider from <anvil-slider> (snippets/anvil-slider-attrs); zoom
-   on hover from the shared .av-hover-zoom. */
-.av-collection-list{--av-collection-list-pad:var(--av-space-4);--av-slider-gap:var(--av-grid-space,var(--av-grid-gap))}
-.av-collection-list--m2{--av-grid-space:var(--av-space-3);--av-collection-list-pad:var(--av-space-3)}
-.av-collection-list__list{padding:0;list-style:none}
-.av-collection-list--row-center .av-collection-list__list{justify-content:center}
-.av-collection-list--row-right .av-collection-list__list{justify-content:flex-end}
-.av-collection-list__item{display:flex;min-width:0;margin:0}
-.av-collection-list__card{position:relative;display:flex;flex:1;flex-direction:column;min-width:0;color:var(--av-fg)}
-.av-collection-list__body{display:flex;flex-direction:column;gap:var(--av-space-1);min-width:0;padding-top:var(--av-space-3)}
-.av-collection-list .av-collection-list__title{margin:0;font-size:var(--av-text-md);line-height:1.25;overflow-wrap:anywhere}
-.av-collection-list__link{color:inherit;text-decoration:none}
-/* The title link covers the whole card; its focus ring is drawn on the card, inside the edge so a scrolling track cannot clip it. */
-.av-collection-list__link::after{content:"";position:absolute;inset:0;z-index:1;border-radius:var(--av-radius-card)}
-.av-collection-list__link:focus-visible{outline:2px solid transparent}
-/* Two-tone ring (accent, then scheme background inside it): one band always contrasts with the photo. */
-.av-collection-list__link:focus-visible::after{outline:2px solid var(--av-accent);outline-offset:-2px;box-shadow:inset 0 0 0 4px var(--av-bg)}
-.av-collection-list__card:hover .av-collection-list__link{text-decoration:underline;text-decoration-thickness:0.06em;text-underline-offset:0.15em}
-.av-collection-list__count{margin:0;font-size:var(--av-text-sm);color:var(--av-fg-muted)}
-.av-collection-list--align-center .av-collection-list__body{text-align:center}
-.av-collection-list--align-right .av-collection-list__body{text-align:right}
-/* Image with title below: the card frame follows Theme settings > Cards > Collection cards. */
-.av-collection-list--frame-outlined .av-collection-list__card,.av-collection-list--frame-raised .av-collection-list__card{padding:var(--av-space-3);border-radius:var(--av-radius-card);background:var(--av-bg)}
-.av-collection-list--frame-outlined .av-collection-list__card{border:max(1px,var(--av-border-w-card)) solid var(--av-border)}
-.av-collection-list--frame-raised .av-collection-list__card{box-shadow:var(--av-shadow-card)}
-.av-collection-list--frame-raised.av-collection-list--slider > [data-slider-track]{padding-block:var(--av-space-1) var(--av-space-4)}
-/* Title over the image: overlay scheme text on the shared .av-overlay tint. Cards do not stretch, so the body stays on the photo. */
-.av-collection-list--overlay .av-collection-list__item{align-items:flex-start}
-.av-collection-list--overlay .av-collection-list__body{position:absolute;inset:0;isolation:isolate;justify-content:flex-end;padding:var(--av-collection-list-pad);border-radius:var(--av-radius-media);color:var(--av-fg)}
-.av-collection-list__tint{z-index:-1;border-radius:inherit}
-/* Bottom: full tint behind the text (lowest 40 %), clear by 90 %. Centre keeps the even tint. */
-.av-collection-list--pos-bottom .av-collection-list__tint{background:linear-gradient(to top,rgb(var(--av-overlay-rgb) / var(--av-overlay-strength)) 0,rgb(var(--av-overlay-rgb) / var(--av-overlay-strength)) 40%,rgb(var(--av-overlay-rgb) / 0) 90%)}
-.av-collection-list--overlay.av-collection-list--pos-center .av-collection-list__body{justify-content:center}
-.av-collection-list--overlay .av-collection-list__link::after{border-radius:var(--av-radius-media)}
-.av-collection-list--overlay .av-collection-list__count{color:inherit}
-.av-collection-list__more{display:flex;justify-content:center;margin-top:var(--av-space-6)}
-.av-collection-list__more--left{justify-content:flex-start}
-.av-collection-list__more--right{justify-content:flex-end}
-@media (min-width: 750px){
-.av-collection-list,.av-collection-list--m2{--av-grid-space:initial;--av-collection-list-pad:var(--av-space-5)}
-.av-collection-list--overlay .av-collection-list__title{font-size:var(--av-text-lg)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Collection list",

@@ -1,3 +1,4 @@
+{{ 'anvil-sec-shoppable-image.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -250,58 +251,6 @@
     {%- endif -%}
   </div>
 </div>
-{% stylesheet %}
-/* The stage is the image box. Spots, their cards and the pulse come from assets/anvil-hotspots.css; this file adds
-   the card layout, dot looks and card placement. Placement uses container units of the stage, so a card always stays
-   inside the image's width (no sideways page scroll on phones), whatever the component's own flip classes say. */
-.av-shoppable-image{display:block}
-.av-shoppable-image:has([aria-expanded="true"]){position:relative;z-index:2}
-.av-shoppable-image__stage{width:100%;margin-inline:auto;container-type:inline-size}
-/* Dots stay 22 px (half the 44 px target) inside the stage, so a dot at an edge never makes the page scroll sideways. */
-.av-shoppable-image .av-shoppable-image__spot{left:clamp(22px,var(--av-spot-x,50%),calc(100% - 22px));top:clamp(22px,var(--av-spot-y,50%),calc(100% - 22px))}
-.av-shoppable-image__spot:has([aria-expanded="true"]){z-index:3}
-.av-shoppable-image__pop{scroll-margin-block:calc(var(--av-header-h, 0px) + var(--av-space-2)) var(--av-space-2)}
-.av-shoppable-image__card{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-3);align-items:start}
-.av-shoppable-image__card--thumb{grid-template-columns:72px minmax(0,1fr)}
-.av-shoppable-image__close{position:absolute;top:var(--av-space-1);inset-inline-end:var(--av-space-1);display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:var(--av-radius-pill);background:transparent;color:inherit;cursor:pointer}
-.av-shoppable-image__close:hover{background:rgb(var(--av-fg-rgb) / 0.08)}
-.av-shoppable-image__thumb{display:block;width:72px;aspect-ratio:1 / 1;overflow:hidden;border-radius:var(--av-radius-media);background:rgb(var(--av-fg-rgb) / 0.06)}
-.av-shoppable-image__thumb img,.av-shoppable-image__thumb svg{display:block;width:100%;height:100%;object-fit:cover}
-.av-shoppable-image__info{display:flex;flex-direction:column;gap:var(--av-space-1);min-width:0;padding-inline-end:var(--av-space-6)}
-.av-shoppable-image__vendor{margin:0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
-.av-shoppable-image__title{margin:0;font-size:var(--av-text-sm);font-weight:600;line-height:1.35;overflow-wrap:anywhere}
-.av-shoppable-image__title a{color:inherit;text-decoration:none}
-.av-shoppable-image__title a:hover{text-decoration:underline;text-underline-offset:0.15em}
-.av-shoppable-image__buy{grid-column:1 / -1;min-width:0}
-.av-shoppable-image__buy .av-field{margin:0}
-.av-shoppable-image__nojs{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--av-space-2) var(--av-space-5);margin:var(--av-space-4) 0 0;padding:0;list-style:none}
-.av-shoppable-image__nojs-item{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2)}
-/* Static markers (no JavaScript, or before <anvil-hotspots> is defined) and the list numbers they match. */
-.av-shoppable-image__marker,.av-shoppable-image__nojs-num{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:var(--av-radius-pill);background:var(--av-hotspots-dot-bg,var(--av-accent));color:var(--av-hotspots-dot-fg,var(--av-on-accent));box-shadow:var(--av-shadow-sm);font-size:var(--av-text-xs);font-weight:700;line-height:1}
-.av-shoppable-image__empty{margin-top:var(--av-space-4)}
-/* Dot looks: colour, size and pulse are the component's .av-hotspots-dots--* modifiers; the plus turns into a cross
-   on an open dot. */
-.av-shoppable-image__plus{display:block}
-.av-shoppable-image [aria-expanded="true"] .av-shoppable-image__plus{rotate:45deg}
-@media (prefers-reduced-motion: no-preference){
-html:not([data-animations="off"]) .av-shoppable-image__plus{transition:rotate var(--av-dur) var(--av-ease)}
-}
-@media (min-width: 750px){
-.av-shoppable-image__stage{width:var(--av-si-w, 100%)}
-}
-/* Card placement: below the dot, or above it (--up), centred on the dot and clamped 8 px inside the stage. 22 px is
-   half of the component's 44 px dot: the dot centre's clamp (as above) and the offset between the spot wrapper's edge
-   and the dot's centre. */
-@supports (left: 1cqw){
-.av-shoppable-image .av-shoppable-image__pop.av-hotspots__pop{--av-si-pw:min(300px, calc(100cqw - 16px));--av-si-dot:clamp(22px, var(--av-si-x, 50) * 1cqw, 100cqw - 22px);width:var(--av-si-pw);top:calc(100% + var(--av-space-1));right:auto;bottom:auto;left:calc(clamp(8px, var(--av-si-dot) - var(--av-si-pw) / 2, 100cqw - var(--av-si-pw) - 8px) - var(--av-si-dot) + 22px);translate:none}
-.av-shoppable-image .av-shoppable-image__spot--up .av-shoppable-image__pop.av-hotspots__pop{top:auto;bottom:calc(100% + var(--av-space-1))}
-@media (min-width: 750px){
-.av-shoppable-image--side .av-shoppable-image__spot .av-shoppable-image__pop.av-hotspots__pop{top:0;bottom:auto;left:calc(100% + var(--av-space-1));right:auto}
-.av-shoppable-image--side .av-shoppable-image__spot--up .av-shoppable-image__pop.av-hotspots__pop{top:auto;bottom:0}
-.av-shoppable-image--side .av-shoppable-image__spot--left .av-shoppable-image__pop.av-hotspots__pop{left:auto;right:calc(100% + var(--av-space-1))}
-}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Shoppable image",

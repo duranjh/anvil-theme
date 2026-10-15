@@ -190,8 +190,13 @@ def find_matching_end(text, start, open_re, close_re):
     return len(text)
 
 
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
 # --------------------------------------------------------------------------- hygiene
 def check_hygiene(path, text, body, rep, slug=None, want_selector_prefix=False):
+    blocks_tags = list(re.finditer(r"\{%-?\s*content_for\s+['\"]blocks['\"]", body))
+    if len(blocks_tags) > 1:
+        rep.err(path, line_of(body, blocks_tags[1].start()), "more than one {% content_for 'blocks' %}; Shopify rejects the file on upload (\"Duplicate entries\"); render one block area and switch the wrapper instead")
     for m in IMG_RE.finditer(body):
         rep.err(path, line_of(body, m.start()), "literal <img>; render images with image_tag (anvil-media)")
     for m in SCRIPT_RE.finditer(body):
@@ -206,8 +211,25 @@ def check_hygiene(path, text, body, rep, slug=None, want_selector_prefix=False):
             rep.err(path, line_of(body, m.start()), f"remote URL to {host}; themes ship zero third-party requests")
 
     sheets = list(STYLESHEET_RE.finditer(text))
-    if len(sheets) > 1:
+    css_path, css_text = path, text
+    if str(path).replace(os.sep, "/").startswith("sections/"):
+        # Shopify ships every {% stylesheet %} on every page (verified 2026-10-15, DECISIONS 3), so section CSS lives
+        # in assets/anvil-sec-<name>.css and the section loads it with stylesheet_tag. Lint that file instead.
+        for sh in sheets:
+            rep.err(path, line_of(text, sh.start()), "section CSS belongs in assets/anvil-sec-<name>.css, loaded with stylesheet_tag (DECISIONS 3); run scripts/extract-section-css.py")
+        name = os.path.basename(str(path))[:-len(".liquid")]
+        name = name[len("anvil-"):] if name.startswith("anvil-") else name
+        asset_rel = f"assets/anvil-sec-{name}.css"
+        asset_abs = os.path.join(ROOT_DIR, asset_rel)
+        sheets = []
+        if os.path.isfile(asset_abs):
+            if f"'anvil-sec-{name}.css' | asset_url | stylesheet_tag" not in text:
+                rep.err(path, 1, f"{asset_rel} exists but the section does not load it with stylesheet_tag")
+            css_path, css_text = asset_rel, "{% stylesheet %}" + open(asset_abs, encoding="utf-8").read() + "{% endstylesheet %}"
+            sheets = list(STYLESHEET_RE.finditer(css_text))
+    elif len(sheets) > 1:
         rep.warn(path, line_of(text, sheets[1].start()), "more than one {% stylesheet %} block")
+    path, text = css_path, css_text
     for sh in sheets:
         css = sh.group(1)
         size = len(minify_css(css).encode("utf-8"))

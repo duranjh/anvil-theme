@@ -1,0 +1,4 @@
+/* sections/apps.liquid — section styles, loaded only where this section renders (scripts/extract-section-css.py) */
+.av-apps{display:flex;flex-direction:column;gap:var(--av-space-4)}
+.av-apps--gap-none{gap:0}
+.av-apps--gap-lg{gap:var(--av-space-7)}

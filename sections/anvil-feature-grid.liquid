@@ -1,3 +1,4 @@
+{{ 'anvil-sec-feature-grid.css' | asset_url | stylesheet_tag }}
 {%- liquid
   assign s = section.settings
 
@@ -209,53 +210,6 @@
   </div>
 </div>
 {%- endif -%}
-{% stylesheet %}
-/* Columns, gap and the centred last row come from the shared .av-grid (anvil-base.css); card boxes from .av-surface.
-   role="list" keeps list semantics in WebKit; anvil-base.css resets list-style and padding for ul[role="list"]. */
-.av-feature-grid--m2{--av-grid-space:var(--av-space-3)}
-.av-feature-grid__item{display:flex;margin:0}
-.av-feature-grid__card{position:relative;display:flex;flex-direction:column;width:100%;min-width:0;color:var(--av-fg);border-radius:var(--av-radius-card)}
-.av-feature-grid--boxed .av-feature-grid__card{padding:var(--av-space-4)}
-/* Bleed: the image reaches the card edges; the card clips it to its own radius. */
-.av-feature-grid--bleed .av-feature-grid__card{padding:0;overflow:hidden}
-.av-feature-grid--bleed .av-feature-grid__media{border-radius:0}
-.av-feature-grid__body{display:flex;flex:1 1 auto;flex-direction:column;gap:var(--av-space-3);min-width:0}
-.av-feature-grid__media + .av-feature-grid__body{margin-top:var(--av-space-4)}
-.av-feature-grid--bleed .av-feature-grid__body{margin-top:0;padding:var(--av-space-4)}
-.av-feature-grid__title{margin:0;font-size:var(--av-text-lg);line-height:1.25;overflow-wrap:anywhere}
-.av-feature-grid--title-sm .av-feature-grid__title{font-size:var(--av-text-md)}
-.av-feature-grid--title-lg .av-feature-grid__title{font-size:var(--av-text-xl)}
-.av-feature-grid__text{min-width:0;overflow-wrap:break-word}
-.av-feature-grid--m2 .av-feature-grid__text{font-size:var(--av-text-sm)}
-.av-feature-grid__action{display:flex;flex-wrap:wrap;margin-top:auto;padding-top:var(--av-space-1)}
-.av-feature-grid--align-center .av-feature-grid__body{text-align:center}
-.av-feature-grid--align-center .av-feature-grid__action{justify-content:center}
-.av-feature-grid--align-right .av-feature-grid__body{text-align:right}
-.av-feature-grid--align-right .av-feature-grid__action{justify-content:flex-end}
-/* A heading that is the card's only link stays underlined, so it reads as a link without hover. The whole-card
-   link shows its underline on hover only: the card itself is the cue. */
-.av-feature-grid__link{color:inherit;text-decoration:underline;text-decoration-thickness:0.06em;text-underline-offset:0.15em}
-.av-feature-grid__link:hover{text-decoration-thickness:0.12em}
-.av-feature-grid__card--linked .av-feature-grid__link{text-decoration-line:none}
-.av-feature-grid__card--linked:hover .av-feature-grid__link{text-decoration-line:underline}
-/* Whole-card link: the heading link's ::after covers the card. Links in the text stay on top; the button cue lets clicks through. */
-.av-feature-grid__card--linked .av-feature-grid__link::after{content:"";position:absolute;inset:0}
-.av-feature-grid__card--linked .av-feature-grid__text a{position:relative}
-.av-feature-grid__cta{pointer-events:none}
-.av-feature-grid__card--linked:has(.av-feature-grid__link:focus-visible){outline:2px solid var(--av-accent);outline-offset:3px}
-@supports selector(:has(*)){.av-feature-grid__card--linked .av-feature-grid__link:focus-visible{outline-color:transparent}}
-/* Editor only: an empty card keeps a visible, clickable box. */
-.av-feature-grid__card--empty{min-height:var(--av-space-9);outline:1px dashed var(--av-border);outline-offset:-1px}
-.av-feature-grid:not(.av-feature-grid--boxed) .av-feature-grid__card--empty{padding:var(--av-space-3)}
-.av-feature-grid__note{margin:0}
-@media (min-width: 750px){
-.av-feature-grid--m2{--av-grid-space:initial}
-.av-feature-grid--m2 .av-feature-grid__text{font-size:var(--av-text-md)}
-.av-feature-grid--boxed .av-feature-grid__card{padding:var(--av-space-5)}
-.av-feature-grid--bleed .av-feature-grid__card{padding:0}
-.av-feature-grid--bleed .av-feature-grid__body{padding:var(--av-space-5)}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Feature grid",

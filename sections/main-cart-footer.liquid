@@ -1,3 +1,4 @@
+{{ 'anvil-sec-main-cart-footer.css' | asset_url | stylesheet_tag }}
 {%- comment -%}
   Cart page summary: order note, discount field (enhanced only, DECISIONS 37), the shared totals
   (snippets/anvil-cart-totals.liquid: subtotal, order discounts, savings from Shopify discounts and compare-at prices,
@@ -84,23 +85,6 @@
     {%- endunless -%}
   </div>
 </div>
-{% stylesheet %}
-.av-s-main-cart-footer:not(:has(.av-cart-footer)){padding-block:0}
-.av-cart-footer{display:grid;grid-template-columns:1fr;gap:var(--av-space-5)}
-.av-cart-footer__note .av-field{max-width:480px}
-.av-cart-footer__summary{display:flex;flex-direction:column;gap:var(--av-space-3)}
-.av-cart-footer__codes{display:flex;flex-wrap:wrap;gap:var(--av-space-2);margin:0}
-.av-cart-footer__code{display:inline-flex;align-items:center;gap:var(--av-space-1);padding-inline-start:var(--av-space-3);font-size:var(--av-text-xs);font-weight:600;border:1px solid var(--av-border);border-radius:var(--av-radius-pill)}
-.av-cart-footer__code-remove{display:grid;place-items:center;width:28px;height:28px;color:inherit}
-.av-cart-footer .av-cart-totals__row--total{font-size:var(--av-text-lg)}
-.av-cart-footer__terms{display:grid;gap:var(--av-space-2);font-size:var(--av-text-sm)}
-.av-cart-footer__terms a{color:inherit;text-decoration:underline}
-.av-cart-footer__policies{display:flex;flex-wrap:wrap;gap:var(--av-space-1) var(--av-space-3);margin:0}
-.av-cart-footer__checkout{margin-top:var(--av-space-2)}
-@media (min-width: 750px){
-.av-cart-footer{grid-template-columns:minmax(0, 1fr) 360px;justify-content:space-between;align-items:start}
-}
-{% endstylesheet %}
 {% schema %}
 {
   "name": "Cart summary",
