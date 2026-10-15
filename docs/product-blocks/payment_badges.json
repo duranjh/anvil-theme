@@ -1,0 +1,24 @@
+{
+  "type": "payment_badges",
+  "name": "Payment badges",
+  "settings": [
+    {"type": "select", "id": "badges_source", "label": "Icons", "options": [{"value": "shop", "label": "Payment methods enabled in your admin"}, {"value": "custom", "label": "Uploaded images"}], "default": "shop", "info": "Icons from your admin are drawn by Shopify. Anvil ships no payment logos; upload only images you are entitled to use."},
+    {"type": "text", "id": "badges_filter", "label": "Only these methods", "visible_if": "{{ block.settings.badges_source == 'shop' }}", "info": "Optional. Shopify's payment type names separated by commas, in the order to show them, for example visa, master, american_express, paypal. Only methods enabled in your admin appear."},
+    {"type": "text", "id": "badges_label", "label": "Text above the icons", "info": "Optional, for example Secure checkout. Do not claim certifications you do not hold."},
+    {"type": "select", "id": "badges_size", "label": "Icon size", "options": [{"value": "sm", "label": "Small"}, {"value": "md", "label": "Medium"}, {"value": "lg", "label": "Large"}], "default": "md"},
+    {"type": "text_alignment", "id": "badges_align", "label": "Alignment", "default": "left"},
+    {"type": "header", "content": "Uploaded images"},
+    {"type": "image_picker", "id": "badge_image_1", "label": "Image 1", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "text", "id": "badge_alt_1", "label": "Image 1 description", "visible_if": "{{ block.settings.badges_source == 'custom' }}", "info": "Read by screen readers, for example the payment method's name."},
+    {"type": "image_picker", "id": "badge_image_2", "label": "Image 2", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "text", "id": "badge_alt_2", "label": "Image 2 description", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "image_picker", "id": "badge_image_3", "label": "Image 3", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "text", "id": "badge_alt_3", "label": "Image 3 description", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "image_picker", "id": "badge_image_4", "label": "Image 4", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "text", "id": "badge_alt_4", "label": "Image 4 description", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "image_picker", "id": "badge_image_5", "label": "Image 5", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "text", "id": "badge_alt_5", "label": "Image 5 description", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "image_picker", "id": "badge_image_6", "label": "Image 6", "visible_if": "{{ block.settings.badges_source == 'custom' }}"},
+    {"type": "text", "id": "badge_alt_6", "label": "Image 6 description", "visible_if": "{{ block.settings.badges_source == 'custom' }}"}
+  ]
+}

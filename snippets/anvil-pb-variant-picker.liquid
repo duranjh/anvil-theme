@@ -1,0 +1,273 @@
+{% doc %}
+  Product block `variant_picker` (DESIGN-money-path §B, WAVE1-CONTRACTS §3, SPEC §3.2), rendered by
+  snippets/anvil-product-block.liquid with product, block, section, form_id and current_variant.
+
+  - Always prints the section's product JSON, read by assets/anvil-product.js:
+      <script type="application/json" data-anvil-product-json>
+      { "id", "handle", "url", "options": [names],
+        "variants": [{ id, title, options, price, compare_at_price, available, sku, requires_shipping,
+                       featured_image: {src} (160 px) | null, quantity_rule: {min, max, increment},
+                       unit_price, unit_ref }],
+        "media": { variant id: featured media id or null },
+        "inventory": { variant id: { "qty", "managed", "policy" } } }
+    The variant list carries only the fields the scripts read (not the whole product.variants JSON). managed is
+    true when the variant's inventory is tracked; qty is the tracked quantity only when it is at or under the
+    highest threshold of the section's Inventory and Urgency text (tracked inventory) blocks, and null otherwise,
+    so the page never publishes stock levels nothing shows and no script can show a number for untracked stock
+    (docs/HONEST.md).
+  - For products with options, <anvil-variant-picker> in one of three styles: dropdowns (one select per option),
+    pills and swatches (one radio group per option; Shopify's option swatches, then the theme's fallback colour
+    list), or offer cards (snippets/anvil-offer-cards.liquid) for one option with the other options as pills.
+  - The controls belong to no form. The script resolves the variant and writes the form's hidden id input, so
+    without JavaScript the picker is hidden (html.no-js, assets/anvil-offer-cards.css) and the buy buttons block
+    shows a plain variant select that posts instead. The controls render disabled and the script enables them: if
+    the module never runs, the picker shows only the opening variant, which is the one the form posts.
+  - In cards mode without ?variant=, the card chosen by offer_cards_preselect is checked when its variant is
+    available, the same rule the section uses for current_variant. If the section opened on another variant, the
+    script syncs the form on load without changing the URL.
+  - A size chart link is drawn under the option named in size_chart_option_name when the section has a size_chart
+    block with a page or image chosen; it opens that block's dialog, id "anvil-size-chart-<section id>" (the
+    size_chart block is limited to one per section, snippets/anvil-pb-size-chart.liquid).
+
+  @param {object} product - The product the section shows
+  @param {object} block - The variant_picker block
+  @param {object} section - The product section; offer_card and size_chart blocks are read from it
+  @param {string} form_id - Id of the section's product form, whose hidden id input the script writes
+  @param {object} current_variant - The variant the section selected (URL, preselected card or first available)
+{% enddoc %}
+{%- liquid
+  assign bs = block.settings
+  assign style = bs.picker_style | default: 'pills'
+  assign selected = current_variant | default: product.selected_or_first_available_variant
+  if style == 'cards' and product.selected_variant == blank
+    capture preselect_id
+      render 'anvil-offer-cards', product: product, block: block, section: section, resolve: true
+    endcapture
+    assign preselect_id = preselect_id | strip | plus: 0
+    if preselect_id > 0 and preselect_id != selected.id
+      for variant in product.variants
+        if variant.id == preselect_id
+          if variant.available
+            assign selected = variant
+          endif
+          break
+        endif
+      endfor
+    endif
+  endif
+
+  assign cards_pos = bs.offer_cards_option | plus: 0
+  if cards_pos < 1 or cards_pos > product.options_with_values.size
+    assign cards_pos = 1
+  endif
+  assign chart_block = section.blocks | where: 'type', 'size_chart' | first
+  if chart_block != blank
+    assign chart_source = chart_block.settings.chart_page
+    if chart_block.settings.chart_source == 'image'
+      assign chart_source = chart_block.settings.chart_image
+    endif
+    if chart_source == blank
+      assign chart_block = nil
+    endif
+  endif
+  assign chart_option = bs.size_chart_option_name | strip | downcase
+  assign chart_label = chart_block.settings.chart_link_text | strip
+  if chart_label == blank
+    assign chart_label = 'anvil.product.size_chart' | t
+  endif
+  assign sold_out = 'anvil.product.sold_out' | t
+  assign fallback_lines = settings.swatch_fallback_colors | newline_to_br | split: '<br />'
+  assign group_prefix = section.id | append: '-opt'
+
+  # Highest stock threshold among the section's stock blocks; quantities above it are not published.
+  assign qty_cap = 0
+  for blk in section.blocks
+    assign blk_cap = 0
+    if blk.type == 'inventory'
+      assign blk_cap = blk.settings.threshold | default: 10
+    elsif blk.type == 'urgency_text' and blk.settings.urgency_source != 'text'
+      assign blk_cap = blk.settings.urgency_threshold | default: 10
+    endif
+    if blk_cap > qty_cap
+      assign qty_cap = blk_cap
+    endif
+  endfor
+
+  assign save_tpl = ''
+  if style == 'cards'
+    case bs.offer_cards_savings
+      when 'percent'
+        assign save_tpl = 'anvil.product.you_save_percent' | t: percent: '[percent]'
+      when 'both'
+        assign save_tpl = 'anvil.product.you_save_both' | t: amount: '[amount]', percent: '[percent]'
+      when 'none'
+        assign save_tpl = ''
+      else
+        assign save_tpl = 'anvil.product.you_save' | t: amount: '[amount]'
+    endcase
+  endif
+-%}
+{%- unless product.has_only_default_variant -%}
+  {{ 'anvil-offer-cards.css' | asset_url | stylesheet_tag }}
+{%- endunless -%}
+<anvil-variant-picker
+  class="av-picker av-picker--{{ style }}"
+  section-id="{{ section.id }}"
+  form-id="{{ form_id }}"
+  {%- if bs.picker_hide_sold_out %} hide-sold-out{% endif %}
+  {%- if save_tpl != blank %} data-anvil-save-tpl="{{ save_tpl | escape }}"{% endif %}
+  {{ block.shopify_attributes }}
+>
+  <script type="application/json" data-anvil-product-json>
+    {
+      "id": {{ product.id | json }},
+      "handle": {{ product.handle | json }},
+      "url": {{ product.url | json }},
+      "options": {{ product.options | json }},
+      "variants": [
+        {%- for variant in product.variants -%}
+          {%- liquid
+            assign unit_price = 'null'
+            assign unit_ref = 'null'
+            if variant.unit_price_measurement
+              assign unit_price = variant.unit_price | json
+              assign ref = variant.unit_price_measurement.reference_unit
+              if variant.unit_price_measurement.reference_value != 1
+                assign ref = variant.unit_price_measurement.reference_value | append: ref
+              endif
+              assign unit_ref = ref | json
+            endif
+            assign rule = variant.quantity_rule
+          -%}
+          {"id": {{ variant.id }}, "title": {{ variant.title | json }}, "options": {{ variant.options | json }}, "price": {{ variant.price }}, "compare_at_price": {{ variant.compare_at_price | json }}, "available": {{ variant.available | json }}, "sku": {{ variant.sku | json }}, "requires_shipping": {{ variant.requires_shipping | json }}, "featured_image": {% if variant.featured_image %}{"src": {{ variant.featured_image | image_url: width: 160 | json }}}{% else %}null{% endif %}, "quantity_rule": {"min": {{ rule.min | default: 1 }}, "max": {{ rule.max | json }}, "increment": {{ rule.increment | default: 1 }}}, "unit_price": {{ unit_price }}, "unit_ref": {{ unit_ref }}}{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      ],
+      "media": {
+        {%- for variant in product.variants -%}
+          "{{ variant.id }}": {{ variant.featured_media.id | default: 'null' }}{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      },
+      "inventory": {
+        {%- for variant in product.variants -%}
+          {%- liquid
+            assign managed = false
+            if variant.inventory_management != blank
+              assign managed = true
+            endif
+          -%}
+          "{{ variant.id }}": {"qty": {% if managed and qty_cap > 0 and variant.inventory_quantity <= qty_cap %}{{ variant.inventory_quantity }}{% else %}null{% endif %}, "managed": {{ managed }}, "policy": {{ variant.inventory_policy | json }}}{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      }
+    }
+  </script>
+  {%- unless product.has_only_default_variant -%}
+    {%- for option in product.options_with_values -%}
+      {%- liquid
+        assign option_index = forloop.index0
+        capture current
+          echo selected.options[option_index]
+        endcapture
+        assign current = current | strip
+        if current == blank
+          assign current = option.selected_value
+        endif
+        assign group_name = group_prefix | append: option.position
+        assign option_key = option.name | strip | downcase
+      -%}
+      {%- capture chart -%}
+        {%- if chart_block != blank and chart_option != blank and option_key == chart_option -%}
+          <button type="button" class="av-picker__chart" data-anvil-open="anvil-size-chart-{{ section.id }}" aria-haspopup="dialog">
+            {%- render 'anvil-icon', name: 'ruler', size: 16 -%}
+            <span>{{ chart_label | escape }}</span>
+          </button>
+        {%- endif -%}
+      {%- endcapture -%}
+
+      {%- if style == 'cards' and option.position == cards_pos -%}
+        {% render 'anvil-offer-cards',
+          product: product,
+          block: block,
+          section: section,
+          option: option,
+          current: current,
+          name: group_name,
+          chart: chart
+        %}
+      {%- elsif style == 'dropdown' -%}
+        <div class="av-field av-picker__field">
+          <label class="av-field__label" for="{{ group_name }}">{{ option.name | escape }}</label>
+          <div class="av-field__select av-dropdown av-dropdown--{{ settings.dropdown_style }}">
+            <select class="av-field__input" id="{{ group_name }}" data-anvil-option="{{ option.position }}" disabled>
+              {%- for value in option.values -%}
+                <option
+                  value="{{ value.name | escape }}"
+                  data-anvil-value="{{ value.name | escape }}"
+                  data-anvil-pos="{{ option.position }}"
+                  {%- if value.name == current %} selected{% elsif bs.picker_hide_sold_out and value.available == false %} hidden{% endif %}
+                >
+                  {{- value.name | escape -}}
+                  {%- unless value.available %} — {{ sold_out }}{% endunless -%}
+                </option>
+              {%- endfor -%}
+            </select>
+          </div>
+          {{- chart -}}
+        </div>
+      {%- else -%}
+        <fieldset class="av-picker__group">
+          <legend class="av-legend av-picker__legend">
+            {{- option.name | escape }}: <span class="av-picker__current" data-anvil-selected="{{ option.position }}">{{ current | escape }}</span>
+          </legend>
+          <div class="av-picker__values">
+            {%- for value in option.values -%}
+              {%- liquid
+                assign swatch = ''
+                if bs.pills_use_swatches
+                  if value.swatch.image
+                    capture swatch
+                      echo 'url('
+                      echo value.swatch.image | image_url: width: 96
+                      echo ')'
+                    endcapture
+                  elsif value.swatch.color
+                    capture swatch
+                      echo value.swatch.color
+                    endcapture
+                  elsif fallback_lines.size > 0
+                    assign value_key = value.name | strip | downcase
+                    for line in fallback_lines
+                      assign pair = line | split: ':'
+                      assign pair_key = pair.first | strip | downcase
+                      if pair.size > 1 and pair_key == value_key
+                        assign swatch = pair.last | strip | remove: ';'
+                        break
+                      endif
+                    endfor
+                  endif
+                endif
+                assign swatch = swatch | strip
+              -%}
+              <label
+                class="av-pill{% if swatch != blank %} av-pill--swatch{% endif %}{% unless value.available %} av-is-unavailable{% endunless %}"
+                data-anvil-value="{{ value.name | escape }}"
+                data-anvil-pos="{{ option.position }}"
+                {%- if swatch != blank %} title="{{ value.name | escape }}"{% endif %}
+                {%- if bs.picker_hide_sold_out and value.available == false and value.name != current %} hidden{% endif %}
+              >
+                <input class="av-pill__input" type="radio" name="{{ group_name }}" value="{{ value.name | escape }}" data-anvil-option="{{ option.position }}"{% if value.name == current %} checked{% endif %} disabled>
+                <span class="av-pill__body"{% if swatch != blank %} style="--av-swatch: {{ swatch | escape }}"{% endif %}>
+                  <span class="av-pill__text{% if swatch != blank %} av-visually-hidden{% endif %}">{{ value.name | escape }}</span>
+                  <span class="av-visually-hidden" data-anvil-oos{% if value.available %} hidden{% endif %}>{{ sold_out }}</span>
+                </span>
+              </label>
+            {%- endfor -%}
+          </div>
+          {{- chart -}}
+        </fieldset>
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endunless -%}
+</anvil-variant-picker>
+{%- unless product.has_only_default_variant -%}
+  <script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>
+{%- endunless -%}

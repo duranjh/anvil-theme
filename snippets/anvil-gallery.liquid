@@ -1,0 +1,376 @@
+{% doc %}
+  Product media gallery for sections/main-product.liquid and sections/anvil-featured-product.liquid, driven by the
+  section's gallery_* settings (docs/product-blocks/_settings-gallery.json). One scroll-snap track of slides that works
+  without JavaScript (swipe on phones, a keyboard-scrollable region everywhere); assets/anvil-gallery.js
+  (<anvil-gallery>) adds the thumbnails, arrows, dots or counter, variant filtering, the hover magnifier and the
+  <dialog> lightbox. Slides carry data-anvil-media-id, data-anvil-variant-ids (the variants whose featured media the
+  slide is) and data-anvil-pos (media.position). Every media box keeps its aspect ratio from
+  media.preview_image.aspect_ratio (or the fixed shape setting), so nothing shifts while images load.
+  Loads assets/anvil-gallery.css and assets/anvil-gallery.js itself.
+
+  Behaviour added by <anvil-gallery section-id zoom variant-first hide-others>:
+  - An IntersectionObserver on the track sets the active dot or counter, the current thumbnail (aria-current) and a
+    polite "Slide N of M" announcement. Thumbnails and arrows scroll the track with scrollTo (never the page; an
+    absolute target is not stopped by scroll-snap-stop on the slides in between).
+  - anvil:variant:changed whose sectionId is this section: hide-others hides media featured by other variants (all
+    media stay when nothing would be left), variant-first moves the variant's media to the front and puts the rest
+    back in admin order, then the track scrolls to the variant's media. The same rules run here in Liquid for the
+    first paint. Stacked desktop galleries never scroll the page on a variant change.
+  - zoom="hover": a magnifier following the mouse on fine pointers. Both zoom modes open the <dialog> lightbox from
+    a button over each image: swipe or arrow keys to move, pinch, double-tap, ctrl+wheel, +/- keys or the zoom
+    button to zoom, arrow keys to pan a zoomed image; closing returns focus to the image the shopper ended on.
+  - Videos with the controls setting off keep native controls without JavaScript; the module swaps them for one
+    play/pause button. Autoplay uses anvil-core.js (muted, in view, motion allowed only).
+
+  @param {object} product - The product whose media is shown; blank or without media renders a placeholder
+  @param {object} section - The section; its gallery_* settings drive the layout, layout_gallery_width the image sizes,
+    and its id filters anvil:variant:changed
+  @param {object} [current_variant] - Variant whose featured media leads and stays visible (default
+    product.selected_or_first_available_variant)
+  @param {string} [sizes] - sizes attribute for the main images (default from layout_gallery_width and page_width)
+  @param {boolean} [lazy] - Lazy-load the first image too, for a gallery far down the page (default: only when
+    section.index > 2)
+
+  @example
+  {% render 'anvil-gallery', product: product, section: section, current_variant: current_variant %}
+{% enddoc %}
+{%- liquid
+  assign s = section.settings
+  assign variant = current_variant | default: product.selected_or_first_available_variant
+  assign thumbs_d = s.gallery_thumbs_desktop | default: 'bottom'
+  assign thumbs_m = s.gallery_thumbs_mobile | default: 'hidden'
+  assign pager = s.gallery_pager_mobile | default: 'dots_under'
+  assign zoom = s.gallery_zoom | default: 'lightbox'
+  assign ratio = s.gallery_ratio | default: 'adapt'
+  assign peek = s.gallery_mobile_peek | default: 0
+  assign variant_first = true
+  if s.gallery_variant_image_first == false
+    assign variant_first = false
+  endif
+  assign v_muted = true
+  if s.gallery_video_muted == false
+    assign v_muted = false
+  endif
+  assign v_autoplay = s.gallery_video_autoplay
+  assign v_loop = s.gallery_video_loop
+  assign v_bare = false
+  if s.gallery_video_controls == false
+    assign v_bare = true
+  endif
+
+  assign fit = 'cover'
+  if ratio != 'adapt'
+    assign fit = 'contain'
+  endif
+  assign ratio_class = ratio | replace: ':', '-'
+
+  assign eager = true
+  if lazy or section.index > 2
+    assign eager = false
+  endif
+
+  assign img_sizes = sizes
+  if img_sizes == blank
+    assign pct = s.layout_gallery_width | plus: 0
+    if pct < 30 or pct > 80
+      assign pct = 50
+    endif
+    assign img_sizes = '(min-width: 750px) ' | append: pct | append: 'vw, 100vw'
+    assign page_w = settings.page_width | plus: 0
+    if page_w > 0 and s.width != 'full'
+      assign capped = page_w | times: pct | divided_by: 100
+      assign img_sizes = '(min-width: ' | append: page_w | append: 'px) ' | append: capped | append: 'px, ' | append: img_sizes
+    endif
+  endif
+  # Half-width media tops out at 1100 px (CONVENTIONS §11); the lightbox adds one larger file per image.
+  assign img_widths = '360, 540, 720, 900, 1100'
+  assign uid = 'anvil-gallery-' | append: section.id
+  assign media_label = 'anvil.product.media_label' | t: title: product.title
+
+  assign media_count = product.media.size | default: 0
+-%}
+{%- if eager -%}
+  {{ 'anvil-gallery.css' | asset_url | stylesheet_tag: preload: true }}
+{%- else -%}
+  {{ 'anvil-gallery.css' | asset_url | stylesheet_tag }}
+{%- endif -%}
+{%- if media_count == 0 -%}
+  <div class="av-gallery av-gallery--empty">
+    <div class="av-gallery__viewer">
+      {% render 'anvil-media', ratio: '1:1', placeholder: 'product-1' %}
+    </div>
+  </div>
+{%- else -%}
+  {%- liquid
+    # Media ids that are some variant's featured media, as ",id,id," so `contains` cannot match a partial id.
+    assign variant_media = ','
+    for v in product.variants
+      if v.featured_media
+        assign variant_media = variant_media | append: v.featured_media.id | append: ','
+      endif
+    endfor
+    assign own_media_id = variant.featured_media.id
+    assign lead_id = ''
+    if variant_first and own_media_id
+      assign lead_id = own_media_id
+    endif
+
+    # Hiding other variants' media is applied server-side too, so the first paint is right; when nothing would be
+    # left to show, every media stays visible.
+    assign visible = media_count
+    assign hide_now = false
+    if s.gallery_hide_other_variant_media and variant_media != ','
+      assign shown = 0
+      for media in product.media
+        assign token = ',' | append: media.id | append: ','
+        if variant_media contains token
+          if media.id == own_media_id
+            assign shown = shown | plus: 1
+          endif
+        else
+          assign shown = shown | plus: 1
+        endif
+      endfor
+      if shown > 0
+        assign hide_now = true
+        assign visible = shown
+      endif
+    endif
+
+    assign with_thumbs = false
+    if thumbs_d == 'left' or thumbs_d == 'bottom' or thumbs_m == 'bottom'
+      assign with_thumbs = true
+    endif
+    assign thumbs_html = ''
+    assign zoomable = false
+    assign n = 0
+  -%}
+  <anvil-gallery
+    class="av-gallery av-enhance av-gallery--d-{{ thumbs_d }} av-gallery--m-{{ thumbs_m }} av-gallery--zoom-{{ zoom }}{% if visible < 2 %} av-is-single{% endif %}"
+    section-id="{{ section.id }}"
+    zoom="{{ zoom }}"
+    {% if variant_first %}variant-first{% endif %}
+    {% if s.gallery_hide_other_variant_media %}hide-others{% endif %}
+    style="--av-gallery-peek: {{ peek }}px;"
+  >
+    <div class="av-gallery__viewer">
+      <div
+        class="av-gallery__track"
+        id="{{ uid }}"
+        data-anvil-gallery-track
+        role="region"
+        aria-roledescription="{{ 'anvil.a11y.carousel' | t }}"
+        aria-label="{{ media_label }}"
+        {% if media_count > 1 %}tabindex="0"{% endif %}
+      >
+        {%- for pass in (1..2) -%}
+          {%- for media in product.media -%}
+            {%- liquid
+              if pass == 1
+                unless media.id == lead_id
+                  continue
+                endunless
+              elsif media.id == lead_id
+                continue
+              endif
+
+              assign token = ',' | append: media.id | append: ','
+              assign vids = ''
+              if variant_media contains token
+                for v in product.variants
+                  if v.featured_media.id == media.id
+                    assign vids = vids | append: ',' | append: v.id
+                  endif
+                endfor
+                assign vids = vids | remove_first: ','
+              endif
+              assign slide_hidden = false
+              if hide_now and vids != blank and media.id != own_media_id
+                assign slide_hidden = true
+              endif
+              assign first = false
+              unless slide_hidden
+                assign n = n | plus: 1
+                if n == 1
+                  assign first = true
+                endif
+              endunless
+              assign m_loading = 'lazy'
+              assign m_priority = false
+              if first and eager
+                assign m_loading = 'eager'
+                assign m_priority = true
+              endif
+              assign kind = media.media_type
+              assign can_zoom = false
+              if zoom != 'none'
+                if kind == 'image' or kind == 'model'
+                  assign can_zoom = true
+                  assign zoomable = true
+                endif
+              endif
+              assign slide_id = uid | append: '-' | append: media.id
+              assign media_ratio = media.preview_image.aspect_ratio | default: 1
+              assign zoom_w = media.preview_image.width | default: 0 | at_most: 2048
+            -%}
+            <div
+              class="av-gallery__slide av-gallery__slide--{{ kind }}"
+              id="{{ slide_id }}"
+              role="group"
+              aria-label="{{ 'anvil.a11y.slide_of' | t: index: n, total: visible }}"
+              data-anvil-gallery-slide
+              data-anvil-media-id="{{ media.id }}"
+              data-anvil-variant-ids="{{ vids }}"
+              data-anvil-pos="{{ media.position }}"
+              {% if can_zoom %}data-anvil-zoomable{% endif %}
+              {% if can_zoom and zoom_w > 1100 %}data-anvil-zoom-src="{{ media.preview_image | image_url: width: zoom_w }} {{ zoom_w }}w"{% endif %}
+              {% if slide_hidden %}hidden{% endif %}
+            >
+              {%- case kind -%}
+                {%- when 'video' -%}
+                  <div
+                    class="av-media av-media-frame av-media--{{ fit }} av-media--{{ ratio_class }} av-media--video"
+                    {% if ratio == 'adapt' %}style="--av-media-ratio: {{ media_ratio }};"{% endif %}
+                    {% if v_autoplay %}data-anvil-autoplay{% endif %}
+                  >
+                    <video
+                      class="av-media__video"
+                      playsinline
+                      controls
+                      preload="{% if first %}metadata{% else %}none{% endif %}"
+                      {% if media.preview_image %}poster="{{ media.preview_image | image_url: width: 1100 }}"{% endif %}
+                      {% if v_loop %}loop{% endif %}
+                      {% if v_muted or v_autoplay %}muted{% endif %}
+                      {% if v_bare %}data-anvil-bare{% endif %}
+                      {% if media.alt != blank %}aria-label="{{ media.alt | escape }}"{% endif %}
+                    >
+                      {%- liquid
+                        # The HLS stream (adaptive, skipped when looping so the file downloads once and replays),
+                        # then one MP4: the tallest at or under 1080 px, else the smallest. Browsers play the first
+                        # source they support, so the full list would hand some phones the largest file.
+                        assign hls = nil
+                        assign mp4 = nil
+                        assign small = nil
+                        for source in media.sources
+                          if source.format == 'm3u8'
+                            assign hls = source
+                          elsif source.format == 'mp4'
+                            if source.height <= 1080
+                              if mp4 == nil or source.height > mp4.height
+                                assign mp4 = source
+                              endif
+                            endif
+                            if small == nil or source.height < small.height
+                              assign small = source
+                            endif
+                          endif
+                        endfor
+                        if mp4 == nil
+                          assign mp4 = small | default: media.sources.first
+                        endif
+                      -%}
+                      {%- if hls -%}
+                        {%- unless v_loop -%}<source src="{{ hls.url }}" type="{{ hls.mime_type }}">{%- endunless -%}
+                      {%- endif -%}
+                      {%- if mp4 -%}
+                        <source src="{{ mp4.url }}" type="{{ mp4.mime_type }}">
+                      {%- endif -%}
+                    </video>
+                  </div>
+                  {%- if v_bare -%}
+                    <button type="button" class="av-gallery__play av-enhanced-only" data-anvil-gallery-play aria-label="{{ 'anvil.a11y.play' | t }}">
+                      {%- render 'anvil-icon', name: 'play', size: 20 -%}
+                      {%- render 'anvil-icon', name: 'pause', size: 20 -%}
+                    </button>
+                  {%- endif -%}
+                {%- when 'external_video' -%}
+                  {% render 'anvil-media', video: media, ratio: ratio, fit: fit, widths: img_widths, sizes: img_sizes, loading: m_loading, alt: media.alt %}
+                {%- else -%}
+                  {%- comment -%} Images, and 3D models shown by their preview image (no viewer library is loaded). {%- endcomment -%}
+                  {% render 'anvil-media', image: media.preview_image, ratio: ratio, fit: fit, widths: img_widths, sizes: img_sizes, loading: m_loading, priority: m_priority, alt: media.alt %}
+                  {%- if can_zoom -%}
+                    <button type="button" class="av-gallery__zoom av-enhanced-only" data-anvil-gallery-zoom aria-haspopup="dialog" aria-controls="{{ uid }}-lightbox">
+                      <span class="av-visually-hidden">{{ 'anvil.gallery.zoom_open' | t }}</span>
+                    </button>
+                  {%- endif -%}
+              {%- endcase -%}
+            </div>
+            {%- if with_thumbs and media_count > 1 -%}
+              {%- capture thumb -%}
+                <button
+                  type="button"
+                  class="av-gallery__thumb"
+                  data-anvil-media-id="{{ media.id }}"
+                  aria-controls="{{ slide_id }}"
+                  {% if first %}aria-current="true"{% endif %}
+                  {% if slide_hidden %}hidden{% endif %}
+                >
+                  {%- if media.preview_image -%}
+                    {{ media.preview_image | image_url: width: 192 | image_tag: widths: '96, 144, 192', sizes: '96px', loading: 'lazy', alt: '', class: 'av-gallery__thumb-img' }}
+                  {%- endif -%}
+                  {%- if kind == 'video' or kind == 'external_video' -%}
+                    <span class="av-gallery__badge">{% render 'anvil-icon', name: 'play', size: 12 %}</span>
+                  {%- endif -%}
+                  <span class="av-visually-hidden">{{ 'anvil.a11y.go_to_slide' | t: index: n }}</span>
+                </button>
+              {%- endcapture -%}
+              {%- assign thumbs_html = thumbs_html | append: thumb -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      </div>
+      {%- if media_count > 1 -%}
+        {%- unless thumbs_d == 'stacked' -%}
+          <button type="button" class="av-gallery__arrow av-gallery__arrow--prev" data-anvil-gallery-step="-1" aria-controls="{{ uid }}" aria-label="{{ 'anvil.a11y.previous' | t }}">
+            {%- render 'anvil-icon', name: 'chevron-left', size: 20 -%}
+          </button>
+          <button type="button" class="av-gallery__arrow av-gallery__arrow--next" data-anvil-gallery-step="1" aria-controls="{{ uid }}" aria-label="{{ 'anvil.a11y.next' | t }}">
+            {%- render 'anvil-icon', name: 'chevron-right', size: 20 -%}
+          </button>
+        {%- endunless -%}
+        {%- unless pager == 'hidden' -%}
+          <div class="av-gallery__pager av-gallery__pager--{{ pager | replace: '_', '-' }}" data-anvil-gallery-pager aria-hidden="true">
+            {%- if pager == 'numeric' -%}
+              <span data-anvil-gallery-count>1 / {{ visible }}</span>
+            {%- else -%}
+              {%- for i in (1..visible) -%}
+                <span class="av-gallery__dot{% if forloop.first %} av-is-active{% endif %}"></span>
+              {%- endfor -%}
+            {%- endif -%}
+          </div>
+        {%- endunless -%}
+        <div class="av-visually-hidden" data-anvil-gallery-live aria-live="polite" aria-atomic="true"></div>
+      {%- endif -%}
+    </div>
+
+    {%- if thumbs_html != blank -%}
+      <div class="av-gallery__thumbs">
+        <div class="av-gallery__thumb-list" role="group" aria-label="{{ 'anvil.a11y.choose_slide' | t }}">
+          {{- thumbs_html -}}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if zoomable -%}
+      <dialog class="av-gallery__lightbox" id="{{ uid }}-lightbox" aria-label="{{ media_label }}">
+        <button type="button" class="av-gallery__lb-btn av-gallery__lb-close" data-anvil-gallery-lb="close" aria-label="{{ 'anvil.a11y.close' | t }}" autofocus>
+          {%- render 'anvil-icon', name: 'x', size: 20 -%}
+        </button>
+        <div class="av-gallery__stage" data-anvil-gallery-stage></div>
+        <div class="av-gallery__lb-bar">
+          <button type="button" class="av-gallery__lb-btn" data-anvil-gallery-lb="-1" aria-label="{{ 'anvil.a11y.previous' | t }}">
+            {%- render 'anvil-icon', name: 'chevron-left', size: 20 -%}
+          </button>
+          <span class="av-gallery__lb-count" data-anvil-gallery-lb-count aria-live="polite"></span>
+          <button type="button" class="av-gallery__lb-btn" data-anvil-gallery-lb="1" aria-label="{{ 'anvil.a11y.next' | t }}">
+            {%- render 'anvil-icon', name: 'chevron-right', size: 20 -%}
+          </button>
+          <button type="button" class="av-gallery__lb-btn" data-anvil-gallery-lb="zoom" aria-pressed="false" aria-label="{{ 'anvil.gallery.zoom' | t }}">
+            {%- render 'anvil-icon', name: 'zoom-in', size: 20 -%}
+          </button>
+        </div>
+      </dialog>
+    {%- endif -%}
+  </anvil-gallery>
+  <script type="module" src="{{ 'anvil-gallery.js' | asset_url }}"></script>
+{%- endif -%}

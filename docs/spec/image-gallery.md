@@ -1,4 +1,4 @@
-# anvil-gallery — spec card
+# anvil-image-gallery — spec card
 
 **Build exactly this; ids and words are yours; follow CONVENTIONS.**
 
@@ -22,14 +22,14 @@ Legend: C = chassis settings (CONVENTIONS §4); L = local section blocks; T = th
 
 ## Files you may create or change
 
-- `sections/anvil-gallery.liquid`
-- `blocks/_anvil-gallery-*.liquid` (only when the Blocks column names a private theme block)
-- `assets/anvil-gallery*.css` / `assets/anvil-gallery*.js` (only when the JS column needs it)
-- `docs/sections/gallery.md`
+- `sections/anvil-image-gallery.liquid`
+- `blocks/_anvil-image-gallery-*.liquid` (only when the Blocks column names a private theme block)
+- `assets/anvil-image-gallery*.css` / `assets/anvil-image-gallery*.js` (only when the JS column needs it)
+- `docs/sections/image-gallery.md`
 
 ## Non-negotiables
 
 - Skeleton, the 13 chassis settings and `presets` exactly as CONVENTIONS §3–§4; `{{ block.shopify_attributes }}` on every local block.
 - Honesty rules (CONVENTIONS §10, docs/HONEST.md) are product requirements; every setting that could mislead carries a one-sentence `info`.
 - Default content reads as an example; placeholders via `placeholder_svg_tag`; images via `image_tag` with `widths`/`sizes`.
-- Finish with `npm run gate -- gallery` and write `docs/sections/gallery.md`.
+- Finish with `npm run gate -- image-gallery` and write `docs/sections/image-gallery.md`.

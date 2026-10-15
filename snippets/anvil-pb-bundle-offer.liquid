@@ -1,0 +1,180 @@
+{% # theme-check-disable UnusedDocParam %}
+{% doc %}
+  Product block "Bundle offer" (bundle_offer): up to three companion products (plus, optionally, this product) as a
+  checklist with variant selects and prices; one button adds every ticked item in a single cartAdd
+  (assets/anvil-commerce.js, <anvil-bundle>). The total is always the sum of the real prices of the ticked variants.
+  When the merchant fills in a discount note (a real automatic discount exists for these products), the note is shown
+  with "Discount applied at checkout"; the theme never prints a lower bundle price. If Shopify rejects the add
+  (for example a sold-out item, 422) nothing is added and Shopify's description is shown.
+  This product's row is always ticked when available and follows the section's variant picker; companion rows are
+  ticked when "Preselect" is on. Sold-out companions are listed but cannot be ticked.
+  Without JavaScript the rows are links with prices (the add button needs the module).
+  form_id is passed by the dispatcher (WAVE1-CONTRACTS §1) and not needed here.
+
+  @param {object} product - The product
+  @param {object} block - This block
+  @param {object} section - The product section; this product's row follows its variant changes
+  @param {string} form_id - Id of the section's product form
+  @param {object} [current_variant] - The variant the section opened with (this product's row)
+{% enddoc %}
+{% # theme-check-enable UnusedDocParam %}
+{%- liquid
+  assign bs = block.settings
+  assign row_base = 'av-bundle-' | append: section.id | append: '-' | append: block.id
+  assign this_variant = current_variant | default: product.selected_or_first_available_variant
+  assign companions = 0
+  for item in bs.bundle_products limit: 3
+    if item.id != product.id
+      assign companions = companions | plus: 1
+    endif
+  endfor
+  assign bundle_total = 0
+  if bs.bundle_include_current and this_variant.available
+    assign bundle_total = bundle_total | plus: this_variant.price
+  endif
+  if bs.bundle_preselect_all
+    for item in bs.bundle_products limit: 3
+      if item.id != product.id and item.available
+        assign bundle_total = bundle_total | plus: item.selected_or_first_available_variant.price
+      endif
+    endfor
+  endif
+  assign heading = bs.bundle_heading | strip
+  assign add_label = bs.bundle_button_label | strip
+  if add_label == blank
+    assign add_label = 'anvil.product.bundle_add' | t
+  endif
+  assign note = bs.bundle_discount_note | strip
+-%}
+{%- if companions > 0 -%}
+  {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+  <anvil-bundle class="av-bundle av-enhance{% unless bs.bundle_show_images %} av-bundle--no-images{% endunless %}" {{ block.shopify_attributes }}>
+    <fieldset class="av-bundle__set">
+      {%- if heading != blank -%}
+        <legend class="av-bundle__heading">{{ heading | escape }}</legend>
+      {%- else -%}
+        <legend class="av-visually-hidden">{{ 'anvil.product.bundle_label' | t }}</legend>
+      {%- endif -%}
+      <ul class="av-bundle__rows" role="list">
+        {%- if bs.bundle_include_current -%}
+          {%- assign row_id = row_base | append: '-this' -%}
+          <li class="av-bundle__row" data-anvil-bundle-row data-anvil-bundle-current="{{ section.id }}" data-anvil-price="{{ this_variant.price }}">
+            <input
+              class="av-bundle__check av-enhanced-only"
+              type="checkbox"
+              id="{{ row_id }}"
+              value="{{ this_variant.id }}"
+              aria-labelledby="{{ row_id }}-title"
+              {% if this_variant.available %}
+                checked
+              {% else %}
+                disabled
+              {% endif %}
+            >
+            {%- if bs.bundle_show_images -%}
+              {%- assign this_image = this_variant.featured_media.preview_image | default: product.featured_media.preview_image -%}
+              <span class="av-bundle__media">
+                {%- if this_image != blank -%}
+                  {{ this_image | image_url: width: 144 | image_tag: widths: '72, 144', sizes: '48px', loading: 'lazy', alt: '', class: 'av-bundle__img' }}
+                {%- else -%}
+                  {{ 'product-1' | placeholder_svg_tag: 'av-bundle__img' }}
+                {%- endif -%}
+              </span>
+            {%- endif -%}
+            <span class="av-bundle__info">
+              <label class="av-bundle__title" id="{{ row_id }}-title" for="{{ row_id }}">
+                <span class="av-badge av-badge--outline">{{ 'anvil.product.bundle_this_item' | t }}</span>
+                {{ product.title | escape }}
+              </label>
+              {%- unless product.has_only_default_variant -%}
+                <span class="av-bundle__variant" data-anvil-bundle-variant-title>{{ this_variant.title | escape }}</span>
+              {%- endunless -%}
+            </span>
+            <span class="av-bundle__price" data-anvil-bundle-price>{% render 'anvil-money', amount: this_variant.price %}</span>
+          </li>
+        {%- endif -%}
+        {%- for item in bs.bundle_products limit: 3 -%}
+          {%- if item.id == product.id -%}
+            {%- continue -%}
+          {%- endif -%}
+          {%- liquid
+            assign row_id = row_base | append: '-' | append: forloop.index
+            assign item_variant = item.selected_or_first_available_variant
+            assign item_image = item.featured_media.preview_image
+          -%}
+          <li class="av-bundle__row{% unless item.available %} av-bundle__row--sold-out{% endunless %}" data-anvil-bundle-row data-anvil-price="{{ item_variant.price }}">
+            <input
+              class="av-bundle__check av-enhanced-only"
+              type="checkbox"
+              id="{{ row_id }}"
+              value="{{ item_variant.id }}"
+              aria-labelledby="{{ row_id }}-title"
+              {% if item.available == false %}
+                disabled
+              {% elsif bs.bundle_preselect_all %}
+                checked
+              {% endif %}
+            >
+            {%- if bs.bundle_show_images -%}
+              <a class="av-bundle__media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+                {%- if item_image != blank -%}
+                  {{ item_image | image_url: width: 144 | image_tag: widths: '72, 144', sizes: '48px', loading: 'lazy', alt: '', class: 'av-bundle__img' }}
+                {%- else -%}
+                  {{ 'product-2' | placeholder_svg_tag: 'av-bundle__img' }}
+                {%- endif -%}
+              </a>
+            {%- endif -%}
+            <span class="av-bundle__info">
+              <a class="av-bundle__title" id="{{ row_id }}-title" href="{{ item.url }}">{{ item.title | escape }}</a>
+              {%- if item.available == false -%}
+                <span class="av-bundle__variant">{{ 'anvil.product.sold_out' | t }}</span>
+              {%- elsif item.has_only_default_variant == false -%}
+                <span class="av-bundle__variant av-fallback-only">{{ item_variant.title | escape }}</span>
+                <span class="av-field__select av-dropdown av-dropdown--{{ settings.dropdown_style }} av-enhanced-only">
+                  <label class="av-visually-hidden" for="{{ row_id }}-variant">{{ 'anvil.product.choose_variant' | t }}: {{ item.title | escape }}</label>
+                  <select class="av-field__input av-bundle__select" id="{{ row_id }}-variant">
+                    {%- for variant in item.variants -%}
+                      <option
+                        value="{{ variant.id }}"
+                        data-anvil-price="{{ variant.price }}"
+                        {% if variant.id == item_variant.id %}
+                          selected
+                        {% endif %}
+                        {% if variant.available == false %}
+                          disabled
+                        {% endif %}
+                      >
+                        {{ variant.title | escape }}
+                        {%- unless variant.available %} ({{ 'anvil.product.sold_out' | t }}){% endunless -%}
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                </span>
+              {%- endif -%}
+            </span>
+            <span class="av-bundle__price" data-anvil-bundle-price>{% render 'anvil-money', amount: item_variant.price %}</span>
+          </li>
+        {%- endfor -%}
+      </ul>
+      <div class="av-bundle__foot av-enhanced-only">
+        <p class="av-bundle__total">
+          <span>{{ 'anvil.product.bundle_total' | t }}</span>
+          <strong data-anvil-bundle-total>{% render 'anvil-money', amount: bundle_total %}</strong>
+        </p>
+        {%- if note != blank -%}
+          <p class="av-bundle__note">
+            {%- render 'anvil-icon', name: 'tag', size: 16 -%}
+            <span>{{ note | escape }} &middot; {{ 'anvil.cart.applied_at_checkout' | t }}</span>
+          </p>
+        {%- endif -%}
+        <button class="av-btn av-btn--primary av-btn--md av-btn--full" type="button" data-anvil-bundle-add{% if bundle_total == 0 %} disabled{% endif %}>
+          {{- add_label | escape -}}
+        </button>
+        <p class="av-bundle__status" role="status" data-anvil-status></p>
+      </div>
+    </fieldset>
+  </anvil-bundle>
+  <script type="module" src="{{ 'anvil-commerce.js' | asset_url }}"></script>
+{%- elsif request.design_mode -%}
+  <p class="av-editor-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.bundle_empty' | t }}</p>
+{%- endif -%}

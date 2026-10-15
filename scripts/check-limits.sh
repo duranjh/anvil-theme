@@ -17,6 +17,7 @@
 #   - blocks/ holds at most 300 files
 #   - gzip budgets for theme assets (DECISIONS 20): the core modules anvil-core, anvil-events, anvil-cart-api,
 #     anvil-sections and anvil-dom together <= 15360 B; anvil-slider.js <= 5120; anvil-marquee.js <= 1536;
+#     anvil-product.js <= 8192 and anvil-cart-drawer.js <= 6144 (wave-1 budgets, DECISIONS 41);
 #     every other assets/anvil-*.js <= 4096; anvil-base.css <= 20480; every other assets/anvil-*.css <= 8192
 #
 # Usage: scripts/check-limits.sh [--root DIR]
@@ -94,6 +95,8 @@ if [ -d assets ]; then
       anvil-core.js|anvil-events.js|anvil-cart-api.js|anvil-sections.js|anvil-dom.js) continue ;;
       anvil-slider.js) limit=5120 ;;
       anvil-marquee.js) limit=1536 ;;
+      anvil-product.js) limit=8192 ;;
+      anvil-cart-drawer.js) limit=6144 ;;
       *) limit=4096 ;;
     esac
     s="$(gz_size "$f")"

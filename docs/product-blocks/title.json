@@ -1,0 +1,75 @@
+{
+  "type": "title",
+  "name": "Title",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "text",
+      "id": "headline",
+      "label": "Custom headline",
+      "info": "Shown as the page heading instead of the product name. Connect a product metafield to give each product its own headline. Only state what is true for the product."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_name",
+      "label": "Show the product name under a custom headline",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "size",
+      "label": "Size",
+      "options": [
+        {
+          "value": "sm",
+          "label": "Small"
+        },
+        {
+          "value": "md",
+          "label": "Medium"
+        },
+        {
+          "value": "lg",
+          "label": "Large"
+        },
+        {
+          "value": "xl",
+          "label": "Extra large"
+        }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "text_alignment",
+      "id": "align",
+      "label": "Alignment",
+      "default": "left"
+    },
+    {
+      "type": "checkbox",
+      "id": "uppercase",
+      "label": "Uppercase",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "space_top",
+      "label": "Extra space above",
+      "min": 0,
+      "max": 64,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "space_bottom",
+      "label": "Extra space below",
+      "min": 0,
+      "max": 64,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    }
+  ]
+}

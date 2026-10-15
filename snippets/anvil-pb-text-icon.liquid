@@ -1,0 +1,26 @@
+{% doc %}
+  Product block text_icon ("Text with icon"): one reassurance line through snippets/anvil-text-icon, with alignment
+  and its own space above and below. Called by the product block dispatcher with product, block, section, form_id
+  and current_variant (WAVE1-CONTRACTS §1); it reads only block. The arguments are described in prose
+  rather than as LiquidDoc parameters because Theme Check requires every declared parameter to be used.
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+-%}
+{%- if s.text != blank -%}
+  <div class="av-pb-text-icon av-align--{{ s.align }}" style="--av-pb-mt: {{ s.space_top }}px; --av-pb-mb: {{ s.space_bottom }}px;" {{ block.shopify_attributes }}>
+    {%- render 'anvil-text-icon',
+      text: s.text,
+      icon: s.icon_name,
+      image: s.icon_custom,
+      size: s.text_size,
+      pill: s.bg_enabled,
+      tone: s.bg_style,
+      shape: s.radius
+    -%}
+  </div>
+{%- elsif request.design_mode -%}
+  <div class="av-pb-text-icon" {{ block.shopify_attributes }}>
+    <p class="av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+  </div>
+{%- endif -%}

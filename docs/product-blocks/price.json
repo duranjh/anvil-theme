@@ -1,0 +1,81 @@
+{
+  "type": "price",
+  "name": "Price",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "select",
+      "id": "size",
+      "label": "Size",
+      "options": [
+        {
+          "value": "sm",
+          "label": "Small"
+        },
+        {
+          "value": "md",
+          "label": "Medium"
+        },
+        {
+          "value": "lg",
+          "label": "Large"
+        },
+        {
+          "value": "xl",
+          "label": "Extra large"
+        }
+      ],
+      "default": "lg"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_compare",
+      "label": "Show compare-at price",
+      "default": true,
+      "info": "Struck through only when it is higher than the price. Enter a compare-at price only if the product really sold at it; Anvil has no manual savings field."
+    },
+    {
+      "type": "select",
+      "id": "badge",
+      "label": "Savings badge",
+      "options": [
+        {
+          "value": "theme",
+          "label": "Theme default"
+        },
+        {
+          "value": "percent",
+          "label": "Percentage"
+        },
+        {
+          "value": "amount",
+          "label": "Amount"
+        },
+        {
+          "value": "text",
+          "label": "Sale"
+        },
+        {
+          "value": "none",
+          "label": "None"
+        }
+      ],
+      "default": "theme",
+      "info": "Computed from the compare-at price, so it only appears when there is a real saving. Theme default follows Theme settings > Badges."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_unit",
+      "label": "Show unit price",
+      "default": true,
+      "info": "Appears for variants that have a unit price measurement in the admin."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_tax_note",
+      "label": "Show tax and shipping note",
+      "default": false,
+      "info": "Says whether tax is included for the shopper's market and that shipping is calculated at checkout, linking your shipping policy when you have one."
+    }
+  ]
+}

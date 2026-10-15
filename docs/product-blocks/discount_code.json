@@ -1,0 +1,37 @@
+{
+  "type": "discount_code",
+  "name": "Discount code",
+  "limit": 2,
+  "settings": [
+    {
+      "type": "text",
+      "id": "code",
+      "label": "Code",
+      "info": "Create the code under Discounts first. The block only shows or applies it; Shopify decides whether it is valid. Nothing shows while this is empty."
+    },
+    {
+      "type": "text",
+      "id": "code_text",
+      "label": "Text",
+      "default": "Use this code at checkout",
+      "info": "Describe what the code really gives, for example \"10% off your first order\"."
+    },
+    {
+      "type": "select",
+      "id": "code_mode",
+      "label": "When tapped",
+      "options": [
+        {
+          "value": "copy",
+          "label": "Copy the code"
+        },
+        {
+          "value": "apply",
+          "label": "Apply it to the cart"
+        }
+      ],
+      "default": "copy",
+      "info": "Apply adds the code to the cart and shows Shopify's answer; an invalid code is reported as not valid."
+    }
+  ]
+}

@@ -1,0 +1,276 @@
+/* Anvil — trust blocks for the product page, and the three trust snippets the cart drawer shares with them
+   (anvil-text-icon, anvil-icons-text, anvil-payment-badges). Each of those snippets and each trust block loads this
+   file itself; repeated links to the same URL are fetched once. Tokens only: colours, radii and fonts come from
+   snippets/anvil-css-tokens.liquid and assets/anvil-base.css. */
+
+/* Text with icon ---------------------------------------------------------------------------------------------- */
+.av-text-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--av-space-2);
+  max-width: 100%;
+  font-family: var(--av-font-body);
+  font-size: var(--av-text-md);
+  line-height: 1.4;
+  vertical-align: middle;
+}
+.av-text-icon--sm { font-size: var(--av-text-sm); }
+.av-text-icon__icon,
+.av-text-icon__img {
+  flex: none;
+  width: var(--av-text-icon-size, 24px);
+  height: var(--av-text-icon-size, 24px);
+  color: var(--av-accent);
+}
+.av-text-icon__img { object-fit: contain; }
+.av-text-icon__text { min-width: 0; }
+.av-text-icon__text a { color: inherit; }
+.av-text-icon--bg {
+  padding: var(--av-space-2) var(--av-space-4);
+  border-radius: var(--av-radius-pill);
+  background: rgb(var(--av-fg-rgb) / 0.06);
+}
+.av-text-icon--soft { border-radius: var(--av-radius-badge); }
+.av-text-icon--square { border-radius: 0; }
+.av-text-icon--accent { background: var(--av-accent); color: var(--av-on-accent); }
+.av-text-icon--accent .av-text-icon__icon { color: currentColor; }
+.av-text-icon--outline { background: none; border: 1px solid var(--av-border); }
+.av-pb-text-icon { margin-block: var(--av-pb-mt, 0) var(--av-pb-mb, 0); }
+
+/* Icons with text (container query: the same row fits the buy column, a phone and the drawer) ------------------- */
+.av-icons-text { container-type: inline-size; }
+.av-icons-text__list {
+  display: grid;
+  grid-template-columns: repeat(var(--av-icons-text-cols-m, 2), minmax(0, 1fr));
+  gap: var(--av-space-4) var(--av-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@container (min-width: 440px) {
+  .av-icons-text__list { grid-template-columns: repeat(var(--av-icons-text-cols, 4), minmax(0, 1fr)); }
+}
+.av-icons-text__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--av-space-2);
+  font-size: var(--av-text-sm);
+  line-height: 1.4;
+  text-align: center;
+}
+.av-icons-text--left .av-icons-text__item { align-items: flex-start; text-align: left; }
+.av-icons-text--inline .av-icons-text__item { flex-direction: row; align-items: flex-start; text-align: left; }
+.av-icons-text__icon,
+.av-icons-text__img {
+  flex: none;
+  width: var(--av-icons-text-size, 28px);
+  height: var(--av-icons-text-size, 28px);
+  color: var(--av-accent);
+}
+.av-icons-text__img { object-fit: contain; }
+.av-icons-text__body { min-width: 0; }
+.av-icons-text__heading { margin: 0; font-weight: 600; }
+.av-icons-text__text { margin: 0; color: var(--av-fg-muted); }
+.av-icons-text__text a { color: inherit; }
+.av-icons-text__text p { margin: 0; }
+
+/* Payment badges ---------------------------------------------------------------------------------------------- */
+.av-payment-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--av-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  --av-payment-badges-h: 26px;
+}
+.av-payment-badges--sm { --av-payment-badges-h: 20px; }
+.av-payment-badges--lg { --av-payment-badges-h: 32px; }
+.av-payment-badges--center { justify-content: center; }
+.av-payment-badges--right { justify-content: flex-end; }
+.av-payment-badges__item { display: flex; line-height: 0; }
+.av-payment-badges__icon,
+.av-payment-badges__img {
+  display: block;
+  width: auto;
+  height: var(--av-payment-badges-h);
+}
+.av-payment-badges__img {
+  max-width: calc(var(--av-payment-badges-h) * 3);
+  object-fit: contain;
+}
+.av-pb-payment-badges__label {
+  margin: 0 0 var(--av-space-2);
+  font-size: var(--av-text-sm);
+  color: var(--av-fg-muted);
+}
+
+/* Emoji benefits ---------------------------------------------------------------------------------------------- */
+.av-pb-emoji-benefits {
+  display: grid;
+  gap: var(--av-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--av-text-md);
+  line-height: 1.45;
+}
+.av-pb-emoji-benefits--sm { font-size: var(--av-text-sm); }
+.av-pb-emoji-benefits--lg { font-size: var(--av-text-lg); }
+.av-pb-emoji-benefits--compact { gap: var(--av-space-1); }
+.av-pb-emoji-benefits__item { display: flex; align-items: flex-start; gap: var(--av-space-2); }
+.av-pb-emoji-benefits__icon { flex: none; min-width: 1.3em; text-align: center; }
+.av-pb-emoji-benefits__check {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  margin: 0.17em 0.1em 0;
+  color: var(--av-accent);
+}
+.av-pb-emoji-benefits__text { min-width: 0; }
+
+/* Urgency text ------------------------------------------------------------------------------------------------ */
+.av-pb-urgency-text {
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-2);
+  margin: 0;
+  font-size: var(--av-text-md);
+  line-height: 1.4;
+  color: var(--av-pb-urgency-color, var(--av-fg));
+}
+.av-pb-urgency-text--sm { font-size: var(--av-text-sm); }
+.av-pb-urgency-text--error { --av-pb-urgency-color: var(--av-error); }
+.av-pb-urgency-text--accent { --av-pb-urgency-color: var(--av-accent); }
+/* data-state is written by the server and by the variant picker's stock bind (WAVE1-CONTRACTS §10); the bind also
+   hides the line whenever the selected variant has no low-stock count. */
+.av-pb-urgency-text[data-state="sold_out"] { display: none; }
+.av-design-mode .av-pb-urgency-text[data-state="sold_out"]:not([hidden]) { display: flex; }
+.av-pb-urgency-text__icon { flex: none; width: 1.15em; height: 1.15em; }
+.av-pb-urgency-text__dot {
+  position: relative;
+  flex: none;
+  width: 0.6em;
+  height: 0.6em;
+  margin-inline: 0.3em;
+  border-radius: var(--av-radius-pill);
+  background: currentColor;
+}
+.av-pb-urgency-text .av-example-note { flex-basis: 100%; }
+@media (prefers-reduced-motion: no-preference) {
+  /* Three pulses (under 5 seconds), then still: WCAG 2.2.2 needs no pause control for that. */
+  html:not([data-animations="off"]) .av-pb-urgency-text__dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: currentColor;
+    animation: av-pb-urgency-pulse 1.5s var(--av-ease) 3;
+    opacity: 0;
+  }
+}
+@keyframes av-pb-urgency-pulse {
+  from { transform: scale(1); opacity: 0.6; }
+  to { transform: scale(2.6); opacity: 0; }
+}
+
+/* Rating stars ------------------------------------------------------------------------------------------------ */
+.av-pb-rating { font-size: var(--av-text-sm); line-height: 1.4; }
+.av-pb-rating--lg { font-size: var(--av-text-md); }
+.av-pb-rating__inner {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--av-space-2);
+  color: inherit;
+  text-decoration: none;
+}
+a.av-pb-rating__inner:hover .av-pb-rating__count { text-decoration: underline; }
+.av-pb-rating__number { font-weight: 600; }
+.av-pb-rating__count { color: var(--av-fg-muted); }
+
+/* Review platform badge --------------------------------------------------------------------------------------- */
+.av-pb-review-platform-badge { font-size: var(--av-text-sm); line-height: 1.4; }
+.av-pb-review-platform-badge--md { font-size: var(--av-text-md); }
+.av-pb-review-platform-badge__inner {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--av-space-2);
+  color: inherit;
+  text-decoration: none;
+}
+a.av-pb-review-platform-badge__inner:hover .av-pb-review-platform-badge__text { text-decoration: underline; }
+.av-pb-review-platform-badge__number { font-weight: 600; }
+.av-pb-review-platform-badge__logo {
+  display: block;
+  width: auto;
+  max-width: 140px;
+  height: 1.6em;
+  object-fit: contain;
+}
+.av-pb-review-platform-badge .av-example-note { margin: var(--av-space-1) 0 0; }
+
+/* Reviews (merchant-entered quotes) --------------------------------------------------------------------------- */
+.av-pb-reviews-list__heading {
+  margin: 0 0 var(--av-space-3);
+  font-family: var(--av-font-heading);
+  font-size: var(--av-text-lg);
+  font-weight: var(--av-heading-weight);
+  letter-spacing: var(--av-heading-spacing);
+  text-transform: var(--av-heading-case);
+}
+.av-pb-reviews-list__list { display: grid; gap: var(--av-space-3); margin: 0; padding: 0; list-style: none; }
+.av-pb-reviews-list__quote { margin: 0; }
+.av-pb-reviews-list__quote--img {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  column-gap: var(--av-space-3);
+  align-items: start;
+}
+.av-pb-reviews-list__quote--img .av-pb-reviews-list__text,
+.av-pb-reviews-list__quote--img .av-pb-reviews-list__name { grid-column: 2; }
+.av-pb-reviews-list--card .av-pb-reviews-list__quote {
+  padding: var(--av-space-4);
+  border: 1px solid var(--av-border);
+  border-radius: var(--av-radius-card);
+  background: rgb(var(--av-fg-rgb) / 0.03);
+}
+.av-pb-reviews-list__img {
+  display: block;
+  grid-row: 1 / span 2;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--av-radius-pill);
+  object-fit: cover;
+}
+.av-pb-reviews-list__text { margin: 0; font-size: var(--av-text-md); line-height: 1.5; }
+.av-pb-reviews-list__text p { margin: 0; }
+.av-pb-reviews-list__name { display: block; margin-top: var(--av-space-2); font-size: var(--av-text-sm); font-weight: 600; }
+.av-pb-reviews-list__disclosure { margin: var(--av-space-3) 0 0; font-size: var(--av-text-xs); color: var(--av-fg-muted); }
+
+/* Review avatars ---------------------------------------------------------------------------------------------- */
+.av-pb-review-avatars { --av-pb-avatar: 36px; }
+.av-pb-review-avatars--sm { --av-pb-avatar: 28px; }
+.av-pb-review-avatars__inner {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--av-space-2) var(--av-space-3);
+  font-size: var(--av-text-sm);
+  line-height: 1.4;
+}
+.av-pb-review-avatars__stack { display: flex; }
+.av-pb-review-avatars__img {
+  display: block;
+  width: var(--av-pb-avatar);
+  height: var(--av-pb-avatar);
+  border: 2px solid var(--av-bg);
+  border-radius: var(--av-radius-pill);
+  object-fit: cover;
+}
+.av-pb-review-avatars__img + .av-pb-review-avatars__img { margin-inline-start: calc(var(--av-pb-avatar) * -0.3); }
+.av-pb-review-avatars__count { font-weight: 600; }
+.av-pb-review-avatars__text { color: var(--av-fg-muted); }

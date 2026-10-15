@@ -1,0 +1,128 @@
+/*
+ * anvil-product.css — product layout for sections/main-product.liquid and sections/anvil-featured-product.liquid.
+ * Gallery + buy column grid, gallery side and width, the sticky column on desktop, phone stacking (gallery first)
+ * and the vertical rhythm between blocks. Section padding comes from anvil-section-attrs + anvil-base.css.
+ *
+ * Inline custom properties written by the sections:
+ *   --av-product-gallery-w  gallery column width from 750 px (layout_gallery_width, 40–60 %)
+ *   --av-pb-gap             space between buy-column blocks (layout_block_gap); block styles may reuse it
+ *   --av-product-trust-w    width of the badge image under the buy column (layout_trust_width)
+ * Block snippets add no wrapper here: each block's root element is a direct child of .av-product__info, so a block
+ * that renders nothing leaves no gap.
+ */
+
+.av-product {
+  --av-pb-gap: var(--av-space-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "gallery"
+    "info";
+  gap: var(--av-space-5);
+  align-items: start;
+}
+
+.av-product__gallery {
+  grid-area: gallery;
+  min-width: 0;
+}
+
+.av-product__info {
+  grid-area: info;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--av-pb-gap);
+}
+
+/* The product form holds the buy buttons; its children keep the column's rhythm. */
+.av-product__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--av-pb-gap);
+  margin: 0;
+}
+
+/* Rendered only so form="…" controls always find the form; it has nothing to show. */
+.av-product__form--bare {
+  display: none;
+}
+
+.av-product__app:empty {
+  display: none;
+}
+
+/* Fallback buy box (no blocks) and the featured section's example layout */
+.av-product__title {
+  margin: 0;
+  font-size: var(--av-text-2xl);
+}
+
+.av-product__title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.av-product__title-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.av-product__example {
+  margin: 0;
+  color: var(--av-fg-muted);
+}
+
+/* Editor-only notes keep their own width inside the column. */
+.av-product__info > .av-device-note {
+  align-self: flex-start;
+}
+
+/* Badge image under the buy column */
+.av-product__trust {
+  width: min(100%, var(--av-product-trust-w, 240px));
+}
+
+.av-product__trust-img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Phones: optional edge-to-edge gallery */
+@media (max-width: 749px) {
+  .av-product--bleed .av-product__gallery {
+    margin-inline: calc(var(--av-gutter) * -1);
+  }
+}
+
+/* Two columns from 750 px; the DOM keeps the gallery first, the grid areas pick the side. */
+@media (min-width: 750px) {
+  .av-product {
+    grid-template-columns: minmax(0, var(--av-product-gallery-w, 55%)) minmax(0, 1fr);
+    grid-template-areas: "gallery info";
+    column-gap: var(--av-space-6);
+  }
+
+  .av-product--gallery-right {
+    grid-template-columns: minmax(0, 1fr) minmax(0, var(--av-product-gallery-w, 55%));
+    grid-template-areas: "info gallery";
+  }
+
+  /* The sticky column moves only inside its grid row, so it never overlaps the next section. */
+  .av-product--sticky-info .av-product__info,
+  .av-product--sticky-gallery .av-product__gallery {
+    position: sticky;
+    top: calc(var(--av-header-h, 0px) + var(--av-space-5));
+  }
+}
+
+@media (min-width: 990px) {
+  .av-product {
+    column-gap: var(--av-space-8);
+  }
+
+  .av-product__title {
+    font-size: var(--av-text-3xl);
+  }
+}

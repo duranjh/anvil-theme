@@ -1,0 +1,40 @@
+{% doc %}
+  Product block `image` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with the
+  fixed arguments product, block, section, form_id and current_variant; it reads block and section (the gallery width).
+
+  An image in the buy column through snippets/anvil-media (aspect-ratio box, responsive image_tag, lazy, placeholder
+  when empty) at a width share of the column, aligned left, centre or right, optionally linked. The sizes attribute
+  follows the product grid: from 750 px the buy column is what the gallery leaves (100 % minus the section's
+  gallery width, 45 % by default). A linked image always has a name: its alt text, the
+  file's alt text, or the link description. Styles: assets/anvil-pb-content.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign img_width = s.width | default: 100
+  assign img_align = s.align | default: 'left'
+  assign col_pct = 100 | minus: section.settings.layout_gallery_width
+  if col_pct < 20 or col_pct > 80
+    assign col_pct = 45
+  endif
+  assign desk_vw = img_width | times: col_pct | divided_by: 100.0 | round
+  assign img_sizes = '(min-width: 750px) ' | append: desk_vw | append: 'vw, ' | append: img_width | append: 'vw'
+  assign img_alt = s.alt
+  if s.link != blank
+    assign img_alt = s.alt | default: s.image.alt | default: s.link_label
+  endif
+  capture media_html
+    render 'anvil-media', image: s.image, ratio: s.ratio, widths: '300, 450, 600, 800, 1100', sizes: img_sizes, alt: img_alt, placeholder: 'image', class: 'av-pb-image__media'
+  endcapture
+-%}
+{{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+<div class="av-pb-image av-pb-align--{{ img_align }}" style="--av-pb-width: {{ img_width }}%;" {{ block.shopify_attributes }}>
+  {%- if s.link != blank -%}
+    <a class="av-pb-image__link" href="{{ s.link }}">{{ media_html }}</a>
+  {%- else -%}
+    {{ media_html }}
+  {%- endif -%}
+</div>

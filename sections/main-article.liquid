@@ -7,6 +7,7 @@
   assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
   assign comment_invalid = false
 -%}
+{{ 'anvil-prose.css' | asset_url | stylesheet_tag }}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-article' %}>
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}

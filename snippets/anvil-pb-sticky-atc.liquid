@@ -1,0 +1,101 @@
+{% doc %}
+  Product block `sticky_atc` (DESIGN-money-path §C, SPEC §3.2). Rendered once by the section after its main grid
+  (never in block order) with product, block, section, form_id and current_variant.
+
+  <anvil-sticky-bar> (assets/anvil-product.js, assets/anvil-sticky-bar.css): a bar fixed to the bottom of the
+  viewport, on phones and/or desktop as the merchant chooses. It carries the hidden attribute, so without
+  JavaScript it never shows; the script removes it once the form's main submit button has scrolled above the
+  viewport (IntersectionObserver) and pads the page bottom by the bar's height while it is shown. Its button
+  submits the section's product form through form="<form_id>"; its optional quantity is a mirror of the
+  Quantity selector's stepper with no name, so it never posts twice. Image, price, compare-at and button label
+  are data-anvil-bind targets the variant picker updates. Express checkout buttons are never shown here.
+  Labels default to the Buy buttons block's labels, then to the theme's.
+
+  @param {object} product - The product the section shows
+  @param {object} block - The sticky_atc block
+  @param {object} section - The product section; the buy_buttons and quantity blocks are read from it
+  @param {string} form_id - Id of the section's product form, submitted by the bar's button
+  @param {object} current_variant - The variant the page opened on
+{% enddoc %}
+{%- liquid
+  assign bs = block.settings
+  assign variant = current_variant | default: product.selected_or_first_available_variant
+  assign buy = section.blocks | where: 'type', 'buy_buttons' | first
+  assign add_label = bs.sticky_atc_label | strip
+  if add_label == blank
+    assign add_label = buy.settings.atc_label | strip
+  endif
+  if add_label == blank
+    assign add_label = 'anvil.product.add_to_cart' | t
+  endif
+  assign sold_label = buy.settings.atc_sold_out_label | strip
+  if sold_label == blank
+    assign sold_label = 'anvil.product.sold_out' | t
+  endif
+  assign label = add_label
+  if variant.available == false
+    assign label = sold_label
+  endif
+  assign btn_style = buy.settings.atc_style | default: 'primary'
+  assign bar_image = variant.featured_image | default: product.featured_image
+  assign on_sale = false
+  if variant.compare_at_price != blank and variant.compare_at_price > variant.price
+    assign on_sale = true
+  endif
+  assign stepper = section.blocks | where: 'type', 'quantity' | first
+  assign show_qty = false
+  if bs.sticky_atc_show_quantity and stepper != blank
+    assign show_qty = true
+  endif
+  assign rule = variant.quantity_rule
+  assign q_min = rule.min | default: 1
+  assign q_step = rule.increment | default: 1
+-%}
+{%- if bs.sticky_atc_mobile or bs.sticky_atc_desktop -%}
+  {{ 'anvil-sticky-bar.css' | asset_url | stylesheet_tag }}
+  <anvil-sticky-bar
+    class="av-sticky-bar{% if bs.sticky_atc_mobile %} av-sticky-bar--mobile{% endif %}{% if bs.sticky_atc_desktop %} av-sticky-bar--desktop{% endif %}"
+    form-id="{{ form_id }}"
+    hidden
+    {{ block.shopify_attributes }}
+  >
+    <div class="av-sticky-bar__inner" role="region" aria-label="{{ product.title | escape }}">
+      {%- if bs.sticky_atc_show_image and bar_image -%}
+        <span class="av-sticky-bar__media" data-anvil-bind="image">
+          {{- bar_image | image_url: width: 160 | image_tag: widths: '80, 160', sizes: '48px', alt: '', loading: 'lazy', class: 'av-sticky-bar__img' -}}
+        </span>
+      {%- endif -%}
+      <div class="av-sticky-bar__info">
+        <p class="av-sticky-bar__title">{{ product.title | escape }}</p>
+        {%- if bs.sticky_atc_show_price -%}
+          <p class="av-sticky-bar__price">
+            <span class="av-sticky-bar__now" data-anvil-bind="price">{% render 'anvil-money', amount: variant.price %}</span>
+            <s class="av-sticky-bar__compare" data-anvil-bind-box{% unless on_sale %} hidden{% endunless %}>
+              <span class="av-visually-hidden">{{ 'anvil.price.regular_price' | t }}</span>
+              <span data-anvil-bind="compare">{% if on_sale %}{% render 'anvil-money', amount: variant.compare_at_price %}{% endif %}</span>
+            </s>
+          </p>
+        {%- endif -%}
+      </div>
+      {%- if show_qty -%}
+        <anvil-quantity class="av-quantity av-sticky-bar__qty av-enhance" form-id="{{ form_id }}" section-id="{{ section.id }}" mirror>
+          <div class="av-qty">
+            <button type="button" class="av-qty__btn av-enhanced-only" data-anvil-step="-1" aria-label="{{ 'anvil.cart.decrease' | t }}">
+              {%- render 'anvil-icon', name: 'minus', size: 16 -%}
+            </button>
+            <input class="av-qty__input" type="number" value="{{ q_min }}" min="{{ q_min }}" step="{{ q_step }}" inputmode="numeric" aria-label="{{ 'anvil.product.quantity' | t }}">
+            <button type="button" class="av-qty__btn av-enhanced-only" data-anvil-step="1" aria-label="{{ 'anvil.cart.increase' | t }}">
+              {%- render 'anvil-icon', name: 'plus', size: 16 -%}
+            </button>
+          </div>
+        </anvil-quantity>
+      {%- endif -%}
+      <button type="submit" name="add" form="{{ form_id }}" class="av-btn av-btn--{{ btn_style }} av-sticky-bar__btn"{% if variant.available == false %} disabled{% endif %}>
+        <span class="av-btn__label" data-anvil-bind="add_label" data-anvil-label-add="{{ add_label | escape }}" data-anvil-label-sold-out="{{ sold_label | escape }}">
+          {{- label | escape -}}
+        </span>
+      </button>
+    </div>
+  </anvil-sticky-bar>
+  <script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>
+{%- endif -%}

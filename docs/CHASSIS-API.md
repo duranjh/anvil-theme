@@ -37,6 +37,49 @@ the Section Rendering API).
 {% render 'anvil-cart-bubble' %}
 ```
 
+## snippets/anvil-cart-line.liquid
+```
+One cart line, shared by the cart drawer and the cart page: image, title, vendor, variant, line-item properties
+(names that start with "_" stay hidden; a line carrying the _anvil_gift property shows a gift label instead),
+selling plan, line-level discounts, the line price (struck through when a Shopify discount or, optionally, the
+compare-at price is higher; "Free" only when Shopify prices the line at zero), a quantity stepper that posts
+updates[<line key>] and a remove link. Quantities are keyed by line item key (Shopify's recommendation), so a
+form rendered before another script changed the cart can never move a quantity onto a different line. Gift lines
+get no stepper: a hidden input holds them at 1. Works as a plain form without JavaScript; <anvil-cart-form>
+(assets/anvil-cart.js) enhances it. Render it inside a list (<ul>); styles live in assets/anvil-cart-drawer.css
+(load it wherever lines render).
+
+@param {object} item - The line item
+@param {string} [form_id] - id of the cart form the inputs belong to (written as the form attribute)
+@param {boolean} [show_image] - Show the line image (default true)
+@param {boolean} [show_variant] - Show the variant title (default true)
+@param {boolean} [show_vendor] - Show the vendor (default Theme settings > Cart > Show product vendors)
+@param {boolean} [show_discounts] - List the line-level discounts (default true)
+@param {boolean} [show_compare_at] - Strike through the compare-at price when it is higher (default false)
+@param {boolean} [show_unit_price] - Show the price of one item when the quantity is above 1 (default false)
+@param {string} [gift_label] - Label printed on gift lines (default "Gift")
+@param {string} [size] - sm (drawer) | md (cart page), default md
+
+@example
+{% render 'anvil-cart-line', item: item, form_id: 'anvil-cart-form', size: 'md' %}
+```
+
+## snippets/anvil-cart-totals.liquid
+```
+Cart totals, shared by the cart drawer and the cart page: the subtotal, cart-level discounts, a savings line from
+Shopify's discount allocations (cart.total_discount), an optional separate line for compare-at savings, the
+estimated total and the taxes and shipping note. Every number comes from the cart; nothing is typed in
+(docs/HONEST.md). Styles live in assets/anvil-cart-drawer.css (load it wherever totals render).
+
+@param {boolean} [show_savings] - Show "You save" from Shopify discounts (default Theme settings > Cart > Show a savings line)
+@param {boolean} [show_discounts] - List cart-level discounts between the subtotal and the total (default true)
+@param {boolean} [show_compare_savings] - Show savings against compare-at prices on their own line (default false)
+@param {boolean} [show_tax_note] - Show the taxes and shipping note (default true)
+
+@example
+{% render 'anvil-cart-totals', show_compare_savings: true %}
+```
+
 ## snippets/anvil-css-tokens.liquid
 ```
 Every settings-derived design token, as CSS custom properties.
@@ -52,6 +95,44 @@ Fixed tokens that do not depend on settings (space scale, easing, fluid type
 formulas) live in assets/anvil-base.css. Output here stays under 6 KB.
 
 @param {string} [part] - 'preload' for the preload tags; anything else for CSS
+```
+
+## snippets/anvil-gallery.liquid
+```
+Product media gallery for sections/main-product.liquid and sections/anvil-featured-product.liquid, driven by the
+section's gallery_* settings (docs/product-blocks/_settings-gallery.json). One scroll-snap track of slides that works
+without JavaScript (swipe on phones, a keyboard-scrollable region everywhere); assets/anvil-gallery.js
+(<anvil-gallery>) adds the thumbnails, arrows, dots or counter, variant filtering, the hover magnifier and the
+<dialog> lightbox. Slides carry data-anvil-media-id, data-anvil-variant-ids (the variants whose featured media the
+slide is) and data-anvil-pos (media.position). Every media box keeps its aspect ratio from
+media.preview_image.aspect_ratio (or the fixed shape setting), so nothing shifts while images load.
+Loads assets/anvil-gallery.css and assets/anvil-gallery.js itself.
+
+Behaviour added by <anvil-gallery section-id zoom variant-first hide-others>:
+- An IntersectionObserver on the track sets the active dot or counter, the current thumbnail (aria-current) and a
+  polite "Slide N of M" announcement. Thumbnails and arrows scroll the track with scrollTo (never the page; an
+  absolute target is not stopped by scroll-snap-stop on the slides in between).
+- anvil:variant:changed whose sectionId is this section: hide-others hides media featured by other variants (all
+  media stay when nothing would be left), variant-first moves the variant's media to the front and puts the rest
+  back in admin order, then the track scrolls to the variant's media. The same rules run here in Liquid for the
+  first paint. Stacked desktop galleries never scroll the page on a variant change.
+- zoom="hover": a magnifier following the mouse on fine pointers. Both zoom modes open the <dialog> lightbox from
+  a button over each image: swipe or arrow keys to move, pinch, double-tap, ctrl+wheel, +/- keys or the zoom
+  button to zoom, arrow keys to pan a zoomed image; closing returns focus to the image the shopper ended on.
+- Videos with the controls setting off keep native controls without JavaScript; the module swaps them for one
+  play/pause button. Autoplay uses anvil-core.js (muted, in view, motion allowed only).
+
+@param {object} product - The product whose media is shown; blank or without media renders a placeholder
+@param {object} section - The section; its gallery_* settings drive the layout, layout_gallery_width the image sizes,
+  and its id filters anvil:variant:changed
+@param {object} [current_variant] - Variant whose featured media leads and stays visible (default
+  product.selected_or_first_available_variant)
+@param {string} [sizes] - sizes attribute for the main images (default from layout_gallery_width and page_width)
+@param {boolean} [lazy] - Lazy-load the first image too, for a gallery far down the page (default: only when
+  section.index > 2)
+
+@example
+{% render 'anvil-gallery', product: product, section: section, current_variant: current_variant %}
 ```
 
 ## snippets/anvil-icon-a-c.liquid
@@ -104,6 +185,32 @@ each render evaluates one short case/when instead of scanning a 27 KB table.
 @example
 {% render 'anvil-icon', name: 'truck', size: 20 %}
 {% render 'anvil-icon', name: 'star', label: 'Rated 5 stars' %}
+```
+
+## snippets/anvil-icons-text.liquid
+```
+Trust row: items made of an icon (anvil-icon, or an uploaded image instead), a short label and a line of text, in a
+grid whose column count follows the width of the space it sits in (container query at 440 px), so one row fits a
+phone, the buy column and the cart drawer. Labels are not headings (CONVENTIONS §3). Items with neither label nor
+text are skipped; nothing renders when every item is empty. Shared by the product page's icons_text block and the
+cart drawer's icons_text block (WAVE1-CONTRACTS §6). Loads assets/anvil-pb-trust.css.
+
+Liquid cannot build an array of objects from literals, so the items arrive in one of two shapes:
+- settings: a settings object holding the slot ids item_1_icon, item_1_image, item_1_heading, item_1_text, and so
+  on up to item_4_*. Both icons_text blocks use these ids. A block passed as items is read the same way.
+- items: an array of objects or blocks exposing icon, image, heading and text, directly or under .settings, for
+  example section.blocks | where: 'type', 'trust_item' (at most 12 are drawn).
+
+@param {object} [items] - Array of item objects or blocks, or a block whose settings use the slot ids
+@param {object} [settings] - Settings object holding item_N_icon, item_N_image, item_N_heading, item_N_text (N = 1–4)
+@param {string} [columns_mobile] - Columns in a narrow space: 1 to 4 (default 2)
+@param {string} [columns] - Columns when the space is 440 px or wider: 1 to 4 (default 4)
+@param {string} [layout] - stacked (icon above the words) | inline (icon beside them) (default stacked)
+@param {string} [align] - left | center (default center when stacked, left when inline)
+@param {string} [class] - Extra classes on the root
+
+@example
+{% render 'anvil-icons-text', settings: block.settings, columns_mobile: block.settings.columns_mobile, columns: block.settings.columns %}
 ```
 
 ## snippets/anvil-json-ld.liquid
@@ -164,6 +271,33 @@ forms print so one page never mixes two styles.
 {% render 'anvil-money', amount: item.final_line_price %}
 ```
 
+## snippets/anvil-offer-cards.liquid
+```
+Offer cards for the variant picker (DESIGN-money-path §B, SPEC §3.2): one radio card per value of the option the
+cards drive (the picker's offer_cards_option), inside a fieldset whose legend names the option and its selected
+value. Card N comes from the Nth offer_card block of the section (its card_variant_position picks the option
+value, 0 = block order); without offer_card blocks every value of the option gets a generated card. With blocks,
+every value no block points at still gets a generated card after them, so each variant stays selectable (a
+product with more values than cards, an ad link to another variant). Each card is rendered by
+snippets/anvil-pb-offer-card.liquid.
+
+With resolve: true nothing is drawn: the snippet prints only the id of the variant that the picker's
+offer_cards_preselect points to (card N's value with the other options at their current values), or nothing for
+0 or a card that does not exist. It is the same rule sections/main-product.liquid applies to current_variant, so
+a caller can capture it:
+  {% capture preselect_id %}{% render 'anvil-offer-cards', product: product, block: picker_block, section: section, resolve: true %}{% endcapture %}
+Whether that variant is available is left to the caller.
+
+@param {object} product - The product
+@param {object} block - The variant_picker block
+@param {object} section - The product section (offer_card blocks are read from it)
+@param {boolean} [resolve] - Print only the preselected variant id
+@param {object} [option] - product_option the cards drive (default: from offer_cards_option)
+@param {string} [current] - Name of that option's selected value
+@param {string} [name] - Radio group name
+@param {string} [chart] - Size chart button markup, printed under the cards
+```
+
 ## snippets/anvil-pagination.liquid
 ```
 Accessible pagination for a paginate block: previous/next, numbered links, the current page and gaps.
@@ -176,6 +310,37 @@ Renders nothing when there is a single page. Styles live in assets/anvil-card.cs
   ...
   {% render 'anvil-pagination', paginate: paginate %}
 {% endpaginate %}
+```
+
+## snippets/anvil-payment-badges.liquid
+```
+One row of payment icons. Source shop: the methods enabled in the store's admin (shop.enabled_payment_types) drawn
+by Shopify's payment_type_svg_tag, optionally narrowed to the handles in filter and shown in the order typed.
+Source custom: images the merchant uploaded, each with alt text. Anvil ships no payment or platform logos.
+Renders nothing when there is no icon to show. Shared by the product page's payment_badges block and the cart
+drawer (WAVE1-CONTRACTS §6). Loads assets/anvil-pb-trust.css.
+payment_type_svg_tag writes fixed ids (<title id="pi-visa"> with aria-labelledby="pi-visa"), so two rows on one
+page would repeat ARIA ids; with uid set, both the id and its reference become pi-<uid>-<type>.
+
+Liquid cannot build an array of image objects from literals, so custom images arrive in one of two shapes:
+- images: an array of image objects (for example section.blocks | map: 'settings' | map: 'image'); alt from each
+  image's own alt text
+- settings: a settings object holding badge_image_1 to badge_image_6 and badge_alt_1 to badge_alt_6 (the product
+  block's ids; a drawer block that uses the same ids can pass its settings too)
+
+@param {string} [source] - shop | custom (default shop)
+@param {string} [filter] - Comma-separated payment type handles to keep, in display order (shop source)
+@param {object} [images] - Array of image objects (custom source)
+@param {object} [settings] - Settings object holding badge_image_N and badge_alt_N, N = 1–6 (custom source)
+@param {string} [size] - sm | md | lg (default md)
+@param {string} [align] - left | center | right (default left)
+@param {string} [label] - Accessible name of the list (default "Payment methods")
+@param {string} [class] - Extra classes on the list
+@param {string} [uid] - Makes the icons' title ids unique on the page (for example the block id)
+
+@example
+{% render 'anvil-payment-badges', source: 'shop', size: 'sm', align: 'center' %}
+{% render 'anvil-payment-badges', source: 'custom', settings: block.settings %}
 ```
 
 ## snippets/anvil-price.liquid
@@ -195,6 +360,67 @@ Styles live in assets/anvil-card.css. Data hooks: data-anvil-price, -current, -c
 @example
 {% render 'anvil-price', product: product, size: 'lg' %}
 {% render 'anvil-price', variant: current_variant, show_badge: false %}
+```
+
+## snippets/anvil-product-block.liquid
+```
+Product block dispatcher for sections/main-product.liquid and sections/anvil-featured-product.liquid.
+Liquid's render tag takes only a literal name, so every block type has its own `when` and renders
+snippets/anvil-pb-<type with hyphens>.liquid with the same five parameters (WAVE1-CONTRACTS §1).
+Each block snippet prints {{ block.shopify_attributes }} on its own root element; this snippet adds no wrapper,
+so a block that has nothing to show leaves no empty box and no gap in the buy column.
+
+Not rendered here:
+- offer_card and quantity_tier are data blocks: the variant picker and the quantity snippets read them from
+  section.blocks and render them in place.
+- sticky_atc is rendered once by main-product after the grid (snippets/anvil-pb-sticky-atc.liquid).
+
+The product form and block order: the sections render one form per section, id form_id
+('anvil-pf-' + section.id), at the position of the first buy_buttons block in the merchant's order. It holds the
+hidden `id` input (data-anvil-variant-input), this snippet's buy_buttons output and, when that block's
+show_dynamic_checkout setting is on, {{ form | payment_button }} (the form object exists only inside the
+section's {% form %} tag, so a rendered snippet cannot print it). Every other control that posts (quantity,
+custom fields, bundle rows, the sticky bar's button) sits outside the form with form="{{ form_id }}", so the
+blocks above and below the buttons keep the order set in the editor and still post with JavaScript off. A
+section without a buy_buttons block still renders the form, empty and hidden, at the end of the buy column, so
+form="…" controls always find it. The buy_buttons snippet should give its submit button form="{{ form_id }}"
+as well, which is harmless inside the form and keeps a second buy_buttons block working.
+
+App blocks: the sections render '@app' blocks themselves with {% render block %} in the section file (an app
+block then reads the section and the template's product from where it is rendered); the '@app' branch below
+exists for any other caller.
+
+@param {object} product - The product the section shows
+@param {object} block - The section block to render
+@param {object} section - The section, for reading sibling blocks and section settings
+@param {string} form_id - Id of the section's product form; controls outside it post with form="{{ form_id }}"
+@param {object} current_variant - The variant the page opened on (WAVE1-CONTRACTS §3)
+
+@example
+{% render 'anvil-product-block', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+```
+
+## snippets/anvil-product-card-mini.liquid
+```
+Compact product card for upsell lists (product block "Product upsells", the drawer's upsells block, the
+recommendations section anvil-upsell-row): thumbnail, title, price and one action.
+The card is <anvil-mini-card class="av-enhance"> from assets/anvil-commerce.js. With that module, a single-variant
+product shows an Add button that adds one unit through cartAdd (drawer and bubble re-render, the drawer opens when
+the theme setting says so). Without it (or for products with options, sold-out products and button: 'view') the
+action is a link to the product. The card holds no <form>, so it is safe inside the drawer's cart form.
+Hooks: data-anvil-product-id (upsell lists hide products already in the cart), [data-anvil-status] (live message),
+data-anvil-focus-key="mini-<product id>" on the Add button (the drawer keeps focus there across a re-render).
+Styles live in assets/anvil-pb-commerce.css; every list that shows cards loads it. A blank product renders an
+example card.
+
+@param {object} [product] - Product; blank renders an example card
+@param {boolean} [show_price] - Show the price (default true)
+@param {string} [button] - add | view (default add)
+@param {string} [source_tag] - Where the card is shown, for example 'upsell' or 'drawer'; written as
+  data-anvil-source for scripts and analytics
+
+@example
+{% render 'anvil-product-card-mini', product: product, button: 'add', source_tag: 'upsell' %}
 ```
 
 ## snippets/anvil-product-card.liquid
@@ -264,7 +490,36 @@ The three "security" toggles from Theme settings > Security. All default off.
   Shopify Market country, not geo-IP) with the merchant's list and, on a
   match, covers the page with the merchant's message.
 Nothing runs in the theme editor; the country rule shows a note instead so
-the merchant can keep editing.
+the merchant can keep editing. The overlay loads assets/anvil-security.css (and anvil-prose.css for the
+message) only when it renders, so stores without the rule never download them.
+```
+
+## snippets/anvil-ship-dates.liquid
+```
+Estimated ship and delivery dates, computed here from 'now' in the store's time zone (Settings > General) and
+recomputed by assets/anvil-ship-dates.js (<anvil-ship-dates>), because a cached page can carry an earlier day's
+dates. Renders nothing when processing_max + delivery_max is 0.
+Day 0 is today, or tomorrow for an order at or after cutoff_hour. With skip_weekends, Saturdays and Sundays are not
+counted and an order placed on a weekend starts counting on Monday. Ship = day 0 + processing days; delivery =
+day 0 + processing + transit days. Dates are anchored at local noon, so daylight-saving days never shift a date.
+Date text uses the locale formats date_formats.anvil_ship_<format>; styles are in this file's stylesheet.
+
+@param {number} processing_min - Processing days before the parcel leaves, minimum
+@param {number} processing_max - Processing days, maximum (raised to processing_min when lower)
+@param {number} delivery_min - Carrier transit days, minimum
+@param {number} delivery_max - Carrier transit days, maximum (raised to delivery_min when lower)
+@param {boolean} [skip_weekends] - Count Monday to Friday only
+@param {number} [cutoff_hour] - Store-time hour (1-23) from which an order counts from the next day; 0 = none
+@param {string} [timezone_note] - Short label printed after the dates, for example "ET"
+@param {string} [format] - short | long | weekday | weekday_long (default weekday)
+@param {string} [mode] - range (one sentence) | steps (ordered, shipped, delivered timeline); default range
+@param {string} [labels] - range: the sentence, with {{ from }} and {{ to }} (or [from] / [to]) where the dates
+  go; blank = anvil.product.arrives_between. steps: three labels separated by "|"; a blank part falls back to
+  Ordered / Shipped / Delivered
+@param {string} [icons] - range: one icon name; steps: three names separated by "|"; blank or "none" = no icon
+
+@example
+{% render 'anvil-ship-dates', processing_min: 1, processing_max: 2, delivery_min: 3, delivery_max: 5, skip_weekends: true, mode: 'steps' %}
 ```
 
 ## snippets/anvil-social-links.liquid
@@ -293,6 +548,26 @@ Styles live in assets/anvil-card.css.
 
 @example
 {% render 'anvil-stars', rating: product.metafields.reviews.rating.value.rating, max: product.metafields.reviews.rating.value.scale_max %}
+```
+
+## snippets/anvil-text-icon.liquid
+```
+One reassurance line: an icon from anvil-icon, or an uploaded image instead, and a short text, optionally on a
+background pill. Shared by the product page's text_icon block and the cart drawer's text_icon block
+(WAVE1-CONTRACTS §6). The icon is decorative; the text carries the meaning. Renders nothing when the text is blank.
+Loads assets/anvil-pb-trust.css (repeated links to one URL are fetched once).
+
+@param {string} text - The line; inline rich text (bold, italic, links) is printed as given
+@param {string} [icon] - anvil-icon name; ignored when image is set or when 'none'
+@param {object} [image] - Image object drawn instead of the icon (decorative, alt="")
+@param {string} [size] - sm | md (default md)
+@param {boolean} [pill] - Draw a background pill behind the line
+@param {string} [tone] - Pill look: subtle | accent | outline (default subtle)
+@param {string} [shape] - Pill corners: pill | soft | square (default pill)
+@param {string} [class] - Extra classes on the root
+
+@example
+{% render 'anvil-text-icon', icon: 'truck', text: block.settings.text, size: 'sm', pill: true %}
 ```
 
 ## blocks/anvil-button.liquid

@@ -1,0 +1,135 @@
+/* anvil-sticky-bar.css — <anvil-sticky-bar> (snippets/anvil-pb-sticky-atc.liquid, assets/anvil-product.js).
+   The bar keeps its hidden attribute until the script shows it, so nothing here can reveal it without JavaScript.
+   The device rules never show a bar that still carries hidden. While it is shown the script sets html.av-is-sticky-shown and
+   --av-sticky-bar-h, and the page gains matching bottom padding so the bar never covers the footer. */
+
+anvil-sticky-bar {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 60;
+  display: block;
+}
+
+.av-sticky-bar:not(.av-sticky-bar--mobile) {
+  display: none;
+}
+
+.av-sticky-bar__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-3);
+  padding: var(--av-space-3) var(--av-gutter);
+  padding-bottom: calc(var(--av-space-3) + env(safe-area-inset-bottom, 0px));
+  color: var(--av-fg);
+  background: var(--av-bg);
+  border-top: 1px solid var(--av-border);
+  box-shadow: var(--av-shadow-lg);
+}
+
+.av-sticky-bar__media {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: var(--av-radius-media);
+}
+
+.av-sticky-bar__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.av-sticky-bar__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.av-sticky-bar__title,
+.av-sticky-bar__price {
+  margin: 0;
+  font-size: var(--av-text-sm);
+  line-height: 1.3;
+}
+
+.av-sticky-bar__title {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.av-sticky-bar__price {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--av-space-2);
+}
+
+.av-sticky-bar__compare {
+  color: var(--av-fg-muted);
+}
+
+.av-sticky-bar__qty {
+  flex: none;
+}
+
+.av-sticky-bar__btn {
+  flex: none;
+  min-width: 40%;
+}
+
+/* Narrow phones with the quantity mirror: drop the thumbnail and the button's minimum width so the title and
+   price keep room. */
+.av-sticky-bar__inner:has(.av-sticky-bar__qty:not([hidden])) .av-sticky-bar__media {
+  display: none;
+}
+
+.av-sticky-bar__inner:has(.av-sticky-bar__qty:not([hidden])) .av-sticky-bar__btn {
+  min-width: 0;
+}
+
+html.av-is-sticky-shown body {
+  padding-bottom: var(--av-sticky-bar-h, 0px);
+}
+
+/* Keyboard focus and scroll-into-view stop above the bar, so it never covers the focused control (WCAG 2.4.11). */
+html.av-is-sticky-shown {
+  scroll-padding-bottom: var(--av-sticky-bar-h, 0px);
+}
+
+@media (min-width: 480px) {
+  .av-sticky-bar__inner:has(.av-sticky-bar__qty:not([hidden])) .av-sticky-bar__media {
+    display: block;
+  }
+}
+
+@media (min-width: 750px) {
+  .av-sticky-bar--desktop:not([hidden]) {
+    display: block;
+  }
+
+  .av-sticky-bar:not(.av-sticky-bar--desktop) {
+    display: none;
+  }
+
+  .av-sticky-bar__inner {
+    padding-inline: max(var(--av-gutter), (100% - var(--av-page-width)) / 2);
+  }
+
+  .av-sticky-bar__btn {
+    min-width: 14rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-animations="off"]) .av-sticky-bar__inner {
+    animation: av-sticky-in var(--av-dur) var(--av-ease);
+  }
+}
+
+@keyframes av-sticky-in {
+  from {
+    transform: translateY(100%);
+  }
+}

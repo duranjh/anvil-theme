@@ -1,0 +1,52 @@
+{% doc %}
+  Product block "Estimated shipping" (shipping_estimate): one line such as "Order now, arrives between Mon, Oct 20
+  and Fri, Oct 24", from snippets/anvil-ship-dates in the store's time zone. Hidden while the selected variant is sold
+  out or does not need shipping (assets/anvil-ship-dates.js follows variant changes); nothing renders when the
+  processing and delivery maximums are both 0. The windows are the merchant's promise: the setting text asks for the
+  same numbers as the shipping policy.
+
+  @param {object} product - The product (its first available variant stands in when current_variant is blank)
+  @param {object} block - This block
+  @param {object} section - The product section; its id ties the block to that section's variant changes
+  @param {string} form_id - Id of the section's product form, written as data-anvil-form for scripts
+  @param {object} [current_variant] - The variant the section opened with
+{% enddoc %}
+{%- liquid
+  assign bs = block.settings
+  assign ship_variant = current_variant | default: product.selected_or_first_available_variant
+  assign ship_hidden = false
+  if ship_variant.available == false or ship_variant.requires_shipping == false
+    assign ship_hidden = true
+  endif
+  assign span = bs.ship_processing_max | plus: bs.ship_delivery_max
+-%}
+{%- if span > 0 -%}
+  <div
+    class="av-pb-ship"
+    {{ block.shopify_attributes }}
+    data-anvil-form="{{ form_id }}"
+    data-anvil-ship-variant="{{ section.id }}"
+    {% if ship_hidden %}
+      hidden
+    {% endif %}
+  >
+    {%- render 'anvil-ship-dates',
+      processing_min: bs.ship_processing_min,
+      processing_max: bs.ship_processing_max,
+      delivery_min: bs.ship_delivery_min,
+      delivery_max: bs.ship_delivery_max,
+      skip_weekends: bs.ship_skip_weekends,
+      cutoff_hour: bs.ship_cutoff_hour,
+      timezone_note: bs.ship_timezone,
+      format: bs.ship_date_format,
+      mode: 'range',
+      labels: bs.ship_estimate_text,
+      icons: bs.ship_icon
+    -%}
+  </div>
+  {%- if ship_hidden and request.design_mode -%}
+    <p class="av-editor-note">{{ 'anvil.editor.ship_hidden' | t }}</p>
+  {%- endif -%}
+{%- elsif request.design_mode -%}
+  <p class="av-editor-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.ship_no_window' | t }}</p>
+{%- endif -%}

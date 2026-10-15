@@ -2,8 +2,159 @@
   "sections": {
     "main": {
       "type": "main-product",
+      "blocks": {
+        "title": {
+          "type": "title",
+          "settings": {
+            "show_name": true,
+            "size": "md",
+            "align": "left",
+            "uppercase": false,
+            "space_top": 0,
+            "space_bottom": 0
+          }
+        },
+        "rating": {
+          "type": "rating",
+          "settings": {
+            "rating_show_number": true,
+            "rating_show_count": true,
+            "rating_size": "md",
+            "rating_align": "left"
+          }
+        },
+        "price": {
+          "type": "price",
+          "settings": {
+            "size": "lg",
+            "show_compare": true,
+            "badge": "theme",
+            "show_unit": true,
+            "show_tax_note": false
+          }
+        },
+        "variant_picker": {
+          "type": "variant_picker",
+          "settings": {
+            "picker_style": "pills",
+            "picker_hide_sold_out": false,
+            "pills_use_swatches": true
+          }
+        },
+        "quantity": {
+          "type": "quantity",
+          "settings": {
+            "quantity_style": "stepper",
+            "quantity_show_label": true,
+            "quantity_max": 0
+          }
+        },
+        "buy_buttons": {
+          "type": "buy_buttons",
+          "settings": {
+            "atc_style": "primary",
+            "show_dynamic_checkout": false,
+            "show_secure_line": false
+          }
+        },
+        "text_icon_shipping": {
+          "type": "text_icon",
+          "settings": {
+            "text": "Example: ships within 2 business days — replace with your real handling time",
+            "icon_name": "truck",
+            "text_size": "md",
+            "align": "left",
+            "bg_enabled": false,
+            "space_top": 0,
+            "space_bottom": 0
+          }
+        },
+        "text_icon_returns": {
+          "type": "text_icon",
+          "settings": {
+            "text": "Example: free returns within 30 days — replace with what your policy says",
+            "icon_name": "rotate-ccw",
+            "text_size": "md",
+            "align": "left",
+            "bg_enabled": false,
+            "space_top": 0,
+            "space_bottom": 0
+          }
+        },
+        "payment_badges": {
+          "type": "payment_badges",
+          "settings": {
+            "badges_source": "shop",
+            "badges_size": "md",
+            "badges_align": "left"
+          }
+        },
+        "shipping_checkpoints": {
+          "type": "shipping_checkpoints",
+          "settings": {
+            "ship_processing_min": 0,
+            "ship_processing_max": 0,
+            "ship_delivery_min": 0,
+            "ship_delivery_max": 0,
+            "ship_skip_weekends": true,
+            "ship_cutoff_hour": 0,
+            "ship_date_format": "weekday"
+          }
+        },
+        "description": {
+          "type": "description",
+          "settings": {
+            "display": "collapsed",
+            "preview_words": 40,
+            "text_size": "md"
+          }
+        },
+        "tab_shipping": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Shipping",
+            "icon": "truck",
+            "content": "<p>Example: where you ship, how long orders take and what shipping costs. Replace this with your real shipping policy.</p>",
+            "open": false
+          }
+        },
+        "tab_returns": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Returns",
+            "icon": "rotate-ccw",
+            "content": "<p>Example: your return window and how a customer starts a return. Replace this with your real return policy.</p>",
+            "open": false
+          }
+        },
+        "share": {
+          "type": "share",
+          "settings": {
+            "label": "Share",
+            "show_icon": true
+          }
+        }
+      },
+      "block_order": [
+        "title",
+        "rating",
+        "price",
+        "variant_picker",
+        "quantity",
+        "buy_buttons",
+        "text_icon_shipping",
+        "text_icon_returns",
+        "payment_badges",
+        "shipping_checkpoints",
+        "description",
+        "tab_shipping",
+        "tab_returns",
+        "share"
+      ],
       "settings": {}
     }
   },
-  "order": ["main"]
+  "order": [
+    "main"
+  ]
 }

@@ -1,0 +1,108 @@
+{% doc %}
+  Product block emoji_benefits ("Emoji benefits"): one list item per non-empty line of the benefits textarea. When a
+  line starts with an emoji, that emoji becomes the item's icon (aria-hidden; the words carry the meaning); other
+  lines get a check icon, or nothing when the merchant turns that off. At most 12 lines are drawn.
+
+  Liquid has no grapheme segmentation, so the leading emoji is found by its UTF-8 bytes (url_encode): a character in
+  the emoji planes (U+1F000 and up) or in the symbol and dingbat blocks (U+2100 to U+2BFF), or any character followed
+  by a variation selector or keycap mark, starts an icon; joiners (ZWJ), variation selectors, keycap marks, skin-tone
+  modifiers, tag characters and a second regional indicator (flags) extend it. This covers single emoji, keycaps,
+  flags and joined sequences such as families.
+
+  Called by the product block dispatcher with product, block, section, form_id and current_variant
+  (WAVE1-CONTRACTS §1); it reads only block. The arguments are described in prose
+  rather than as LiquidDoc parameters because Theme Check requires every declared parameter to be used.
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign eb_lines = s.benefits | newline_to_br | strip_newlines | split: '<br />'
+
+  capture eb_html
+    for eb_raw in eb_lines limit: 12
+      assign eb_line = eb_raw | strip
+      if eb_line == blank
+        continue
+      endif
+
+      assign eb_cluster = 0
+      assign eb_enc0 = eb_line | slice: 0 | url_encode
+      assign eb_enc1 = eb_line | slice: 1 | url_encode
+      assign eb_head = eb_enc0 | slice: 0, 6
+      assign eb_byte1 = eb_enc0 | slice: 0, 3
+      if eb_head == '%F0%9F'
+        assign eb_cluster = 1
+      elsif eb_byte1 == '%E2' and eb_head != '%E2%80' and eb_head != '%E2%81'
+        assign eb_cluster = 1
+      elsif eb_enc1 == '%EF%B8%8F' or eb_enc1 == '%E2%83%A3'
+        assign eb_cluster = 1
+      endif
+
+      if eb_cluster > 0
+        assign eb_join = false
+        assign eb_flag = false
+        if eb_enc0 contains '%F0%9F%87%'
+          assign eb_flag = true
+        endif
+        for k in (1..10)
+          assign eb_enc = eb_line | slice: eb_cluster | url_encode
+          if eb_enc == blank or eb_enc == '+'
+            break
+          endif
+          assign eb_grow = false
+          if eb_join
+            assign eb_grow = true
+            assign eb_join = false
+          elsif eb_enc == '%E2%80%8D'
+            assign eb_grow = true
+            assign eb_join = true
+          elsif eb_enc == '%EF%B8%8F' or eb_enc == '%E2%83%A3'
+            assign eb_grow = true
+          elsif eb_enc contains '%F0%9F%8F%B'
+            assign eb_tone = eb_enc | slice: -1
+            if 'BCDEF' contains eb_tone
+              assign eb_grow = true
+            endif
+          elsif eb_enc contains '%F3%A0%80' or eb_enc contains '%F3%A0%81'
+            assign eb_grow = true
+          elsif eb_flag and eb_cluster == 1 and eb_enc contains '%F0%9F%87%'
+            assign eb_grow = true
+          endif
+          unless eb_grow
+            break
+          endunless
+          assign eb_cluster = eb_cluster | plus: 1
+        endfor
+      endif
+
+      assign eb_icon = ''
+      assign eb_text = eb_line
+      if eb_cluster > 0
+        assign eb_rest = eb_line | slice: eb_cluster, 2000 | strip
+        if eb_rest != blank
+          assign eb_icon = eb_line | slice: 0, eb_cluster | escape
+          assign eb_text = eb_rest
+        endif
+      endif
+
+      echo '<li class="av-pb-emoji-benefits__item">'
+      if eb_icon != blank
+        echo '<span class="av-pb-emoji-benefits__icon" aria-hidden="true">' | append: eb_icon | append: '</span>'
+      elsif s.benefits_check
+        render 'anvil-icon', name: 'check', size: 18, class: 'av-pb-emoji-benefits__check'
+      endif
+      assign eb_text = eb_text | escape
+      echo '<span class="av-pb-emoji-benefits__text">' | append: eb_text | append: '</span></li>'
+    endfor
+  endcapture
+  assign eb_html = eb_html | strip
+-%}
+{%- if eb_html != blank -%}
+  {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+  <ul class="av-pb-emoji-benefits av-pb-emoji-benefits--{{ s.benefits_size }}{% if s.benefits_spacing == 'compact' %} av-pb-emoji-benefits--compact{% endif %}" role="list" {{ block.shopify_attributes }}>
+    {{- eb_html -}}
+  </ul>
+{%- elsif request.design_mode -%}
+  <div class="av-pb-emoji-benefits" {{ block.shopify_attributes }}>
+    <p class="av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+  </div>
+{%- endif -%}

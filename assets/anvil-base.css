@@ -2,10 +2,11 @@
    Loaded on every page by layout/theme.liquid after the inline token <style>.
    Contents: fallback tokens, reset, fluid type scale, layout primitives,
    scheme surface, buttons, fields, badges, utilities, reveal/show helpers,
-   grid, prose, pagination, form messages, country-block overlay, and the
+   grid, short rich text (.av-rte), pagination, form messages, and the
    small shared components every block may render without loading another
    file: media box (snippets/anvil-media), price (anvil-price) and stars
-   (anvil-stars).
+   (anvil-stars). Long-form prose is assets/anvil-prose.css; the country-rule
+   overlay is assets/anvil-security.css.
    Mobile first. Breakpoints: 480 / 750 / 990 / 1200. No !important. */
 
 /* 1. Fallback tokens --------------------------------------------------------
@@ -1274,133 +1275,10 @@ select.av-dropdown--underline {
   border-radius: 50%;
 }
 
-/* 13. Prose (rich text) ----------------------------------------------------- */
-.av-prose {
-  font-size: var(--av-text-md);
-  line-height: 1.6;
-}
-
-.av-prose > * + * {
-  margin-top: 1em;
-}
-
-.av-prose > :is(h1, h2, h3, h4, h5, h6) + * {
-  margin-top: 0.5em;
-}
-
-.av-prose > * + :is(h2, h3, h4) {
-  margin-top: 1.5em;
-}
-
-.av-prose h1 {
-  font-size: var(--av-text-3xl);
-}
-
-.av-prose h2 {
-  font-size: var(--av-text-2xl);
-}
-
-.av-prose h3 {
-  font-size: var(--av-text-xl);
-}
-
-.av-prose h4,
-.av-prose h5,
-.av-prose h6 {
-  font-size: var(--av-text-lg);
-}
-
-.av-prose a {
-  color: var(--av-accent);
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
-}
-
-.av-prose strong {
-  font-weight: 700;
-}
-
-.av-prose ul,
-.av-prose ol {
-  padding-inline-start: 1.5em;
-}
-
-.av-prose li + li {
-  margin-top: 0.35em;
-}
-
-.av-prose img,
-.av-prose video,
-.av-prose iframe {
-  border-radius: var(--av-radius-media);
-}
-
-.av-prose iframe {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  height: auto;
-}
-
-.av-prose blockquote {
-  padding-inline-start: var(--av-space-4);
-  border-inline-start: 3px solid var(--av-accent);
-  font-style: italic;
-  color: var(--av-fg-muted);
-}
-
-.av-prose hr {
-  margin: 2em 0;
-}
-
-.av-prose table {
-  font-size: var(--av-text-sm);
-}
-
-/* Liquid wraps merchant tables in .av-prose__table (a focusable, labelled
-   region) so wide size charts scroll sideways while keeping table semantics. */
-.av-prose__table {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.av-prose__table > table {
-  min-width: 100%;
-}
-
-.av-prose th,
-.av-prose td {
-  padding: var(--av-space-2) var(--av-space-3);
-  border-bottom: 1px solid var(--av-border);
-  text-align: start;
-}
-
-.av-prose th {
-  font-weight: 600;
-}
-
-.av-prose code {
-  font-family: ui-monospace, monospace;
-  font-size: 0.9em;
-  padding: 0.1em 0.35em;
-  background: rgb(var(--av-fg-rgb) / 0.06);
-  border-radius: 4px;
-}
-
-.av-prose pre {
-  padding: var(--av-space-4);
-  overflow-x: auto;
-  background: rgb(var(--av-fg-rgb) / 0.06);
-  border-radius: var(--av-radius-box);
-}
-
-.av-prose--sm {
-  font-size: var(--av-text-sm);
-}
-
-.av-prose--lg {
-  font-size: var(--av-text-lg);
-}
-
+/* 13. Rich text --------------------------------------------------------------
+   Short merchant rich text (section subheadings, footer and text blocks, FAQ answers). Long-form prose
+   (.av-prose: pages, articles, product descriptions, tabs, popups, size charts) lives in assets/anvil-prose.css,
+   loaded by the sections and snippets that render it. */
 .av-rte {
   font-size: var(--av-text-md);
   line-height: 1.6;
@@ -1581,41 +1459,7 @@ select.av-dropdown--underline {
   display: none;
 }
 
-/* 16. Country rule overlay (snippets/anvil-security) ------------------------ */
-.av-country-block {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: grid;
-  place-items: center;
-  padding: var(--av-gutter);
-  overflow: auto;
-}
-
-.av-country-block__card {
-  width: 100%;
-  max-width: 32rem;
-  text-align: center;
-  display: grid;
-  gap: var(--av-space-4);
-  justify-items: center;
-}
-
-.av-country-block__logo {
-  width: var(--av-logo-w);
-  height: auto;
-}
-
-.av-country-block__title {
-  font-family: var(--av-font-heading);
-  font-weight: var(--av-heading-weight);
-  font-size: var(--av-text-2xl);
-  line-height: 1.1;
-}
-
-.av-is-blocked body > :not(.av-country-block) {
-  display: none;
-}
+/* 16. Country rule overlay: assets/anvil-security.css (loaded only while it covers the page) */
 
 /* 17. Breakpoint utilities -------------------------------------------------- */
 @media (min-width: 480px) {

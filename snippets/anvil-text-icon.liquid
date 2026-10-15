@@ -1,0 +1,53 @@
+{% doc %}
+  One reassurance line: an icon from anvil-icon, or an uploaded image instead, and a short text, optionally on a
+  background pill. Shared by the product page's text_icon block and the cart drawer's text_icon block
+  (WAVE1-CONTRACTS §6). The icon is decorative; the text carries the meaning. Renders nothing when the text is blank.
+  Loads assets/anvil-pb-trust.css (repeated links to one URL are fetched once).
+
+  @param {string} text - The line; inline rich text (bold, italic, links) is printed as given
+  @param {string} [icon] - anvil-icon name; ignored when image is set or when 'none'
+  @param {object} [image] - Image object drawn instead of the icon (decorative, alt="")
+  @param {string} [size] - sm | md (default md)
+  @param {boolean} [pill] - Draw a background pill behind the line
+  @param {string} [tone] - Pill look: subtle | accent | outline (default subtle)
+  @param {string} [shape] - Pill corners: pill | soft | square (default pill)
+  @param {string} [class] - Extra classes on the root
+
+  @example
+  {% render 'anvil-text-icon', icon: 'truck', text: block.settings.text, size: 'sm', pill: true %}
+{% enddoc %}
+{%- liquid
+  assign ti_size = 'md'
+  assign ti_px = 24
+  if size == 'sm'
+    assign ti_size = 'sm'
+    assign ti_px = 20
+  endif
+  assign ti_px_2x = ti_px | times: 2
+  assign ti_widths = ti_px | append: ', ' | append: ti_px_2x
+  assign ti_sizes = ti_px | append: 'px'
+  assign ti_class = 'av-text-icon av-text-icon--' | append: ti_size
+  if pill
+    assign ti_class = ti_class | append: ' av-text-icon--bg'
+    if tone == 'accent' or tone == 'outline'
+      assign ti_class = ti_class | append: ' av-text-icon--' | append: tone
+    endif
+    if shape == 'soft' or shape == 'square'
+      assign ti_class = ti_class | append: ' av-text-icon--' | append: shape
+    endif
+  endif
+  if class != blank
+    assign ti_class = ti_class | append: ' ' | append: class
+  endif
+-%}
+{%- if text != blank -%}
+  {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+  <div class="{{ ti_class }}" style="--av-text-icon-size: {{ ti_px }}px;">
+    {%- if image != blank -%}
+      {{ image | image_url: width: ti_px_2x | image_tag: widths: ti_widths, sizes: ti_sizes, loading: 'lazy', alt: '', class: 'av-text-icon__img' }}
+    {%- elsif icon != blank and icon != 'none' -%}
+      {%- render 'anvil-icon', name: icon, size: ti_px, class: 'av-text-icon__icon' -%}
+    {%- endif -%}
+    <span class="av-text-icon__text">{{ text }}</span>
+  </div>
+{%- endif -%}

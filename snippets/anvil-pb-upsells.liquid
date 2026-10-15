@@ -1,0 +1,114 @@
+{% # theme-check-disable UnusedDocParam %}
+{% doc %}
+  Product block "Product upsells" (upsells): a short list of compact product cards (snippets/anvil-product-card-mini)
+  with one-tap add for single-variant products. Source: up to four products picked by the merchant, or Shopify's
+  product recommendations (related or complementary) loaded by assets/anvil-commerce.js (<anvil-upsells>) from
+  routes.product_recommendations_url with section_id=anvil-upsell-row. "Hide products already in the cart" hides them
+  on load and after every cart change; the block disappears when nothing is left. "Products shown" caps both
+  sources; with "hide products already in the cart" the recommendations request asks for more (the limit plus the
+  number of cart lines, at most 10), so hidden products do not shorten the list. Complementary recommendations need
+  the Search & Discovery app; with none configured the block stays hidden.
+  form_id and current_variant are passed by the dispatcher (WAVE1-CONTRACTS §1) and not needed here.
+
+  @param {object} product - The product; excluded from the list and the recommendations anchor
+  @param {object} block - This block
+  @param {object} section - The product section
+  @param {string} form_id - Id of the section's product form
+  @param {object} [current_variant] - The variant the section opened with
+{% enddoc %}
+{% # theme-check-enable UnusedDocParam %}
+{%- liquid
+  assign bs = block.settings
+  assign upsell_limit = bs.upsell_limit | default: 3
+  assign upsell_intent = bs.upsell_intent | default: 'related'
+  assign hide_in_cart = bs.upsell_hide_in_cart
+  assign in_cart = cart.items | map: 'product_id' | uniq | join: ','
+  assign in_cart_list = in_cart | split: ','
+  assign heading_id = 'av-upsells-' | append: section.id | append: '-' | append: block.id
+  assign shown = 0
+  assign manual_count = 0
+  if bs.upsell_source == 'manual'
+    for item in bs.upsell_products limit: 4
+      if item.id != product.id
+        assign manual_count = manual_count | plus: 1
+        assign item_id = item.id | append: ''
+        unless hide_in_cart and in_cart_list contains item_id
+          assign shown = shown | plus: 1
+        endunless
+      endif
+    endfor
+  endif
+  assign recs_limit = upsell_limit
+  if hide_in_cart
+    assign recs_limit = upsell_limit | plus: cart.items.size | at_most: 10
+  endif
+  assign recs_url = routes.product_recommendations_url | append: '?section_id=anvil-upsell-row&product_id=' | append: product.id | append: '&limit=' | append: recs_limit | append: '&intent=' | append: upsell_intent
+  assign heading = bs.upsell_heading | strip
+-%}
+{%- if bs.upsell_source == 'manual' and manual_count == 0 -%}
+  {%- if request.design_mode -%}
+    {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+    <div class="av-upsells" {{ block.shopify_attributes }}>
+      {%- if heading != blank -%}
+        <h2 class="av-upsells__heading">{{ heading | escape }}</h2>
+      {%- endif -%}
+      <ul class="av-upsells__list" role="list">
+        <li class="av-upsells__item">{%- render 'anvil-product-card-mini', source_tag: 'upsell' -%}</li>
+        <li class="av-upsells__item">{%- render 'anvil-product-card-mini', source_tag: 'upsell' -%}</li>
+      </ul>
+      <p class="av-editor-note">{{ 'anvil.editor.upsells_empty' | t }}</p>
+    </div>
+  {%- endif -%}
+{%- elsif product != blank -%}
+  {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+  <anvil-upsells
+    class="av-upsells{% unless bs.upsell_show_price %} av-upsells--no-price{% endunless %}"
+    limit="{{ upsell_limit }}"
+    data-anvil-product="{{ product.id }}"
+    data-anvil-in-cart="{{ in_cart }}"
+    {% if hide_in_cart %}
+      hide-in-cart
+    {% endif %}
+    {% if bs.upsell_source == 'manual' %}
+      {% if shown == 0 %}
+        hidden
+      {% endif %}
+    {% else %}
+      url="{{ recs_url }}" hidden
+    {% endif %}
+    {{ block.shopify_attributes }}
+  >
+    {%- if heading != blank -%}
+      <h2 class="av-upsells__heading" id="{{ heading_id }}">{{ heading | escape }}</h2>
+    {%- endif -%}
+    <ul class="av-upsells__list" role="list" data-anvil-upsell-list{% if heading != blank %} aria-labelledby="{{ heading_id }}"{% endif %}>
+      {%- if bs.upsell_source == 'manual' -%}
+        {%- assign listed = 0 -%}
+        {%- for item in bs.upsell_products limit: 4 -%}
+          {%- if item.id == product.id or listed >= upsell_limit -%}
+            {%- continue -%}
+          {%- endif -%}
+          {%- assign item_id = item.id | append: '' -%}
+          {%- liquid
+            assign item_hidden = false
+            if hide_in_cart and in_cart_list contains item_id
+              assign item_hidden = true
+            else
+              assign listed = listed | plus: 1
+            endif
+          -%}
+          <li
+            class="av-upsells__item"
+            data-anvil-product-id="{{ item.id }}"
+            {% if item_hidden %}
+              hidden
+            {% endif %}
+          >
+            {%- render 'anvil-product-card-mini', product: item, show_price: bs.upsell_show_price, button: 'add', source_tag: 'upsell' -%}
+          </li>
+        {%- endfor -%}
+      {%- endif -%}
+    </ul>
+  </anvil-upsells>
+  <script type="module" src="{{ 'anvil-commerce.js' | asset_url }}"></script>
+{%- endif -%}

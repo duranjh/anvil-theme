@@ -1,0 +1,159 @@
+{
+  "type": "collapsible_tab",
+  "name": "Collapsible tab",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Details",
+      "info": "When empty, the chosen page's title is used."
+    },
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "Icon",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "file-text",
+          "label": "Document"
+        },
+        {
+          "value": "info",
+          "label": "Information"
+        },
+        {
+          "value": "truck",
+          "label": "Truck"
+        },
+        {
+          "value": "package",
+          "label": "Package"
+        },
+        {
+          "value": "rotate-ccw",
+          "label": "Return arrow"
+        },
+        {
+          "value": "shield-check",
+          "label": "Shield"
+        },
+        {
+          "value": "ruler",
+          "label": "Ruler"
+        },
+        {
+          "value": "shirt",
+          "label": "Shirt"
+        },
+        {
+          "value": "scissors",
+          "label": "Scissors"
+        },
+        {
+          "value": "droplet",
+          "label": "Drop"
+        },
+        {
+          "value": "leaf",
+          "label": "Leaf"
+        },
+        {
+          "value": "recycle",
+          "label": "Recycle"
+        },
+        {
+          "value": "sparkles",
+          "label": "Sparkles"
+        },
+        {
+          "value": "heart",
+          "label": "Heart"
+        },
+        {
+          "value": "star",
+          "label": "Star"
+        },
+        {
+          "value": "gift",
+          "label": "Gift"
+        },
+        {
+          "value": "credit-card",
+          "label": "Card"
+        },
+        {
+          "value": "clock",
+          "label": "Clock"
+        },
+        {
+          "value": "globe",
+          "label": "Globe"
+        },
+        {
+          "value": "help-circle",
+          "label": "Question"
+        },
+        {
+          "value": "message-circle",
+          "label": "Chat"
+        },
+        {
+          "value": "mail",
+          "label": "Mail"
+        },
+        {
+          "value": "lock",
+          "label": "Lock"
+        },
+        {
+          "value": "award",
+          "label": "Award"
+        },
+        {
+          "value": "tag",
+          "label": "Tag"
+        },
+        {
+          "value": "box",
+          "label": "Box"
+        },
+        {
+          "value": "wrench",
+          "label": "Wrench"
+        },
+        {
+          "value": "book-open",
+          "label": "Book"
+        },
+        {
+          "value": "check-circle",
+          "label": "Check"
+        }
+      ],
+      "default": "none"
+    },
+    {
+      "type": "richtext",
+      "id": "content",
+      "label": "Content",
+      "default": "<p>Example: materials, care and fit. Replace this with details that are true for this product.</p>"
+    },
+    {
+      "type": "page",
+      "id": "page",
+      "label": "Page",
+      "info": "Its content shows after the text above, for example shipping or returns details you keep on one page."
+    },
+    {
+      "type": "checkbox",
+      "id": "open",
+      "label": "Open by default",
+      "default": false
+    }
+  ]
+}

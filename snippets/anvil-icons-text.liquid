@@ -1,0 +1,103 @@
+{% doc %}
+  Trust row: items made of an icon (anvil-icon, or an uploaded image instead), a short label and a line of text, in a
+  grid whose column count follows the width of the space it sits in (container query at 440 px), so one row fits a
+  phone, the buy column and the cart drawer. Labels are not headings (CONVENTIONS §3). Items with neither label nor
+  text are skipped; nothing renders when every item is empty. Shared by the product page's icons_text block and the
+  cart drawer's icons_text block (WAVE1-CONTRACTS §6). Loads assets/anvil-pb-trust.css.
+
+  Liquid cannot build an array of objects from literals, so the items arrive in one of two shapes:
+  - settings: a settings object holding the slot ids item_1_icon, item_1_image, item_1_heading, item_1_text, and so
+    on up to item_4_*. Both icons_text blocks use these ids. A block passed as items is read the same way.
+  - items: an array of objects or blocks exposing icon, image, heading and text, directly or under .settings, for
+    example section.blocks | where: 'type', 'trust_item' (at most 12 are drawn).
+
+  @param {object} [items] - Array of item objects or blocks, or a block whose settings use the slot ids
+  @param {object} [settings] - Settings object holding item_N_icon, item_N_image, item_N_heading, item_N_text (N = 1–4)
+  @param {string} [columns_mobile] - Columns in a narrow space: 1 to 4 (default 2)
+  @param {string} [columns] - Columns when the space is 440 px or wider: 1 to 4 (default 4)
+  @param {string} [layout] - stacked (icon above the words) | inline (icon beside them) (default stacked)
+  @param {string} [align] - left | center (default center when stacked, left when inline)
+  @param {string} [class] - Extra classes on the root
+
+  @example
+  {% render 'anvil-icons-text', settings: block.settings, columns_mobile: block.settings.columns_mobile, columns: block.settings.columns %}
+{% enddoc %}
+{%- liquid
+  assign it_cols_m = columns_mobile | default: 2
+  assign it_cols = columns | default: 4
+  assign it_inline = false
+  if layout == 'inline'
+    assign it_inline = true
+  endif
+  assign it_left = false
+  if align == 'left'
+    assign it_left = true
+  elsif align == blank and it_inline
+    assign it_left = true
+  endif
+  assign it_px = 28
+  if it_inline
+    assign it_px = 24
+  endif
+  assign it_px_2x = it_px | times: 2
+  assign it_widths = it_px | append: ', ' | append: it_px_2x
+  assign it_sizes = it_px | append: 'px'
+
+  assign it_use_array = false
+  assign it_count = 4
+  if items.first != blank
+    assign it_use_array = true
+    assign it_count = items.size | at_most: 12
+  endif
+  assign it_src = settings
+  if it_src == blank and it_use_array == false
+    assign it_src = items.settings | default: items
+  endif
+
+  capture it_html
+    for i in (1..it_count)
+      if it_use_array
+        assign it_index = i | minus: 1
+        assign it_item = items[it_index]
+        assign it_icon = it_item.icon | default: it_item.settings.icon
+        assign it_image = it_item.image | default: it_item.settings.image
+        assign it_heading = it_item.heading | default: it_item.settings.heading
+        assign it_text = it_item.text | default: it_item.settings.text
+      else
+        assign it_key = 'item_' | append: i | append: '_icon'
+        assign it_icon = it_src[it_key]
+        assign it_key = 'item_' | append: i | append: '_image'
+        assign it_image = it_src[it_key]
+        assign it_key = 'item_' | append: i | append: '_heading'
+        assign it_heading = it_src[it_key]
+        assign it_key = 'item_' | append: i | append: '_text'
+        assign it_text = it_src[it_key]
+      endif
+      if it_heading == blank and it_text == blank
+        continue
+      endif
+      echo '<li class="av-icons-text__item">'
+      if it_image != blank
+        echo it_image | image_url: width: it_px_2x | image_tag: widths: it_widths, sizes: it_sizes, loading: 'lazy', alt: '', class: 'av-icons-text__img'
+      elsif it_icon != blank and it_icon != 'none'
+        render 'anvil-icon', name: it_icon, size: it_px, class: 'av-icons-text__icon'
+      endif
+      echo '<div class="av-icons-text__body">'
+      if it_heading != blank
+        assign it_heading = it_heading | escape
+        echo '<p class="av-icons-text__heading">' | append: it_heading | append: '</p>'
+      endif
+      if it_text != blank
+        echo '<div class="av-icons-text__text">' | append: it_text | append: '</div>'
+      endif
+      echo '</div></li>'
+    endfor
+  endcapture
+  assign it_html = it_html | strip
+-%}
+{%- if it_html != blank -%}
+  {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+  <div class="av-icons-text{% if it_inline %} av-icons-text--inline{% endif %}{% if it_left %} av-icons-text--left{% endif %}{% if class != blank %} {{ class }}{% endif %}" style="--av-icons-text-cols-m: {{ it_cols_m }}; --av-icons-text-cols: {{ it_cols }}; --av-icons-text-size: {{ it_px }}px;">
+    <ul class="av-icons-text__list" role="list">{{ it_html }}</ul>
+  </div>
+{%- endif -%}

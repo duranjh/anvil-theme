@@ -1,0 +1,23 @@
+{
+  "type": "share",
+  "name": "Share",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Label",
+      "default": "Share"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_icon",
+      "label": "Show icon",
+      "default": true
+    },
+    {
+      "type": "paragraph",
+      "content": "Opens the device's share sheet, or copies the product link where there is none. The link never carries the visitor's ad or tracking parameters."
+    }
+  ]
+}

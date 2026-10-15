@@ -1,0 +1,69 @@
+{% # theme-check-disable UnusedDocParam %}
+{% doc %}
+  Product block "Gifts on quantity" (quantity_gifts): tells the shopper that adding N of this product brings a gift,
+  and renders the gift rule assets/anvil-gifts.js acts on (WAVE1-CONTRACTS §5):
+  {"key": "qty:<product id>:<N>", "trigger": "quantity", "productId", "min", "giftVariantId"}.
+  With N or more of this product in the cart (gift lines not counted) the engine adds one gift line carrying the
+  property _anvil_gift; below N it removes it; a shopper who removes the gift is not given it again this session.
+  The theme only adds the line. The merchant's Buy X Get Y automatic discount makes it free, and the drawer prints
+  "FREE" only when Shopify priced the line at zero. Nothing renders until a gift product with an available variant
+  is chosen. Not offered in the Featured product section. data-anvil-cart-count on the rule lets the engine skip its
+  first cart read when the cart is empty.
+  form_id and current_variant are passed by the dispatcher (WAVE1-CONTRACTS §1) and not needed here.
+
+  @param {object} product - The trigger product
+  @param {object} block - This block
+  @param {object} section - The product section; part of the element ids
+  @param {string} form_id - Id of the section's product form
+  @param {object} [current_variant] - The variant the section opened with
+{% enddoc %}
+{% # theme-check-enable UnusedDocParam %}
+{%- liquid
+  assign bs = block.settings
+  assign gift = bs.gift_product
+  assign gift_variant = nil
+  if gift != blank
+    assign position = bs.gift_variant_position | default: 1 | minus: 1 | at_least: 0
+    assign gift_variant = gift.variants[position] | default: gift.selected_or_first_available_variant
+  endif
+  assign gift_min = bs.gift_min_qty | default: 2 | at_least: 1
+  assign gift_key = 'qty:' | append: product.id | append: ':' | append: gift_min
+  assign note_id = 'av-gift-' | append: section.id | append: '-' | append: block.id
+  assign gift_text = bs.gift_label | strip | escape
+  if gift_text == blank
+    assign gift_text = 'anvil.product.gift_on_quantity' | t: count: '[count]', gift: '[gift]'
+  endif
+  assign gift_name = gift.title | escape
+  assign gift_text = gift_text | replace: '{{ count }}', '[count]' | replace: '{{count}}', '[count]' | replace: '{{ gift }}', '[gift]' | replace: '{{gift}}', '[gift]'
+  assign gift_text = gift_text | replace: '[count]', gift_min | replace: '[gift]', gift_name
+-%}
+{%- if product != blank and gift_variant != blank and gift_variant.available -%}
+  {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+  <div class="av-gift-note" id="{{ note_id }}" {{ block.shopify_attributes }}>
+    {%- if bs.gift_show_image -%}
+      {%- assign gift_image = gift_variant.featured_media.preview_image | default: gift.featured_media.preview_image -%}
+      <span class="av-gift-note__media">
+        {%- if gift_image != blank -%}
+          {{ gift_image | image_url: width: 112 | image_tag: widths: '56, 112', sizes: '56px', loading: 'lazy', alt: '', class: 'av-gift-note__img' }}
+        {%- else -%}
+          {%- render 'anvil-icon', name: 'gift', size: 24 -%}
+        {%- endif -%}
+      </span>
+    {%- else -%}
+      <span class="av-gift-note__icon">{%- render 'anvil-icon', name: 'gift', size: 20 -%}</span>
+    {%- endif -%}
+    <p class="av-gift-note__text">{{ gift_text }}</p>
+    <script type="application/json" data-anvil-gift-rule data-anvil-cart-count="{{ cart.item_count }}">
+      {
+        "key": {{ gift_key | json }},
+        "trigger": "quantity",
+        "productId": {{ product.id }},
+        "min": {{ gift_min }},
+        "giftVariantId": {{ gift_variant.id }}
+      }
+    </script>
+  </div>
+  <script type="module" src="{{ 'anvil-gifts.js' | asset_url }}"></script>
+{%- elsif request.design_mode -%}
+  <p class="av-editor-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.gift_empty' | t }}</p>
+{%- endif -%}

@@ -1,0 +1,96 @@
+{% doc %}
+  One row of payment icons. Source shop: the methods enabled in the store's admin (shop.enabled_payment_types) drawn
+  by Shopify's payment_type_svg_tag, optionally narrowed to the handles in filter and shown in the order typed.
+  Source custom: images the merchant uploaded, each with alt text. Anvil ships no payment or platform logos.
+  Renders nothing when there is no icon to show. Shared by the product page's payment_badges block and the cart
+  drawer (WAVE1-CONTRACTS §6). Loads assets/anvil-pb-trust.css.
+  payment_type_svg_tag writes fixed ids (<title id="pi-visa"> with aria-labelledby="pi-visa"), so two rows on one
+  page would repeat ARIA ids; with uid set, both the id and its reference become pi-<uid>-<type>.
+
+  Liquid cannot build an array of image objects from literals, so custom images arrive in one of two shapes:
+  - images: an array of image objects (for example section.blocks | map: 'settings' | map: 'image'); alt from each
+    image's own alt text
+  - settings: a settings object holding badge_image_1 to badge_image_6 and badge_alt_1 to badge_alt_6 (the product
+    block's ids; a drawer block that uses the same ids can pass its settings too)
+
+  @param {string} [source] - shop | custom (default shop)
+  @param {string} [filter] - Comma-separated payment type handles to keep, in display order (shop source)
+  @param {object} [images] - Array of image objects (custom source)
+  @param {object} [settings] - Settings object holding badge_image_N and badge_alt_N, N = 1–6 (custom source)
+  @param {string} [size] - sm | md | lg (default md)
+  @param {string} [align] - left | center | right (default left)
+  @param {string} [label] - Accessible name of the list (default "Payment methods")
+  @param {string} [class] - Extra classes on the list
+  @param {string} [uid] - Makes the icons' title ids unique on the page (for example the block id)
+
+  @example
+  {% render 'anvil-payment-badges', source: 'shop', size: 'sm', align: 'center' %}
+  {% render 'anvil-payment-badges', source: 'custom', settings: block.settings %}
+{% enddoc %}
+{%- liquid
+  assign pay_size = 'md'
+  assign pay_w = 84
+  if size == 'sm'
+    assign pay_size = 'sm'
+    assign pay_w = 64
+  elsif size == 'lg'
+    assign pay_size = 'lg'
+    assign pay_w = 104
+  endif
+  assign pay_w_2x = pay_w | times: 2
+  assign pay_widths = pay_w | append: ', ' | append: pay_w_2x
+  assign pay_sizes = pay_w | append: 'px'
+  assign pay_label = label
+  if pay_label == blank
+    assign pay_label = 'anvil.trust.payment_methods' | t
+  endif
+  assign pi_from = '"pi-'
+  assign pi_to = pi_from
+  if uid != blank
+    assign pi_to = '"pi-' | append: uid | append: '-'
+  endif
+
+  capture pay_items
+    if source == 'custom'
+      if images.first != blank
+        for pay_img in images limit: 12
+          assign pay_alt = pay_img.alt | default: ''
+          echo '<li class="av-payment-badges__item">'
+          echo pay_img | image_url: width: pay_w_2x | image_tag: widths: pay_widths, sizes: pay_sizes, loading: 'lazy', alt: pay_alt, class: 'av-payment-badges__img'
+          echo '</li>'
+        endfor
+      elsif settings != blank
+        for i in (1..6)
+          assign pay_key = 'badge_image_' | append: i
+          assign pay_img = settings[pay_key]
+          if pay_img != blank
+            assign pay_key = 'badge_alt_' | append: i
+            assign pay_alt = settings[pay_key] | default: pay_img.alt | default: ''
+            echo '<li class="av-payment-badges__item">'
+            echo pay_img | image_url: width: pay_w_2x | image_tag: widths: pay_widths, sizes: pay_sizes, loading: 'lazy', alt: pay_alt, class: 'av-payment-badges__img'
+            echo '</li>'
+          endif
+        endfor
+      endif
+    else
+      assign pay_types = shop.enabled_payment_types
+      if filter != blank
+        assign pay_types = filter | downcase | remove: ' ' | split: ',' | uniq
+      endif
+      for pay_type in pay_types
+        if shop.enabled_payment_types contains pay_type
+          echo '<li class="av-payment-badges__item">'
+          echo pay_type | payment_type_svg_tag: class: 'av-payment-badges__icon' | replace: pi_from, pi_to
+          echo '</li>'
+        endif
+      endfor
+    endif
+  endcapture
+  assign pay_items = pay_items | strip
+-%}
+{%- if pay_items != blank -%}
+  {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+  <ul class="av-payment-badges av-payment-badges--{{ pay_size }}{% if align == 'center' or align == 'right' %} av-payment-badges--{{ align }}{% endif %}{% if class != blank %} {{ class }}{% endif %}" role="list" aria-label="{{ pay_label | escape }}">
+    {{- pay_items -}}
+  </ul>
+{%- endif -%}

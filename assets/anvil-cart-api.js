@@ -15,10 +15,13 @@
  *   cartClear(opts)           → empty cart (attributes and note survive, per Shopify)
  *   CartError                 {status, message, description, body}; status 0 = network/config error
  *
- * opts: { sections: string[] (≤ 5 section ids rendered in the same response), source: string, signal: AbortSignal }
+ * opts: { sections: string[] (≤ 5 section ids rendered in the same response), source: string, signal: AbortSignal,
+ *         track: boolean (default true) }
  * Every mutation emits anvil:cart:updated {cart, sections, source} or anvil:cart:error {status, message,
  * description, source}. A response that lands after a newer mutation already finished is returned to its caller
- * but not emitted (monotonic sequence), so subscribers never render a stale cart.
+ * but not emitted (monotonic sequence), so subscribers never render a stale cart. `track: false` keeps a quiet save
+ * that re-renders nothing (order note, terms attribute) out of that sequence, so it can never make a line change's
+ * response count as stale; such a save is always emitted.
  * Routes come from window.Anvil.routes, read by Liquid name (cart_add_url) or camelCase alias (cartAdd); no path is
  * hard-coded. The cart JSON's `discount_codes` ([{code, applicable}]) is used by callers to tell an applied code from
  * an ignored one.
@@ -118,7 +121,7 @@ function post(name, payload, opts, source) {
       signal: opts.signal,
     },
     source,
-    true
+    opts.track !== false
   );
 }
 

@@ -1,0 +1,53 @@
+{% doc %}
+  Product block `popup` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with the
+  fixed arguments product, block, section, form_id and current_variant; it reads block and section.
+
+  A link that opens a page's content in <anvil-dialog> (native <dialog>, defined in assets/anvil-core.js: focus
+  moves in, Esc and the backdrop close it, focus returns to the opener). Progressive enhancement through
+  .av-enhance on the <anvil-dialog>: until the element is defined the trigger is a plain link to the page
+  (.av-fallback-only), afterwards it is a button with data-anvil-open (.av-enhanced-only). The dialog title is the
+  page title (h2, labelling the dialog). Renders nothing without a page, except an editor-only note.
+  Styles: assets/anvil-dialog.css (dialog surface, loaded here) and assets/anvil-pb-content.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign popup_page = s.page
+  assign dialog_id = 'av-pb-popup-' | append: section.id | append: '-' | append: block.id
+  assign title_id = dialog_id | append: '-title'
+  assign popup_label = s.label | strip | default: popup_page.title
+  assign popup_style = s.style | default: 'link'
+  assign popup_icon = s.icon
+  if popup_icon == 'none'
+    assign popup_icon = ''
+  endif
+-%}
+{%- if popup_page != blank -%}
+  {%- liquid
+    assign table_label = 'anvil.a11y.scroll_table' | t | escape
+    assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
+    assign popup_body = popup_page.content | replace: '<table', table_open | replace: '</table>', '</table></div>'
+    assign open_attrs = 'data-anvil-open="' | append: dialog_id | append: '" aria-haspopup="dialog" aria-expanded="false"'
+    assign trigger_label = popup_label | escape
+  -%}
+  {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+  {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+  {{ 'anvil-prose.css' | asset_url | stylesheet_tag }}
+  <anvil-dialog id="{{ dialog_id }}" class="av-pb-popup av-enhance" {{ block.shopify_attributes }}>
+    {%- render 'anvil-button', label: trigger_label, url: popup_page.url, style: popup_style, size: 'sm', icon: popup_icon, icon_first: true, class: 'av-pb-popup__trigger av-fallback-only' -%}
+    {%- render 'anvil-button', label: trigger_label, style: popup_style, size: 'sm', icon: popup_icon, icon_first: true, attrs: open_attrs, class: 'av-pb-popup__trigger av-enhanced-only' -%}
+    <dialog class="av-dialog av-dialog--sheet av-pb-popup__dialog" aria-labelledby="{{ title_id }}">
+      <button type="button" class="av-dialog__close" data-anvil-close aria-label="{{ 'anvil.a11y.close' | t | escape }}">
+        {%- render 'anvil-icon', name: 'x', size: 20 -%}
+      </button>
+      <h2 class="av-dialog__title" id="{{ title_id }}">{{ popup_page.title | escape }}</h2>
+      <div class="av-pb-popup__body av-prose">{{ popup_body }}</div>
+    </dialog>
+  </anvil-dialog>
+{%- elsif request.design_mode -%}
+  {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+  <p class="av-pb-popup__note" {{ block.shopify_attributes }}>{{ 'anvil.editor.popup_no_page' | t }}</p>
+{%- endif -%}

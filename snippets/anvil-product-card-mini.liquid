@@ -1,0 +1,93 @@
+{% doc %}
+  Compact product card for upsell lists (product block "Product upsells", the drawer's upsells block, the
+  recommendations section anvil-upsell-row): thumbnail, title, price and one action.
+  The card is <anvil-mini-card class="av-enhance"> from assets/anvil-commerce.js. With that module, a single-variant
+  product shows an Add button that adds one unit through cartAdd (drawer and bubble re-render, the drawer opens when
+  the theme setting says so). Without it (or for products with options, sold-out products and button: 'view') the
+  action is a link to the product. The card holds no <form>, so it is safe inside the drawer's cart form.
+  Hooks: data-anvil-product-id (upsell lists hide products already in the cart), [data-anvil-status] (live message),
+  data-anvil-focus-key="mini-<product id>" on the Add button (the drawer keeps focus there across a re-render).
+  Styles live in assets/anvil-pb-commerce.css; every list that shows cards loads it. A blank product renders an
+  example card.
+
+  @param {object} [product] - Product; blank renders an example card
+  @param {boolean} [show_price] - Show the price (default true)
+  @param {string} [button] - add | view (default add)
+  @param {string} [source_tag] - Where the card is shown, for example 'upsell' or 'drawer'; written as
+    data-anvil-source for scripts and analytics
+
+  @example
+  {% render 'anvil-product-card-mini', product: product, button: 'add', source_tag: 'upsell' %}
+{% enddoc %}
+{%- liquid
+  assign mini_price = true
+  if show_price == false
+    assign mini_price = false
+  endif
+  assign mini_button = button | default: 'add'
+  assign mini_action = 'link'
+  if product != blank
+    assign mini_variant = product.selected_or_first_available_variant
+    assign mini_image = product.featured_media.preview_image | default: product.featured_image
+    if product.available == false
+      assign mini_action = 'sold_out'
+    elsif mini_button == 'add'
+      if product.has_only_default_variant or product.variants.size == 1
+        assign mini_action = 'add'
+      endif
+    endif
+  endif
+-%}
+<anvil-mini-card
+  class="av-mini av-enhance"
+  {%- if product != blank %} data-anvil-product-id="{{ product.id }}"{% endif %}
+  {%- if source_tag != blank %} data-anvil-source="{{ source_tag | escape }}"{% endif %}
+>
+  {%- if product != blank -%}
+    <a class="av-mini__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+      {%- if mini_image != blank -%}
+        {{ mini_image | image_url: width: 192 | image_tag: widths: '96, 144, 192', sizes: '64px', loading: 'lazy', alt: '', class: 'av-mini__img' }}
+      {%- else -%}
+        {{ 'product-1' | placeholder_svg_tag: 'av-mini__img' }}
+      {%- endif -%}
+    </a>
+    <div class="av-mini__body">
+      <a class="av-mini__title" href="{{ product.url }}">{{ product.title | escape }}</a>
+      {%- if mini_price -%}
+        {%- render 'anvil-price', product: product, show_badge: false, size: 'sm', class: 'av-mini__price' -%}
+      {%- endif -%}
+    </div>
+    <div class="av-mini__action">
+      {%- case mini_action -%}
+        {%- when 'sold_out' -%}
+          <button class="av-btn av-btn--secondary av-btn--sm" type="button" disabled>{{ 'anvil.card.sold_out' | t }}</button>
+        {%- when 'add' -%}
+          <button class="av-btn av-btn--secondary av-btn--sm av-enhanced-only" type="button" data-anvil-mini-add="{{ mini_variant.id }}" data-anvil-focus-key="mini-{{ product.id }}">
+            {{- 'anvil.cart.add' | t -}}
+            <span class="av-visually-hidden">: {{ product.title | escape }}</span>
+          </button>
+          <a class="av-btn av-btn--secondary av-btn--sm av-fallback-only" href="{{ product.url }}">
+            {{- 'anvil.card.view' | t -}}
+            <span class="av-visually-hidden">: {{ product.title | escape }}</span>
+          </a>
+        {%- else -%}
+          <a class="av-btn av-btn--secondary av-btn--sm" href="{{ product.url }}">
+            {%- if mini_button == 'view' -%}{{ 'anvil.card.view' | t }}{%- else -%}{{ 'anvil.card.choose_options' | t }}{%- endif -%}
+            <span class="av-visually-hidden">: {{ product.title | escape }}</span>
+          </a>
+      {%- endcase -%}
+    </div>
+    <p class="av-mini__status" role="status" data-anvil-status></p>
+  {%- else -%}
+    <span class="av-mini__media">{{ 'product-1' | placeholder_svg_tag: 'av-mini__img' }}</span>
+    <div class="av-mini__body">
+      <span class="av-mini__title">{{ 'anvil.card.example_product' | t }}</span>
+      {%- if mini_price -%}
+        <div class="av-price av-price--sm av-mini__price"><span class="av-price__current">{% render 'anvil-money', amount: 1900 %}</span></div>
+      {%- endif -%}
+    </div>
+    <div class="av-mini__action">
+      <button class="av-btn av-btn--secondary av-btn--sm" type="button" disabled>{{ 'anvil.cart.add' | t }}</button>
+    </div>
+  {%- endif -%}
+</anvil-mini-card>

@@ -1,0 +1,113 @@
+{% doc %}
+  One offer card (DESIGN-money-path §B): a radio for one value of the option the cards drive, with its label,
+  caption, badge (shown only when the merchant ticked "backed by sales data"), benefit line, variant image, price,
+  compare-at strike-through and saving. The saving is compare_at_price minus price and exists only when the
+  compare-at price is higher; there is no manual savings field (docs/HONEST.md).
+  Rendered by snippets/anvil-offer-cards.liquid. offer_card is a data block, so the product block dispatcher never
+  renders it; called without a value this snippet prints nothing.
+  The radio belongs to no form and renders disabled: assets/anvil-product.js (<anvil-variant-picker>) enables it,
+  resolves the variant and refreshes the price, strike-through, saving and status of every card when another option
+  changes. The saving goes into plain-text locale strings, so the money markup is stripped of any HTML a store's
+  money format carries.
+
+  @param {object} [value] - product_option_value this card selects
+  @param {object} [card] - The offer_card block; blank for a card generated from the option value
+  @param {string} [name] - Radio group name
+  @param {number} [pos] - Position of the option the cards drive
+  @param {string} [current] - Name of that option's selected value
+  @param {string} [mode] - Savings display: amount | percent | both | none
+  @param {boolean} [show_image] - Show the variant image when the card allows it
+  @param {boolean} [hide_sold_out] - Hide the card while its value is sold out and not selected
+{% enddoc %}
+{%- if value != blank -%}
+  {%- liquid
+    assign variant = value.variant
+    assign cs = card.settings
+    assign label = cs.card_label | strip
+    if label == blank
+      assign label = value.name
+    endif
+    assign checked = false
+    if value.name == current
+      assign checked = true
+    endif
+    assign save = 0
+    if variant.compare_at_price != blank and variant.compare_at_price > variant.price
+      assign save = variant.compare_at_price | minus: variant.price
+    endif
+    assign save_text = ''
+    if save > 0 and mode != 'none'
+      capture save_money
+        render 'anvil-money', amount: save
+      endcapture
+      assign save_money = save_money | strip_html | strip
+      assign save_pct = save | times: 100 | divided_by: variant.compare_at_price
+      case mode
+        when 'percent'
+          assign save_text = 'anvil.product.you_save_percent' | t: percent: save_pct
+        when 'both'
+          assign save_text = 'anvil.product.you_save_both' | t: amount: save_money, percent: save_pct
+        else
+          assign save_text = 'anvil.product.you_save' | t: amount: save_money
+      endcase
+    endif
+    assign card_image = nil
+    if show_image and variant.featured_image
+      if card == blank or cs.card_show_image
+        assign card_image = variant.featured_image
+      endif
+    endif
+    assign badge = cs.card_badge | strip
+    if cs.card_badge_backed_by_sales != true
+      assign badge = ''
+    endif
+    assign is_hidden = false
+    if hide_sold_out and value.available == false and checked == false
+      assign is_hidden = true
+    endif
+  -%}
+  <label
+    class="av-offer-card{% unless value.available %} av-is-unavailable{% endunless %}"
+    data-anvil-card
+    data-anvil-value="{{ value.name | escape }}"
+    data-anvil-pos="{{ pos }}"
+    {%- if is_hidden %} hidden{% endif %}
+    {%- if card != blank %} {{ card.shopify_attributes }}{% endif %}
+  >
+    <input class="av-offer-card__input" type="radio" name="{{ name }}" value="{{ value.name | escape }}" data-anvil-option="{{ pos }}"{% if checked %} checked{% endif %} disabled>
+    <span class="av-offer-card__body">
+      {%- if badge != blank -%}
+        <span class="av-badge av-badge--accent av-offer-card__badge">{{ badge | escape }}</span>
+      {%- endif -%}
+      {%- if card_image -%}
+        <span class="av-offer-card__media" data-anvil-card-media>
+          {{- card_image | image_url: width: 160 | image_tag: widths: '80, 160', sizes: '56px', alt: '', class: 'av-offer-card__img' -}}
+        </span>
+      {%- endif -%}
+      <span class="av-offer-card__text">
+        <span class="av-offer-card__label">{{ label | escape }}</span>
+        {%- if cs.card_caption != blank -%}
+          <span class="av-offer-card__caption">{{ cs.card_caption | escape }}</span>
+        {%- endif -%}
+        {%- if cs.card_benefit != blank -%}
+          <span class="av-offer-card__benefit">{{ cs.card_benefit | escape }}</span>
+        {%- endif -%}
+      </span>
+      <span class="av-offer-card__price">
+        <span class="av-offer-card__now" data-anvil-card-price>
+          {%- if variant -%}{% render 'anvil-money', amount: variant.price %}{%- endif -%}
+        </span>
+        <s class="av-offer-card__compare" data-anvil-card-compare{% if save == 0 %} hidden{% endif %}>
+          <span class="av-visually-hidden">{{ 'anvil.price.regular_price' | t }}</span>
+          <span>{% if save > 0 %}{% render 'anvil-money', amount: variant.compare_at_price %}{% endif %}</span>
+        </s>
+        {%- if mode != 'none' -%}
+          <span class="av-offer-card__save" data-anvil-card-save{% if save_text == blank %} hidden{% endif %}>{{ save_text }}</span>
+        {%- endif -%}
+        <span class="av-offer-card__status" data-anvil-oos{% if value.available %} hidden{% endif %}>
+          {%- if variant -%}{{ 'anvil.product.sold_out' | t }}{%- else -%}{{ 'anvil.product.unavailable' | t }}{%- endif -%}
+        </span>
+      </span>
+    </span>
+  </label>
+{%- endif -%}

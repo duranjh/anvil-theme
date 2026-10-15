@@ -10,6 +10,9 @@
   "scripts": {
     "check": "shopify theme check --fail-level warning",
     "lint": "bash scripts/cleanroom-lint.sh && python3 scripts/asset-audit.py && python3 scripts/chassis-lint.py && bash scripts/check-limits.sh",
+    "test": "node --test 'tests/*.test.mjs'",
+    "blocks": "python3 scripts/sync-block-schemas.py",
+    "blocks:check": "python3 scripts/sync-block-schemas.py --check --strict",
     "gate": "bash scripts/gate.sh",
     "package": "bash scripts/package.sh",
     "a11y": "bash scripts/a11y.sh",

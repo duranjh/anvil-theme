@@ -7,11 +7,11 @@
   assign title = page_title
   if current_tags
     assign tag_label = current_tags | join: ', '
-    assign tags_text = 'general.meta.tags' | t: tags: tag_label
+    assign tags_text = 'anvil.meta.tags' | t: tags: tag_label
     assign title = title | append: ' – ' | append: tags_text
   endif
   if current_page and current_page > 1
-    assign page_text = 'general.meta.page' | t: page: current_page
+    assign page_text = 'anvil.meta.page' | t: page: current_page
     assign title = title | append: ' – ' | append: page_text
   endif
   unless page_title contains shop.name

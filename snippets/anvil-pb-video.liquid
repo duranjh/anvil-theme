@@ -1,0 +1,40 @@
+{% doc %}
+  Product block `video` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with the
+  fixed arguments product, block, section, form_id and current_variant; it reads block and section (the gallery width).
+
+  A Shopify-hosted video (video_tag) or a YouTube/Vimeo link (click-to-load facade, nothing loads before the tap)
+  through snippets/anvil-media. Autoplay applies to Shopify videos only: anvil-core.js plays them muted while in
+  view and only when the shopper allows motion; their controls stay visible so they can always be paused. The poster
+  image covers a YouTube/Vimeo facade; the title names the video for screen readers. Placeholder when empty.
+  Styles: assets/anvil-pb-content.css (media box styles live in assets/anvil-base.css).
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign video_title = s.title | strip
+  # The buy column is what the gallery leaves from 750 px (anvil-product.css), 45 % by default.
+  assign col_pct = 100 | minus: section.settings.layout_gallery_width
+  if col_pct < 20 or col_pct > 80
+    assign col_pct = 45
+  endif
+  assign poster_sizes = '(min-width: 750px) ' | append: col_pct | append: 'vw, 100vw'
+-%}
+{{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+<div class="av-pb-video" {{ block.shopify_attributes }}>
+  {%- render 'anvil-media',
+    video: s.video,
+    video_url: s.video_url,
+    image: s.poster,
+    ratio: s.ratio,
+    widths: '300, 450, 600, 800, 1100',
+    sizes: poster_sizes,
+    alt: video_title,
+    autoplay: s.autoplay,
+    loop: s.loop,
+    placeholder: 'lifestyle-1',
+    class: 'av-pb-video__media'
+  -%}
+</div>

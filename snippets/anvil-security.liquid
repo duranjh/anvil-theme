@@ -8,7 +8,8 @@
     Shopify Market country, not geo-IP) with the merchant's list and, on a
     match, covers the page with the merchant's message.
   Nothing runs in the theme editor; the country rule shows a note instead so
-  the merchant can keep editing.
+  the merchant can keep editing. The overlay loads assets/anvil-security.css (and anvil-prose.css for the
+  message) only when it renders, so stores without the rule never download them.
 {% enddoc %}
 {%- liquid
   assign blocked = false
@@ -34,6 +35,8 @@
       {{- 'anvil.security.country_rule_editor_note' | t: country: localization.country.name -}}
     </div>
   {%- else -%}
+    {{ 'anvil-security.css' | asset_url | stylesheet_tag }}
+    {{ 'anvil-prose.css' | asset_url | stylesheet_tag }}
     <div class="av-country-block av-scheme" role="alertdialog" aria-modal="true" aria-labelledby="av-country-block-title">
       <div class="av-country-block__card">
         {%- if settings.logo != blank -%}

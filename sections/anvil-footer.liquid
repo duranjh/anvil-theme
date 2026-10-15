@@ -210,7 +210,8 @@
         {%- if s.show_payment_icons and payment_types.size > 0 -%}
           <ul class="av-footer__payments av-list-reset{% if s.payment_filter != blank %} av-footer__payments--row{% endif %}" aria-label="{{ 'anvil.footer.payment_methods' | t }}">
             {%- for type in payment_types -%}
-              <li class="av-footer__payment">{{ type | payment_type_svg_tag: class: 'av-footer__payment-icon' }}</li>
+              {%- comment -%} The icons' fixed title ids get a footer prefix, so product page and drawer icons never repeat them. {%- endcomment -%}
+              <li class="av-footer__payment">{{ type | payment_type_svg_tag: class: 'av-footer__payment-icon' | replace: '"pi-', '"pi-footer-' }}</li>
             {%- endfor -%}
           </ul>
         {%- endif -%}

@@ -1,0 +1,101 @@
+{
+  "type": "variant_picker",
+  "name": "Variant picker",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "select",
+      "id": "picker_style",
+      "label": "Style",
+      "options": [
+        { "value": "dropdown", "label": "Dropdowns" },
+        { "value": "pills", "label": "Pills and swatches" },
+        { "value": "cards", "label": "Offer cards" }
+      ],
+      "default": "pills"
+    },
+    {
+      "type": "checkbox",
+      "id": "picker_hide_sold_out",
+      "label": "Hide sold-out values",
+      "default": false,
+      "info": "A value stays visible while it is selected, so a shopper arriving on a sold-out variant still sees what they picked."
+    },
+    {
+      "type": "checkbox",
+      "id": "pills_use_swatches",
+      "label": "Show colour swatches",
+      "default": true,
+      "info": "Uses the swatches set on your product options in Shopify, then the fallback list in Theme settings > Colour swatches. Values without either stay text pills."
+    },
+    {
+      "type": "text",
+      "id": "size_chart_option_name",
+      "label": "Size chart option",
+      "info": "Option name, for example Size. A size chart link appears next to it when this section also has a Size chart block with a page or image."
+    },
+    {
+      "type": "header",
+      "content": "Offer cards"
+    },
+    {
+      "type": "paragraph",
+      "content": "Add Offer card blocks to write each card's label, caption, badge and benefit line. Without them, one card per option value is generated."
+    },
+    {
+      "type": "select",
+      "id": "offer_cards_option",
+      "label": "Option shown as cards",
+      "options": [
+        { "value": "1", "label": "First option" },
+        { "value": "2", "label": "Second option" },
+        { "value": "3", "label": "Third option" }
+      ],
+      "default": "1",
+      "info": "The product's other options appear as pills under the cards. Falls back to the first option when a product has fewer options."
+    },
+    {
+      "type": "range",
+      "id": "offer_cards_preselect",
+      "label": "Card selected on load",
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "default": 0,
+      "info": "0 opens on the first available variant. A sold-out card is never preselected, and a link that names a variant (?variant=) always wins."
+    },
+    {
+      "type": "select",
+      "id": "offer_cards_savings",
+      "label": "Savings on cards",
+      "options": [
+        { "value": "amount", "label": "Amount" },
+        { "value": "percent", "label": "Percentage" },
+        { "value": "both", "label": "Amount and percentage" },
+        { "value": "none", "label": "None" }
+      ],
+      "default": "amount",
+      "info": "Computed from each variant's compare-at price, and shown only when it is higher than the price. Enter a compare-at price only if the item really sold at it; there is no manual savings field."
+    },
+    {
+      "type": "select",
+      "id": "offer_cards_image_source",
+      "label": "Card image",
+      "options": [
+        { "value": "variant", "label": "Variant image" },
+        { "value": "none", "label": "None" }
+      ],
+      "default": "variant"
+    },
+    {
+      "type": "select",
+      "id": "offer_cards_layout",
+      "label": "Card layout",
+      "options": [
+        { "value": "stack", "label": "One per row" },
+        { "value": "grid", "label": "Side by side" }
+      ],
+      "default": "stack"
+    }
+  ]
+}

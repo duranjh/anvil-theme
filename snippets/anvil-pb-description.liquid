@@ -1,0 +1,61 @@
+{% doc %}
+  Product block `description` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with
+  the fixed arguments product, block, section, form_id and current_variant; it reads product and block.
+
+  The product description, in full or collapsed. Collapsed shows the first words as plain text and a native
+  <details> whose summary reads "See more" / "See less"; opening it shows the full formatted description and hides
+  the preview (CSS :has), so it works without JavaScript. A description no longer than the preview is shown in
+  full. Tables are wrapped in a labelled, focusable scroll region. Renders nothing when the description is empty.
+  Styles: assets/anvil-pb-content.css and .av-prose in assets/anvil-prose.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign body = product.description | strip
+-%}
+{%- if body != blank -%}
+  {%- liquid
+    assign table_label = 'anvil.a11y.scroll_table' | t | escape
+    assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
+    assign body = body | replace: '<table', table_open | replace: '</table>', '</table></div>'
+
+    assign collapsed = false
+    if s.display == 'collapsed'
+      comment
+        A space before every tag keeps words from separate paragraphs or list items apart once the tags go.
+      endcomment
+      assign plain = product.description | replace: '<', ' <' | strip_html | strip
+      assign preview_words = s.preview_words | default: 40
+      assign preview = plain | truncatewords: preview_words, '…'
+      if preview.size < plain.size
+        assign collapsed = true
+      endif
+    endif
+
+    assign text_size = s.text_size | default: 'md'
+  -%}
+  {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+  {{ 'anvil-prose.css' | asset_url | stylesheet_tag }}
+  <div class="av-pb-description av-pb-description--{{ text_size }}" {{ block.shopify_attributes }}>
+    {%- if collapsed -%}
+      {%- comment -%}
+        Not escaped again: the description is HTML, so its text already carries entities (&amp;, &nbsp;) and no
+        tags survive strip_html; escaping would print them literally.
+      {%- endcomment -%}
+      <p class="av-pb-description__preview">{{ preview }}</p>
+      <details class="av-pb-description__details">
+        <summary class="av-pb-description__toggle">
+          <span class="av-pb-description__more">{{ 'anvil.product.see_more' | t }}</span>
+          <span class="av-pb-description__less">{{ 'anvil.product.see_less' | t }}</span>
+          {%- render 'anvil-icon', name: 'chevron-down', size: 16, class: 'av-pb-description__icon' -%}
+        </summary>
+        <div class="av-pb-description__full av-prose">{{ body }}</div>
+      </details>
+    {%- else -%}
+      <div class="av-pb-description__full av-prose">{{ body }}</div>
+    {%- endif -%}
+  </div>
+{%- endif -%}

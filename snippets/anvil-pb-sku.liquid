@@ -1,0 +1,33 @@
+{% doc %}
+  Product block `sku` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with the
+  fixed arguments product, block, section, form_id and current_variant.
+
+  The selected variant's SKU behind the merchant's label. The value is the bind target data-anvil-bind="sku", so
+  the variant picker rewrites it on every change; the line is its bind box, so for a variant without a SKU the
+  whole line (label included) is hidden, by the server and by the bind. The line is also a server-truth node (data-anvil-server-truth="sku-<section>-<block>"),
+  so the picker's Section Rendering fetch confirms it. Renders nothing when no variant of the product has a SKU.
+  Styles: assets/anvil-pb-content.css.
+
+  @param {object} product - The product; its first available variant stands in when current_variant is blank
+  @param {object} block - The sku block
+  @param {object} section - The product section; its id scopes the server-truth key
+  @param {string} form_id - The section's product form id; prefixes the line's id
+  @param {object} current_variant - The variant the shell selected (URL, preselected offer card or first available)
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign variant = current_variant
+  if variant == blank and product != blank
+    assign variant = product.selected_or_first_available_variant
+  endif
+  assign any_sku = product.variants | map: 'sku' | join: '' | strip
+-%}
+{%- if any_sku != blank -%}
+  {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+  <p class="av-pb-sku" id="{{ form_id }}-sku" data-anvil-server-truth="sku-{{ section.id }}-{{ block.id }}" data-anvil-bind-box{% if variant.sku == blank %} hidden{% endif %} {{ block.shopify_attributes }}>
+    {%- if s.label != blank -%}
+      <span class="av-pb-sku__label">{{ s.label | escape }}</span>{{ ' ' }}
+    {%- endif -%}
+    <span class="av-pb-sku__value" data-anvil-bind="sku">{{ variant.sku | escape }}</span>
+  </p>
+{%- endif -%}

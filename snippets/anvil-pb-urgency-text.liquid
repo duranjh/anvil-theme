@@ -1,0 +1,100 @@
+{% doc %}
+  Product block urgency_text ("Urgency text"). Two sources, and no visitor counter exists in either:
+  - inventory: "Only N left" from the selected variant's tracked inventory. It shows only when the variant's stock
+    is tracked (inventory_management not blank: Shopify or a fulfilment service whose counts sync to Shopify, the
+    same rule as the inventory block and the picker's JSON, DECISIONS 44) and 1 ≤ N ≤ the merchant's threshold;
+    untracked, sold-out and
+    well-stocked variants render nothing (an editor note explains why while editing). The node is always rendered
+    (hidden when empty). Its text span is the variant picker's "stock" bind (assets/anvil-product.js): the
+    template and threshold sit in data-anvil-tpl-low / data-anvil-threshold, so a variant change rewrites or hides
+    the line at once from the product JSON's tracked inventory, in Featured product too, and never leaves the
+    previous variant's count on screen. On the product page the node is also a server-truth node
+    (WAVE1-CONTRACTS §3) that the picker's Section Rendering fetch replaces with the server's render.
+  - text: the merchant's plain line, rendered as typed (escaped).
+
+  @param {object} product - The product; its first available variant stands in when current_variant is blank
+  @param {object} block - The urgency_text block
+  @param {object} section - The product section; its id scopes the server-truth key
+  @param {string} form_id - The product form id; prefixes the line's id
+  @param {object} current_variant - The variant the shell selected (URL, preselected card or first available)
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign ut_class = 'av-pb-urgency-text av-pb-urgency-text--' | append: s.urgency_size
+  if s.urgency_tone == 'error' or s.urgency_tone == 'accent'
+    assign ut_class = ut_class | append: ' av-pb-urgency-text--' | append: s.urgency_tone
+  endif
+  capture ut_icon
+    if s.urgency_icon == 'dot'
+      echo '<span class="av-pb-urgency-text__dot" aria-hidden="true"></span>'
+    elsif s.urgency_icon != blank and s.urgency_icon != 'none'
+      render 'anvil-icon', name: s.urgency_icon, size: 20, class: 'av-pb-urgency-text__icon'
+    endif
+  endcapture
+
+  if s.urgency_source == 'text'
+    assign ut_plain = s.urgency_plain | strip
+  else
+    assign ut_variant = current_variant | default: product.selected_or_first_available_variant
+    assign ut_qty = ut_variant.inventory_quantity | default: 0
+    assign ut_show = false
+    assign ut_note = ''
+    if ut_variant.available
+      assign ut_state = 'in_stock'
+    else
+      assign ut_state = 'sold_out'
+    endif
+    if ut_variant == blank
+      assign ut_note = 'anvil.editor.urgency_no_variant' | t
+    elsif ut_variant.inventory_management == blank
+      assign ut_note = 'anvil.editor.untracked_inventory' | t
+    elsif ut_qty < 1
+      assign ut_note = 'anvil.editor.urgency_no_stock' | t
+    elsif ut_qty > s.urgency_threshold
+      assign ut_note = 'anvil.editor.urgency_above_threshold' | t: stock: ut_qty, threshold: s.urgency_threshold
+    else
+      assign ut_show = true
+      assign ut_state = 'low_stock'
+    endif
+    if ut_show
+      assign ut_count_html = '<strong>' | append: ut_qty | append: '</strong>'
+      assign ut_text = s.urgency_text | default: '[count]' | escape | replace: '[count]', ut_count_html
+    endif
+  endif
+-%}
+{%- if s.urgency_source == 'text' -%}
+  {%- if ut_plain != blank -%}
+    {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+    <p class="{{ ut_class }}" {{ block.shopify_attributes }}>
+      {{- ut_icon -}}
+      <span class="av-pb-urgency-text__text">{{ ut_plain | escape }}</span>
+    </p>
+  {%- elsif request.design_mode -%}
+    <p class="av-pb-urgency-text" {{ block.shopify_attributes }}><span class="av-example-note">{{ 'anvil.editor.block_empty' | t }}</span></p>
+  {%- endif -%}
+{%- else -%}
+  {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+  <p
+    class="{{ ut_class }}"
+    id="{{ form_id }}-urgency-{{ block.id }}"
+    data-anvil-server-truth="urgency-{{ section.id }}-{{ block.id }}"
+    data-anvil-bind-box
+    data-state="{{ ut_state }}"
+    {% unless ut_show or request.design_mode %}hidden{% endunless %}
+    {{ block.shopify_attributes }}
+  >
+    {{- ut_icon -}}
+    <span
+      class="av-pb-urgency-text__text"
+      data-anvil-bind="stock"
+      data-anvil-strong
+      data-anvil-threshold="{{ s.urgency_threshold }}"
+      data-anvil-tpl-low="{{ s.urgency_text | default: '[count]' | escape }}"
+    >
+      {%- if ut_show -%}{{ ut_text }}{%- endif -%}
+    </span>
+    {%- if ut_show == false and request.design_mode -%}
+      <span class="av-example-note">{{ ut_note }}</span>
+    {%- endif -%}
+  </p>
+{%- endif -%}

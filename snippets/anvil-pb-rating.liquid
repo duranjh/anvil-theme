@@ -1,0 +1,44 @@
+{% doc %}
+  Product block rating ("Rating stars"): stars, the number and the review count from the product's standard review
+  metafields, which review apps write: reviews.rating (value.rating on value.scale_max) and reviews.rating_count.
+  Renders nothing when the product has no rating (an editor note explains it while editing); nothing here is typed by
+  the merchant (docs/HONEST.md). Optionally links to the anchor of the reviews section or app block.
+  Called by the product block dispatcher with product, block, section, form_id and current_variant
+  (WAVE1-CONTRACTS §1); it reads product and block. The arguments are described in prose
+  rather than as LiquidDoc parameters because Theme Check requires every declared parameter to be used.
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign rt = product.metafields.reviews.rating.value
+  assign rt_px = 18
+  if s.rating_size == 'sm'
+    assign rt_px = 14
+  elsif s.rating_size == 'lg'
+    assign rt_px = 22
+  endif
+  assign rt_anchor = s.rating_anchor | remove: '#' | strip
+-%}
+{%- if rt != blank and rt.rating != blank -%}
+  {%- liquid
+    assign rt_max = rt.scale_max | default: 5
+    assign rt_value = rt.rating | round: 1
+    assign rt_count = product.metafields.reviews.rating_count.value
+  -%}
+  {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+  <div class="av-pb-rating av-pb-rating--{{ s.rating_size }} av-align--{{ s.rating_align }}" {{ block.shopify_attributes }}>
+    {%- if rt_anchor != blank -%}<a class="av-pb-rating__inner" href="#{{ rt_anchor | escape }}">{%- else -%}<span class="av-pb-rating__inner">{%- endif -%}
+      {%- render 'anvil-stars', rating: rt.rating, max: rt_max, size: rt_px -%}
+      {%- if s.rating_show_number -%}
+        <span class="av-pb-rating__number" aria-hidden="true">{{ rt_value }}</span>
+      {%- endif -%}
+      {%- if s.rating_show_count and rt_count != blank and rt_count > 0 -%}
+        <span class="av-pb-rating__count" aria-hidden="true">({{ rt_count }})</span>
+        <span class="av-visually-hidden">{{ 'anvil.stars.count' | t: count: rt_count }}</span>
+      {%- endif -%}
+    {%- if rt_anchor != blank -%}</a>{%- else -%}</span>{%- endif -%}
+  </div>
+{%- elsif request.design_mode -%}
+  <div class="av-pb-rating" {{ block.shopify_attributes }}>
+    <p class="av-example-note">{{ 'anvil.editor.rating_missing' | t }}</p>
+  </div>
+{%- endif -%}

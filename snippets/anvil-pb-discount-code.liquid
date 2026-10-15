@@ -1,0 +1,84 @@
+{% # theme-check-disable UnusedDocParam %}
+{% doc %}
+  Product block "Discount code" (discount_code): a pill showing a code the merchant created under Discounts, with
+  a copy button (Clipboard API, then a fallback that copies or selects the code) or an apply link.
+  Apply without JavaScript is Shopify's discount URL, /discount/CODE?redirect=<this page>; with assets/anvil-commerce.js
+  it applies the code through Anvil.cart.applyDiscount, keeping the codes already on the cart, and reports
+  "That code is not valid for this cart" when Shopify does not accept it. The applied state comes from
+  cart.discount_applications (code discounts carry the code as their title) and then from cart.discount_codes.
+  Nothing renders without a code.
+  product, form_id and current_variant are passed by the dispatcher (WAVE1-CONTRACTS §1) and not needed here.
+
+  @param {object} product - The product
+  @param {object} block - This block
+  @param {object} section - The product section; part of the element ids
+  @param {string} form_id - Id of the section's product form
+  @param {object} [current_variant] - The variant the section opened with
+{% enddoc %}
+{% # theme-check-enable UnusedDocParam %}
+{%- liquid
+  assign bs = block.settings
+  assign code = bs.code | strip
+  assign code_mode = bs.code_mode | default: 'copy'
+  assign code_down = code | downcase
+  assign code_applied = false
+  for application in cart.discount_applications
+    if application.type == 'discount_code'
+      assign application_code = application.title | downcase
+      if application_code == code_down
+        assign code_applied = true
+      endif
+    endif
+  endfor
+  assign code_id = 'av-code-' | append: section.id | append: '-' | append: block.id
+  if routes.root_url == '/'
+    assign apply_url = '/discount/'
+  else
+    assign apply_url = routes.root_url | append: '/discount/'
+  endif
+  assign code_path = code | url_encode | replace: '+', '%20'
+  assign redirect_path = request.path | url_encode
+  assign apply_url = apply_url | append: code_path | append: '?redirect=' | append: redirect_path
+  assign described = ''
+  if bs.code_text != blank
+    assign described = ' aria-describedby="' | append: code_id | append: '-text"'
+  endif
+-%}
+{%- if code != blank -%}
+  {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+  <anvil-discount
+    class="av-discount av-discount--{{ code_mode }} av-enhance{% if code_applied %} av-is-applied{% endif %}"
+    code="{{ code | escape }}"
+    data-anvil-copied="{{ 'anvil.a11y.copied' | t }}"
+    {{ block.shopify_attributes }}
+  >
+    {%- if bs.code_text != blank -%}
+      <p class="av-discount__text" id="{{ code_id }}-text">{{ bs.code_text | escape }}</p>
+    {%- endif -%}
+    <div class="av-discount__row">
+      {%- render 'anvil-icon', name: 'tag', size: 18, class: 'av-discount__icon' -%}
+      <span class="av-discount__code" data-anvil-discount-code>{{ code | escape }}</span>
+      <span class="av-discount__applied">
+        {%- render 'anvil-icon', name: 'check', size: 16 -%}
+        {{- 'anvil.cart.code_applied' | t -}}
+      </span>
+      {%- if code_mode == 'apply' -%}
+        <a class="av-btn av-btn--secondary av-btn--sm av-discount__action" href="{{ apply_url }}" data-anvil-discount="apply"{{ described }}>
+          {{- 'anvil.cart.apply' | t -}}
+          <span class="av-visually-hidden">: {{ code | escape }}</span>
+        </a>
+      {%- else -%}
+        <button class="av-btn av-btn--secondary av-btn--sm av-discount__action av-enhanced-only" type="button" data-anvil-discount="copy"{{ described }}>
+          {%- render 'anvil-icon', name: 'copy', size: 16, class: 'av-discount__idle' -%}
+          {%- render 'anvil-icon', name: 'check', size: 16, class: 'av-discount__done' -%}
+          {{- 'anvil.a11y.copy' | t -}}
+          <span class="av-visually-hidden">: {{ code | escape }}</span>
+        </button>
+      {%- endif -%}
+    </div>
+    <p class="av-discount__status" role="status" data-anvil-status></p>
+  </anvil-discount>
+  <script type="module" src="{{ 'anvil-commerce.js' | asset_url }}"></script>
+{%- elsif request.design_mode -%}
+  <p class="av-editor-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.code_empty' | t }}</p>
+{%- endif -%}

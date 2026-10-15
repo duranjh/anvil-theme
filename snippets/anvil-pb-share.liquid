@@ -1,0 +1,36 @@
+{% doc %}
+  Product block `share` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with the
+  fixed arguments product, block, section, form_id and current_variant; it reads product and block.
+
+  One share button, <anvil-share> (assets/anvil-pb-content.js, loaded with a module script; the URL dedupes, so a
+  second share block does not load it twice). It opens the device's share sheet (navigator.share) and falls back
+  to copying the link, confirmed in a polite live region; when the clipboard is refused the link itself is shown
+  so it can be copied by hand. The shared link is the product's clean URL plus the selected ?variant=, never the
+  visitor's ad or tracking parameters. The button only works once the element is defined (.av-enhance /
+  .av-enhanced-only): without JavaScript nothing dead shows, and while the module loads its space is kept
+  (invisible) so the column does not shift. Styles: assets/anvil-pb-content.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign share_label = s.label | strip
+  if share_label == blank
+    assign share_label = 'anvil.product.share' | t
+  endif
+  assign share_url = request.origin | append: product.url
+  if product == blank
+    assign share_url = request.origin | append: routes.root_url
+  endif
+-%}
+{{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+<anvil-share class="av-pb-share av-enhance" data-anvil-url="{{ share_url | escape }}" data-anvil-title="{{ product.title | escape }}" data-anvil-copied="{{ 'anvil.product.copied' | t | escape }}" {{ block.shopify_attributes }}>
+  <button type="button" class="av-pb-share__btn av-enhanced-only">
+    {%- if s.show_icon -%}{%- render 'anvil-icon', name: 'share-2', size: 18 -%}{%- endif -%}
+    <span>{{ share_label | escape }}</span>
+  </button>
+  <span class="av-pb-share__status" role="status"></span>
+</anvil-share>
+<script type="module" src="{{ 'anvil-pb-content.js' | asset_url }}"></script>

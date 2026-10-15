@@ -1,0 +1,17 @@
+[
+  { "type": "header", "content": "Layout" },
+  { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+  { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+  { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+  { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+  { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+  { "type": "header", "content": "Columns" },
+  { "type": "select", "id": "layout_gallery_position", "label": "Gallery side on desktop", "options": [ {"value":"left","label":"Left"}, {"value":"right","label":"Right"} ], "default": "left", "info": "On phones the gallery always comes first, above the buy column." },
+  { "type": "range", "id": "layout_gallery_width", "label": "Gallery share of the width", "min": 40, "max": 60, "step": 5, "unit": "%", "default": 55, "info": "Applies from tablet width up; the buy column takes the rest." },
+  { "type": "select", "id": "layout_sticky", "label": "Keep in view while scrolling", "options": [ {"value":"info","label":"Buy column"}, {"value":"gallery","label":"Gallery"}, {"value":"none","label":"Nothing"} ], "default": "info", "info": "Desktop only. The shorter column stays in view while the taller one scrolls. A buy column taller than the screen shows its lower blocks only after the gallery has scrolled by, so pick Gallery when the buy column is long." },
+  { "type": "range", "id": "layout_block_gap", "label": "Space between blocks", "min": 0, "max": 40, "step": 4, "unit": "px", "default": 16 },
+  { "type": "checkbox", "id": "layout_mobile_bleed", "label": "Edge-to-edge gallery on phones", "default": false },
+  { "type": "header", "content": "Badge under the buy column" },
+  { "type": "image_picker", "id": "layout_trust_image", "label": "Badge image", "info": "Upload only artwork you own or are licensed to use, showing claims that are true for your store. Anvil ships no platform, review-site or payment logos. Describe the badge in the image's alt text." },
+  { "type": "range", "id": "layout_trust_width", "label": "Badge width", "min": 80, "max": 480, "step": 8, "unit": "px", "default": 240 }
+]

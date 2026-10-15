@@ -1,0 +1,43 @@
+{
+  "type": "quantity",
+  "name": "Quantity selector",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "select",
+      "id": "quantity_style",
+      "label": "Style",
+      "options": [
+        { "value": "stepper", "label": "Stepper" },
+        { "value": "tiers", "label": "Tier cards" }
+      ],
+      "default": "stepper",
+      "info": "Tier cards come from Quantity tier blocks; without any, the stepper shows. Both follow each variant's minimum, maximum and increment from Shopify."
+    },
+    {
+      "type": "checkbox",
+      "id": "quantity_show_label",
+      "label": "Show label",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "quantity_max",
+      "label": "Highest quantity",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "default": 0,
+      "info": "0 means no limit beyond the variant's own quantity rule. This only limits the selector; Shopify still enforces stock at checkout."
+    },
+    {
+      "type": "range",
+      "id": "quantity_tier_default",
+      "label": "Tier selected on load",
+      "min": 1,
+      "max": 5,
+      "step": 1,
+      "default": 1
+    }
+  ]
+}

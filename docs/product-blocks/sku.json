@@ -1,0 +1,13 @@
+{
+  "type": "sku",
+  "name": "SKU",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Label",
+      "default": "SKU:"
+    }
+  ]
+}

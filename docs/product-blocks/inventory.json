@@ -1,0 +1,58 @@
+{
+  "type": "inventory",
+  "name": "Inventory",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Counts come only from Shopify's tracked inventory. Nothing shows for variants whose inventory is not tracked."
+    },
+    {
+      "type": "range",
+      "id": "threshold",
+      "label": "Low-stock threshold",
+      "min": 1,
+      "max": 50,
+      "step": 1,
+      "default": 10,
+      "info": "The low-stock text shows when tracked stock is at or below this number."
+    },
+    {
+      "type": "text",
+      "id": "text_low",
+      "label": "Low-stock text",
+      "default": "Only [count] left in stock",
+      "info": "[count] becomes the real tracked quantity. Never type a number here."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_in_stock",
+      "label": "Show a message above the threshold",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "text_in",
+      "label": "In-stock text",
+      "default": "In stock"
+    },
+    {
+      "type": "text",
+      "id": "text_backorder",
+      "label": "Text when selling past zero",
+      "info": "Shown when tracked stock is at zero but the variant keeps selling (Continue selling when out of stock). Leave empty to show nothing; only promise a dispatch time you can keep."
+    },
+    {
+      "type": "text",
+      "id": "text_out",
+      "label": "Sold-out text",
+      "default": "Out of stock"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dot",
+      "label": "Show status dot",
+      "default": true
+    }
+  ]
+}

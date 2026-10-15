@@ -1,0 +1,49 @@
+{
+  "type": "description",
+  "name": "Description",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "select",
+      "id": "display",
+      "label": "Display",
+      "options": [
+        {
+          "value": "collapsed",
+          "label": "Collapsed with See more"
+        },
+        {
+          "value": "full",
+          "label": "Full"
+        }
+      ],
+      "default": "collapsed"
+    },
+    {
+      "type": "range",
+      "id": "preview_words",
+      "label": "Words shown before See more",
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "default": 40,
+      "info": "A description this short or shorter is shown in full."
+    },
+    {
+      "type": "select",
+      "id": "text_size",
+      "label": "Text size",
+      "options": [
+        {
+          "value": "sm",
+          "label": "Small"
+        },
+        {
+          "value": "md",
+          "label": "Medium"
+        }
+      ],
+      "default": "md"
+    }
+  ]
+}

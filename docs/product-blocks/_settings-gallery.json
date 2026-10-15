@@ -1,0 +1,114 @@
+[
+  { "type": "header", "content": "Gallery" },
+  {
+    "type": "select",
+    "id": "gallery_thumbs_desktop",
+    "label": "Thumbnails on desktop",
+    "options": [
+      { "value": "left", "label": "Left of the image" },
+      { "value": "bottom", "label": "Under the image" },
+      { "value": "hidden", "label": "None, arrows only" },
+      { "value": "stacked", "label": "None, stack every image" }
+    ],
+    "default": "bottom"
+  },
+  {
+    "type": "select",
+    "id": "gallery_thumbs_mobile",
+    "label": "Thumbnails on phones",
+    "options": [
+      { "value": "hidden", "label": "None" },
+      { "value": "bottom", "label": "Under the image" }
+    ],
+    "default": "hidden"
+  },
+  {
+    "type": "select",
+    "id": "gallery_pager_mobile",
+    "label": "Position marker on phones",
+    "options": [
+      { "value": "dots_under", "label": "Dots under the image" },
+      { "value": "dots_overlay", "label": "Dots on the image" },
+      { "value": "numeric", "label": "Counter, like 2 / 5" },
+      { "value": "hidden", "label": "None" }
+    ],
+    "default": "dots_under"
+  },
+  {
+    "type": "range",
+    "id": "gallery_mobile_peek",
+    "label": "Peek of the next image on phones",
+    "min": 0,
+    "max": 40,
+    "step": 4,
+    "unit": "px",
+    "default": 0,
+    "info": "Shows a sliver of the next image so shoppers can tell the gallery swipes."
+  },
+  {
+    "type": "select",
+    "id": "gallery_ratio",
+    "label": "Media shape",
+    "options": [
+      { "value": "adapt", "label": "Each image's own shape" },
+      { "value": "1:1", "label": "Square" },
+      { "value": "4:5", "label": "Portrait 4:5" },
+      { "value": "3:4", "label": "Portrait 3:4" }
+    ],
+    "default": "adapt",
+    "info": "A fixed shape fits the whole image inside the frame, so nothing is cropped."
+  },
+  {
+    "type": "select",
+    "id": "gallery_zoom",
+    "label": "Zoom",
+    "options": [
+      { "value": "none", "label": "Off" },
+      { "value": "hover", "label": "Magnify under the mouse" },
+      { "value": "lightbox", "label": "Open full screen" }
+    ],
+    "default": "lightbox",
+    "info": "The magnifier needs a mouse. On touch screens, and for keyboard users, the image opens full screen instead, where it can be pinched or zoomed."
+  },
+  {
+    "type": "checkbox",
+    "id": "gallery_variant_image_first",
+    "label": "Show the selected variant's image first",
+    "default": true
+  },
+  {
+    "type": "checkbox",
+    "id": "gallery_hide_other_variant_media",
+    "label": "Hide images of other variants",
+    "default": false,
+    "info": "An image belongs to a variant when it is that variant's image in the product admin. Images that belong to no variant always show."
+  },
+  { "type": "header", "content": "Product videos" },
+  {
+    "type": "checkbox",
+    "id": "gallery_video_autoplay",
+    "label": "Play videos automatically",
+    "default": false,
+    "info": "Videos play muted while on screen, and only for shoppers whose device does not ask for reduced motion. A pause control always stays available."
+  },
+  {
+    "type": "checkbox",
+    "id": "gallery_video_loop",
+    "label": "Loop videos",
+    "default": false
+  },
+  {
+    "type": "checkbox",
+    "id": "gallery_video_muted",
+    "label": "Start videos muted",
+    "default": true,
+    "info": "Videos that play automatically are always muted, because browsers block autoplay with sound."
+  },
+  {
+    "type": "checkbox",
+    "id": "gallery_video_controls",
+    "label": "Show video controls",
+    "default": true,
+    "info": "When off, one play and pause button replaces the player controls. YouTube and Vimeo videos keep their own player."
+  }
+]

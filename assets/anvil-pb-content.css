@@ -1,0 +1,375 @@
+/* anvil-pb-content.css — content blocks of the product section (snippets/anvil-pb-title, -price, -description,
+   -sku, -inventory, -share, -custom-liquid, -collapsible-tab, -popup, -complementary, -divider, -image, -video,
+   -link-button, -scroll-buttons). Loaded by each of those snippets with stylesheet_tag (same URL, fetched once).
+   Tokens only; mobile first; only transform/opacity animate, and only when motion is allowed.
+   Per-instance values arrive as inline custom properties: --av-pb-mt / --av-pb-mb (extra space above / below),
+   --av-pb-width (share of the column), --av-pb-thickness (divider). */
+
+/* Alignment shared by the blocks that offer it */
+.av-pb-align--center {
+  text-align: center;
+}
+
+.av-pb-align--right {
+  text-align: right;
+}
+
+/* Title ------------------------------------------------------------------- */
+.av-pb-title {
+  margin-block: var(--av-pb-mt, 0px) var(--av-pb-mb, 0px);
+}
+
+.av-pb-title__heading {
+  margin: 0;
+  font-size: var(--av-text-2xl);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.av-pb-title--sm .av-pb-title__heading {
+  font-size: var(--av-text-xl);
+}
+
+.av-pb-title--lg .av-pb-title__heading {
+  font-size: var(--av-text-3xl);
+}
+
+.av-pb-title--xl .av-pb-title__heading {
+  font-size: var(--av-text-4xl);
+}
+
+.av-pb-title--upper .av-pb-title__heading {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.av-pb-title__name {
+  margin: var(--av-space-1) 0 0;
+  font-size: var(--av-text-sm);
+  color: var(--av-fg-muted);
+}
+
+/* Price ------------------------------------------------------------------- */
+.av-pb-price {
+  display: grid;
+  gap: var(--av-space-1);
+}
+
+.av-pb-price .av-price--xl {
+  font-size: var(--av-text-2xl);
+}
+
+/* The picker hides the bound value; its wrapper (with the hidden label or the badge words) follows. */
+.av-pb-price__was:has(> [hidden]),
+.av-pb-price__badge:has([hidden]) {
+  display: none;
+}
+
+.av-pb-price__note {
+  margin: 0;
+  font-size: var(--av-text-xs);
+  color: var(--av-fg-muted);
+}
+
+.av-pb-price__note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* Description --------------------------------------------------------------- */
+.av-pb-description--sm .av-prose,
+.av-pb-description--sm .av-pb-description__preview {
+  font-size: var(--av-text-sm);
+}
+
+.av-pb-description__preview {
+  margin: 0;
+  font-size: var(--av-text-md);
+  line-height: 1.6;
+}
+
+.av-pb-description__preview:has(+ .av-pb-description__details[open]) {
+  display: none;
+}
+
+.av-pb-description__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--av-space-1);
+  min-height: 24px;
+  margin-top: var(--av-space-2);
+  font-size: var(--av-text-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.av-pb-description__details[open] > .av-pb-description__toggle {
+  margin: 0 0 var(--av-space-3);
+}
+
+.av-pb-description__details[open] .av-pb-description__more,
+.av-pb-description__details:not([open]) .av-pb-description__less {
+  display: none;
+}
+
+.av-pb-description__details[open] .av-pb-description__icon {
+  transform: rotate(180deg);
+}
+
+/* SKU ----------------------------------------------------------------------- */
+.av-pb-sku {
+  margin: 0;
+  font-size: var(--av-text-sm);
+  color: var(--av-fg-muted);
+}
+
+.av-pb-sku:has(.av-pb-sku__value:empty) {
+  display: none;
+}
+
+/* Inventory ----------------------------------------------------------------- */
+.av-pb-inventory {
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-2);
+  margin: 0;
+  font-size: var(--av-text-sm);
+}
+
+
+.av-pb-inventory__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--av-radius-swatch);
+  background: var(--av-fg-muted);
+}
+
+/* data-state comes from the server and from the variant picker's stock bind (WAVE1-CONTRACTS §10). */
+.av-pb-inventory[data-state="in_stock"] .av-pb-inventory__dot {
+  background: var(--av-success);
+}
+
+.av-pb-inventory[data-state="low_stock"] .av-pb-inventory__dot {
+  background: var(--av-accent);
+}
+
+.av-pb-inventory[data-state="sold_out"],
+.av-pb-inventory__note {
+  color: var(--av-fg-muted);
+}
+
+/* Share --------------------------------------------------------------------- */
+.av-pb-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--av-space-2) var(--av-space-3);
+}
+
+.av-pb-share__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--av-space-2);
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--av-text-sm);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+/* While the module loads (JavaScript on), the button keeps its space, invisible, so the column does not shift. */
+.js .av-pb-share:not(:defined) .av-pb-share__btn {
+  display: inline-flex;
+  visibility: hidden;
+}
+
+.av-pb-share__status {
+  font-size: var(--av-text-xs);
+  color: var(--av-fg-muted);
+  overflow-wrap: anywhere;
+}
+
+/* Custom Liquid and link button: no box when nothing renders ---------------- */
+.av-pb-custom-liquid:empty,
+.av-pb-link-button:empty {
+  display: none;
+}
+
+/* Collapsible tab ------------------------------------------------------------ */
+.av-pb-collapsible-tab {
+  display: block;
+  border-block: 1px solid var(--av-border);
+}
+
+.av-pb-collapsible-tab + .av-pb-collapsible-tab {
+  border-top-width: 0;
+}
+
+.av-pb-collapsible-tab__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-3);
+  min-height: 48px;
+  padding-block: var(--av-space-3);
+}
+
+.av-pb-collapsible-tab__icon,
+.av-pb-collapsible-tab__chevron {
+  flex: none;
+}
+
+.av-pb-collapsible-tab__heading {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: var(--av-text-md);
+  line-height: 1.3;
+}
+
+.av-pb-collapsible-tab__details[open] .av-pb-collapsible-tab__chevron {
+  transform: rotate(180deg);
+}
+
+.av-pb-collapsible-tab__content {
+  padding-bottom: var(--av-space-4);
+}
+
+/* Popup ---------------------------------------------------------------------- */
+.av-pb-popup {
+  display: block;
+}
+
+/* A text-link button keeps no button padding at any size (the size classes set padding after .av-btn--link). */
+.av-pb-popup .av-btn--link,
+.av-pb-link-button .av-btn--link,
+.av-pb-scroll-buttons .av-btn--link {
+  min-height: 24px;
+  padding: 0;
+}
+
+.av-pb-popup .av-btn--link {
+  font-size: var(--av-text-sm);
+  color: inherit;
+}
+
+.av-pb-popup__note,
+.av-pb-complementary__note {
+  margin: 0;
+  font-size: var(--av-text-xs);
+  color: var(--av-fg-muted);
+}
+
+/* Complementary products ---------------------------------------------------- */
+.av-pb-complementary {
+  display: block;
+}
+
+.av-pb-complementary__heading {
+  margin: 0 0 var(--av-space-3);
+  font-size: var(--av-text-md);
+  line-height: 1.3;
+}
+
+/* Divider -------------------------------------------------------------------- */
+.av-pb-divider {
+  box-sizing: border-box;
+  width: var(--av-pb-width, 100%);
+  max-width: 100%;
+  height: 0;
+  margin: var(--av-pb-mt, 0px) 0 var(--av-pb-mb, 0px);
+  border: 0;
+  border-top: var(--av-pb-thickness, 1px) solid var(--av-border);
+}
+
+.av-pb-divider--text {
+  border-top-color: var(--av-fg);
+}
+
+.av-pb-divider--accent {
+  border-top-color: var(--av-accent);
+}
+
+.av-pb-divider--dashed {
+  border-top-style: dashed;
+}
+
+.av-pb-divider--dotted {
+  border-top-style: dotted;
+}
+
+/* Image ---------------------------------------------------------------------- */
+.av-pb-image {
+  width: var(--av-pb-width, 100%);
+  max-width: 100%;
+}
+
+.av-pb-image__link {
+  display: block;
+  border-radius: var(--av-radius-media);
+}
+
+/* Blocks narrower than the column move with the alignment */
+.av-pb-divider.av-pb-align--center,
+.av-pb-image.av-pb-align--center {
+  margin-inline: auto;
+}
+
+.av-pb-divider.av-pb-align--right,
+.av-pb-image.av-pb-align--right {
+  margin-inline: auto 0;
+}
+
+/* Link button and scroll buttons --------------------------------------------- */
+.av-pb-link-button,
+.av-pb-scroll-buttons__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--av-space-2);
+}
+
+.av-pb-link-button.av-pb-align--center,
+.av-pb-scroll-buttons.av-pb-align--center .av-pb-scroll-buttons__list {
+  justify-content: center;
+}
+
+.av-pb-link-button.av-pb-align--right,
+.av-pb-scroll-buttons.av-pb-align--right .av-pb-scroll-buttons__list {
+  justify-content: flex-end;
+}
+
+.av-pb-scroll-buttons {
+  display: block;
+}
+
+.av-pb-scroll-buttons--stack .av-pb-scroll-buttons__list {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.av-pb-scroll-buttons--stack.av-pb-align--center .av-pb-scroll-buttons__list {
+  align-items: center;
+}
+
+.av-pb-scroll-buttons--stack.av-pb-align--right .av-pb-scroll-buttons__list {
+  align-items: flex-end;
+}
+
+.av-pb-scroll-buttons--fill .av-pb-scroll-buttons__item {
+  flex: 1 1 0;
+  min-width: max-content;
+}
+
+/* Motion: only the chevrons turn, and only when the shopper allows it --------- */
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-animations="off"]) .av-pb-collapsible-tab__chevron,
+  html:not([data-animations="off"]) .av-pb-description__icon {
+    transition: transform var(--av-dur) var(--av-ease);
+  }
+}

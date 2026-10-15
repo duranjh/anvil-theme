@@ -1,0 +1,132 @@
+{% doc %}
+  One cart line, shared by the cart drawer and the cart page: image, title, vendor, variant, line-item properties
+  (names that start with "_" stay hidden; a line carrying the _anvil_gift property shows a gift label instead),
+  selling plan, line-level discounts, the line price (struck through when a Shopify discount or, optionally, the
+  compare-at price is higher; "Free" only when Shopify prices the line at zero), a quantity stepper that posts
+  updates[<line key>] and a remove link. Quantities are keyed by line item key (Shopify's recommendation), so a
+  form rendered before another script changed the cart can never move a quantity onto a different line. Gift lines
+  get no stepper: a hidden input holds them at 1. Works as a plain form without JavaScript; <anvil-cart-form>
+  (assets/anvil-cart.js) enhances it. Render it inside a list (<ul>); styles live in assets/anvil-cart-drawer.css
+  (load it wherever lines render).
+
+  @param {object} item - The line item
+  @param {string} [form_id] - id of the cart form the inputs belong to (written as the form attribute)
+  @param {boolean} [show_image] - Show the line image (default true)
+  @param {boolean} [show_variant] - Show the variant title (default true)
+  @param {boolean} [show_vendor] - Show the vendor (default Theme settings > Cart > Show product vendors)
+  @param {boolean} [show_discounts] - List the line-level discounts (default true)
+  @param {boolean} [show_compare_at] - Strike through the compare-at price when it is higher (default false)
+  @param {boolean} [show_unit_price] - Show the price of one item when the quantity is above 1 (default false)
+  @param {string} [gift_label] - Label printed on gift lines (default "Gift")
+  @param {string} [size] - sm (drawer) | md (cart page), default md
+
+  @example
+  {% render 'anvil-cart-line', item: item, form_id: 'anvil-cart-form', size: 'md' %}
+{% enddoc %}
+{%- liquid
+  assign img_on = show_image | default: true, allow_false: true
+  assign variant_on = show_variant | default: true, allow_false: true
+  assign vendor_on = show_vendor | default: settings.cart_show_vendor, allow_false: true
+  assign discounts_on = show_discounts | default: true, allow_false: true
+  assign line_size = size | default: 'md'
+  assign default_gift = 'anvil.cart.gift' | t
+  assign gift_text = gift_label | default: default_gift
+  assign gift_key = item.properties['_anvil_gift']
+  assign is_gift = false
+  if gift_key != blank
+    assign is_gift = true
+  endif
+  assign form_attr = ''
+  if form_id != blank
+    assign form_attr = ' form="' | append: form_id | append: '"'
+  endif
+
+  assign was = 0
+  if item.original_line_price > item.final_line_price
+    assign was = item.original_line_price
+  endif
+  if show_compare_at and item.variant.compare_at_price > item.original_price
+    assign compare_line = item.variant.compare_at_price | times: item.quantity
+    if compare_line > was
+      assign was = compare_line
+    endif
+  endif
+
+  if line_size == 'sm'
+    assign img_sizes = '80px'
+  else
+    assign img_sizes = '(min-width: 750px) 120px, 88px'
+  endif
+-%}
+<li class="av-cart-line av-cart-line--{{ line_size }}{% if is_gift %} av-cart-line--gift{% endif %}{% unless img_on %} av-cart-line--no-media{% endunless %}" data-anvil-line="{{ item.key }}"{% if is_gift %} data-anvil-gift-key="{{ gift_key | escape }}"{% endif %}>
+  {%- if img_on -%}
+    {%- if item.image -%}
+      <a class="av-cart-line__media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+        {{- item.image | image_url: width: 240 | image_tag: widths: '80, 120, 160, 240', sizes: img_sizes, loading: 'lazy', alt: '', class: 'av-cart-line__img' -}}
+      </a>
+    {%- else -%}
+      <span class="av-cart-line__media" aria-hidden="true"></span>
+    {%- endif -%}
+  {%- endif -%}
+  <div class="av-cart-line__info">
+    {%- if is_gift -%}
+      <span class="av-cart-line__gift av-badge av-badge--accent">{% render 'anvil-icon', name: 'gift', size: 14 %}{{ gift_text | escape }}</span>
+    {%- endif -%}
+    <a class="av-cart-line__name" href="{{ item.url }}">{{ item.product.title | escape }}</a>
+    {%- if vendor_on and item.vendor != blank -%}
+      <p class="av-cart-line__meta">{{ item.vendor | escape }}</p>
+    {%- endif -%}
+    {%- if variant_on -%}
+      {%- unless item.product.has_only_default_variant -%}
+        <p class="av-cart-line__meta">{{ item.variant.title | escape }}</p>
+      {%- endunless -%}
+    {%- endif -%}
+    {%- for property in item.properties -%}
+      {%- assign prop_first = property.first | slice: 0 -%}
+      {%- if property.last != blank and prop_first != '_' -%}
+        <p class="av-cart-line__meta">{{ property.first | escape }}: {{ property.last | escape }}</p>
+      {%- endif -%}
+    {%- endfor -%}
+    {%- if item.selling_plan_allocation -%}
+      <p class="av-cart-line__meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</p>
+    {%- endif -%}
+    {%- if show_unit_price and item.quantity > 1 -%}
+      {%- capture unit_money -%}{% render 'anvil-money', amount: item.final_price %}{%- endcapture -%}
+      <p class="av-cart-line__meta">{{ 'anvil.product.per_unit_html' | t: price: unit_money }}</p>
+    {%- endif -%}
+    {%- if discounts_on -%}
+      {%- for allocation in item.line_level_discount_allocations -%}
+        <p class="av-cart-line__meta av-cart-line__discount">
+          {%- render 'anvil-icon', name: 'tag', size: 14 -%}
+          <span>{{ allocation.discount_application.title | escape }} (&minus;{% render 'anvil-money', amount: allocation.amount %})</span>
+        </p>
+      {%- endfor -%}
+    {%- endif -%}
+    <div class="av-cart-line__controls">
+      {%- if is_gift -%}
+        <input type="hidden" name="updates[{{ item.key }}]" value="1"{{ form_attr }} data-anvil-quantity>
+      {%- else -%}
+        <div class="av-qty av-cart-line__qty">
+          <button type="button" class="av-qty__btn av-enhanced-only" data-anvil-step="-1" data-anvil-focus-key="dec-{{ item.key }}" aria-label="{{ 'anvil.cart.decrease_for' | t: title: item.product.title }}">
+            {%- render 'anvil-icon', name: 'minus', size: 16 -%}
+          </button>
+          <input class="av-qty__input" type="number" name="updates[{{ item.key }}]" value="{{ item.quantity }}" min="0" inputmode="numeric"{{ form_attr }} aria-label="{{ 'anvil.cart.quantity_for' | t: title: item.product.title }}" data-anvil-quantity data-anvil-focus-key="qty-{{ item.key }}">
+          <button type="button" class="av-qty__btn av-enhanced-only" data-anvil-step="1" data-anvil-focus-key="inc-{{ item.key }}" aria-label="{{ 'anvil.cart.increase_for' | t: title: item.product.title }}">
+            {%- render 'anvil-icon', name: 'plus', size: 16 -%}
+          </button>
+        </div>
+      {%- endif -%}
+      <a class="av-cart-line__remove" href="{{ item.url_to_remove }}" data-anvil-remove data-anvil-focus-key="rm-{{ item.key }}" aria-label="{{ 'anvil.cart.remove_for' | t: title: item.product.title }}">{{ 'anvil.cart.remove' | t }}</a>
+    </div>
+    <p class="av-cart-line__error av-form-message av-form-message--error" data-anvil-line-error hidden></p>
+  </div>
+  <div class="av-cart-line__price">
+    {%- if was > item.final_line_price -%}
+      <s class="av-cart-line__was"><span class="av-visually-hidden">{{ 'anvil.price.regular_price' | t }}</span> {% render 'anvil-money', amount: was %}</s>
+    {%- endif -%}
+    <span class="av-cart-line__now">
+      {%- if was > item.final_line_price -%}<span class="av-visually-hidden">{{ 'anvil.price.sale_price' | t }} </span>{%- endif -%}
+      {%- if item.final_line_price == 0 -%}{{ 'anvil.cart.free' | t }}{%- else -%}{% render 'anvil-money', amount: item.final_line_price %}{%- endif -%}
+    </span>
+  </div>
+</li>

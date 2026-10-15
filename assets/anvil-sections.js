@@ -11,6 +11,9 @@
  *       exists the `#shopify-section-<id>` wrapper is used instead. The same lookup runs on the parsed response
  *       (falling back to its body). Keeps the focused control by `data-anvil-focus-key` (with its text selection),
  *       the window scroll offset and the scroll offsets of descendants marked `data-anvil-scroll="<key>"`.
+ *       Shopify subsets {% stylesheet %} CSS to the files rendered on the page and sends a re-rendered section's
+ *       CSS as <style data-section-stylesheet> in the response; since only the root's children are copied, every
+ *       such style is appended to <head> once (deduplicated by its text).
  *       Emits anvil:section:swapped {id, element}. Returns null when the target is not on the page.
  *
  * This module has no static imports: anvil-core.js loads every core module from its versioned asset URL, and
@@ -22,6 +25,8 @@ function emit(topic, detail) {
   document.dispatchEvent(new CustomEvent(topic, { detail }));
   return detail;
 }
+
+const styles = new Set();
 
 function wrapper(root, id) {
   return (
@@ -48,6 +53,13 @@ export function swapSection(id, html) {
   if (!target || typeof html !== 'string') return null;
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const source = wrapper(doc, id) || doc.body;
+  for (const style of doc.querySelectorAll('style[data-section-stylesheet]')) {
+    const css = style.textContent;
+    if (css.trim() && !styles.has(css)) {
+      styles.add(css);
+      document.head.append(style);
+    }
+  }
 
   const active = document.activeElement;
   const focusKey = target.contains(active) ? active.getAttribute('data-anvil-focus-key') : null;

@@ -1,0 +1,26 @@
+{% doc %}
+  Product block payment_badges ("Payment badges"): an optional line of text above one row of payment icons through
+  snippets/anvil-payment-badges, either the methods enabled in the admin (optionally filtered) or uploaded images
+  with alt text. Called by the product block dispatcher with product, block, section, form_id and current_variant
+  (WAVE1-CONTRACTS §1); it reads only block. The arguments are described in prose
+  rather than as LiquidDoc parameters because Theme Check requires every declared parameter to be used.
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  capture row
+    render 'anvil-payment-badges', source: s.badges_source, filter: s.badges_filter, settings: s, size: s.badges_size, align: s.badges_align, uid: block.id
+  endcapture
+  assign row = row | strip
+-%}
+{%- if row != blank -%}
+  <div class="av-pb-payment-badges av-align--{{ s.badges_align }}" {{ block.shopify_attributes }}>
+    {%- if s.badges_label != blank -%}
+      <p class="av-pb-payment-badges__label">{{ s.badges_label | escape }}</p>
+    {%- endif -%}
+    {{- row -}}
+  </div>
+{%- elsif request.design_mode -%}
+  <div class="av-pb-payment-badges" {{ block.shopify_attributes }}>
+    <p class="av-example-note">{{ 'anvil.editor.payment_badges_empty' | t }}</p>
+  </div>
+{%- endif -%}

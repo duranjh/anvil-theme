@@ -1,0 +1,75 @@
+{
+  "type": "upsells",
+  "name": "Product upsells",
+  "limit": 2,
+  "settings": [
+    {
+      "type": "text",
+      "id": "upsell_heading",
+      "label": "Heading",
+      "default": "Add to your order"
+    },
+    {
+      "type": "select",
+      "id": "upsell_source",
+      "label": "Products",
+      "options": [
+        {
+          "value": "recommendations",
+          "label": "Shopify recommendations"
+        },
+        {
+          "value": "manual",
+          "label": "Pick products"
+        }
+      ],
+      "default": "recommendations"
+    },
+    {
+      "type": "product_list",
+      "id": "upsell_products",
+      "label": "Picked products",
+      "limit": 4,
+      "info": "Used when Products is set to Pick products."
+    },
+    {
+      "type": "select",
+      "id": "upsell_intent",
+      "label": "Recommendation type",
+      "options": [
+        {
+          "value": "related",
+          "label": "Related"
+        },
+        {
+          "value": "complementary",
+          "label": "Complementary"
+        }
+      ],
+      "default": "related",
+      "info": "Complementary uses the products you pair in the Search & Discovery app; with none set, the block stays hidden.",
+      "visible_if": "{{ block.settings.upsell_source == 'recommendations' }}"
+    },
+    {
+      "type": "range",
+      "id": "upsell_limit",
+      "label": "Products shown",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "checkbox",
+      "id": "upsell_hide_in_cart",
+      "label": "Hide products already in the cart",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "upsell_show_price",
+      "label": "Show prices",
+      "default": true
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "type": "urgency_text",
+  "name": "Urgency text",
+  "settings": [
+    {"type": "select", "id": "urgency_source", "label": "Source", "options": [{"value": "inventory", "label": "Tracked inventory"}, {"value": "text", "label": "Plain text"}], "default": "inventory", "info": "Tracked inventory shows the selected variant's real stock and only when Shopify tracks it. There is no visitor counter."},
+    {"type": "range", "id": "urgency_threshold", "label": "Show at or below", "min": 1, "max": 50, "step": 1, "unit": "pcs", "default": 10, "visible_if": "{{ block.settings.urgency_source == 'inventory' }}", "info": "The line appears when the selected variant has this many or fewer in stock."},
+    {"type": "text", "id": "urgency_text", "label": "Stock text", "default": "Only [count] left in stock", "visible_if": "{{ block.settings.urgency_source == 'inventory' }}", "info": "[count] becomes the tracked stock of the selected variant. Never type a number here."},
+    {"type": "text", "id": "urgency_plain", "label": "Text", "default": "Example: order today, ships tomorrow — replace with something true", "visible_if": "{{ block.settings.urgency_source == 'text' }}", "info": "Shown as typed. Do not invent stock levels, viewer counts or deadlines."},
+    {"type": "select", "id": "urgency_icon", "label": "Icon", "options": [{"value": "none", "label": "None"}, {"value": "dot", "label": "Dot"}, {"value": "flame", "label": "Flame"}, {"value": "clock", "label": "Clock"}, {"value": "hourglass", "label": "Hourglass"}, {"value": "zap", "label": "Lightning"}, {"value": "alert-circle", "label": "Alert"}, {"value": "package", "label": "Package"}], "default": "dot", "info": "The dot pulses three times, only for shoppers who allow motion."},
+    {"type": "select", "id": "urgency_tone", "label": "Colour", "options": [{"value": "error", "label": "Error colour"}, {"value": "accent", "label": "Accent colour"}, {"value": "text", "label": "Text colour"}], "default": "error"},
+    {"type": "select", "id": "urgency_size", "label": "Size", "options": [{"value": "sm", "label": "Small"}, {"value": "md", "label": "Medium"}], "default": "md"}
+  ]
+}

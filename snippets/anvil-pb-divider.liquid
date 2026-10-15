@@ -1,0 +1,19 @@
+{% doc %}
+  Product block `divider` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with the
+  fixed arguments product, block, section, form_id and current_variant; it reads block.
+
+  A rule in the border, text or accent colour of the section's scheme, with its thickness, width, alignment and the
+  space above and below written as inline custom properties. Styles: assets/anvil-pb-content.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign divider_color = s.color | default: 'border'
+  assign divider_style = s.style | default: 'solid'
+  assign divider_align = s.align | default: 'left'
+-%}
+{{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+<hr class="av-pb-divider av-pb-divider--{{ divider_color }} av-pb-divider--{{ divider_style }} av-pb-align--{{ divider_align }}" style="--av-pb-thickness: {{ s.thickness | default: 1 }}px; --av-pb-width: {{ s.width | default: 100 }}%; --av-pb-mt: {{ s.space_top | default: 0 }}px; --av-pb-mb: {{ s.space_bottom | default: 0 }}px;" {{ block.shopify_attributes }}>

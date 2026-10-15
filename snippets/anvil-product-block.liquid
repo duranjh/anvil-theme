@@ -1,0 +1,110 @@
+{% doc %}
+  Product block dispatcher for sections/main-product.liquid and sections/anvil-featured-product.liquid.
+  Liquid's render tag takes only a literal name, so every block type has its own `when` and renders
+  snippets/anvil-pb-<type with hyphens>.liquid with the same five parameters (WAVE1-CONTRACTS §1).
+  Each block snippet prints {{ block.shopify_attributes }} on its own root element; this snippet adds no wrapper,
+  so a block that has nothing to show leaves no empty box and no gap in the buy column.
+
+  Not rendered here:
+  - offer_card and quantity_tier are data blocks: the variant picker and the quantity snippets read them from
+    section.blocks and render them in place.
+  - sticky_atc is rendered once by main-product after the grid (snippets/anvil-pb-sticky-atc.liquid).
+
+  The product form and block order: the sections render one form per section, id form_id
+  ('anvil-pf-' + section.id), at the position of the first buy_buttons block in the merchant's order. It holds the
+  hidden `id` input (data-anvil-variant-input), this snippet's buy_buttons output and, when that block's
+  show_dynamic_checkout setting is on, {{ form | payment_button }} (the form object exists only inside the
+  section's {% form %} tag, so a rendered snippet cannot print it). Every other control that posts (quantity,
+  custom fields, bundle rows, the sticky bar's button) sits outside the form with form="{{ form_id }}", so the
+  blocks above and below the buttons keep the order set in the editor and still post with JavaScript off. A
+  section without a buy_buttons block still renders the form, empty and hidden, at the end of the buy column, so
+  form="…" controls always find it. The buy_buttons snippet should give its submit button form="{{ form_id }}"
+  as well, which is harmless inside the form and keeps a second buy_buttons block working.
+
+  App blocks: the sections render '@app' blocks themselves with {% render block %} in the section file (an app
+  block then reads the section and the template's product from where it is rendered); the '@app' branch below
+  exists for any other caller.
+
+  @param {object} product - The product the section shows
+  @param {object} block - The section block to render
+  @param {object} section - The section, for reading sibling blocks and section settings
+  @param {string} form_id - Id of the section's product form; controls outside it post with form="{{ form_id }}"
+  @param {object} current_variant - The variant the page opened on (WAVE1-CONTRACTS §3)
+
+  @example
+  {% render 'anvil-product-block', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+{% enddoc %}
+{%- case block.type -%}
+  {%- when 'variant_picker' -%}
+    {% render 'anvil-pb-variant-picker', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'quantity' -%}
+    {% render 'anvil-pb-quantity', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'buy_buttons' -%}
+    {% render 'anvil-pb-buy-buttons', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'title' -%}
+    {% render 'anvil-pb-title', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'price' -%}
+    {% render 'anvil-pb-price', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'description' -%}
+    {% render 'anvil-pb-description', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'sku' -%}
+    {% render 'anvil-pb-sku', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'inventory' -%}
+    {% render 'anvil-pb-inventory', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'share' -%}
+    {% render 'anvil-pb-share', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'custom_liquid' -%}
+    {% render 'anvil-pb-custom-liquid', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'collapsible_tab' -%}
+    {% render 'anvil-pb-collapsible-tab', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'popup' -%}
+    {% render 'anvil-pb-popup', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'complementary' -%}
+    {% render 'anvil-pb-complementary', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'divider' -%}
+    {% render 'anvil-pb-divider', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'image' -%}
+    {% render 'anvil-pb-image', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'video' -%}
+    {% render 'anvil-pb-video', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'link_button' -%}
+    {% render 'anvil-pb-link-button', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'scroll_buttons' -%}
+    {% render 'anvil-pb-scroll-buttons', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'text_icon' -%}
+    {% render 'anvil-pb-text-icon', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'icons_text' -%}
+    {% render 'anvil-pb-icons-text', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'emoji_benefits' -%}
+    {% render 'anvil-pb-emoji-benefits', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'urgency_text' -%}
+    {% render 'anvil-pb-urgency-text', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'payment_badges' -%}
+    {% render 'anvil-pb-payment-badges', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'rating' -%}
+    {% render 'anvil-pb-rating', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'review_platform_badge' -%}
+    {% render 'anvil-pb-review-platform-badge', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'reviews_list' -%}
+    {% render 'anvil-pb-reviews-list', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'review_avatars' -%}
+    {% render 'anvil-pb-review-avatars', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'shipping_estimate' -%}
+    {% render 'anvil-pb-shipping-estimate', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'shipping_checkpoints' -%}
+    {% render 'anvil-pb-shipping-checkpoints', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'custom_field' -%}
+    {% render 'anvil-pb-custom-field', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'size_chart' -%}
+    {% render 'anvil-pb-size-chart', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'discount_code' -%}
+    {% render 'anvil-pb-discount-code', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'bundle_offer' -%}
+    {% render 'anvil-pb-bundle-offer', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'upsells' -%}
+    {% render 'anvil-pb-upsells', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when 'quantity_gifts' -%}
+    {% render 'anvil-pb-quantity-gifts', product: product, block: block, section: section, form_id: form_id, current_variant: current_variant %}
+  {%- when '@app' -%}
+    {% render block %}
+{%- endcase -%}

@@ -1,0 +1,125 @@
+{% doc %}
+  Product block `quantity` (DESIGN-money-path §D, SPEC §3.2), rendered by snippets/anvil-product-block.liquid with
+  product, block, section, form_id and current_variant.
+
+  <anvil-quantity> (assets/anvil-product.js) in one of two styles:
+  - stepper: a number input named quantity with form="<form_id>", so it posts without JavaScript; min, step and
+    max follow current_variant.quantity_rule (min, increment, max), capped by the block's quantity_max when set.
+    The minus and plus buttons are .av-enhanced-only and appear once the element is defined; at a limit they carry
+    aria-disabled="true" (not disabled, so a keyboard user pressing minus to the minimum keeps focus on it); the
+    script clamps typed values and re-applies the rule on every variant change.
+  - tiers: one card per quantity_tier block (snippets/anvil-pb-quantity-tier.liquid), each a radio named quantity
+    that posts the tier's quantity. Without tier blocks the stepper shows (with an editor hint). In the theme
+    editor a hidden red note (data-anvil-tier-warn) is filled by the script when the cart line's discount after
+    an add differs from the selected tier's promise.
+
+  @param {object} product - The product; its first available variant stands in when current_variant is blank
+  @param {object} block - The quantity block
+  @param {object} section - The product section; quantity_tier blocks are read from it
+  @param {string} form_id - Id of the section's product form; the quantity controls post with form="…"
+  @param {object} current_variant - The variant whose quantity rule and price the controls start from
+{% enddoc %}
+{%- liquid
+  assign bs = block.settings
+  assign variant = current_variant | default: product.selected_or_first_available_variant
+  assign rule = variant.quantity_rule
+  assign q_min = rule.min | default: 1
+  assign q_step = rule.increment | default: 1
+  assign q_max = rule.max | default: 0
+  assign cap = bs.quantity_max | default: 0
+  if cap > 0
+    if q_max == 0 or cap < q_max
+      assign q_max = cap
+    endif
+  endif
+  if q_max > 0 and q_max < q_min
+    assign q_max = q_min
+  endif
+
+  assign tier_blocks = section.blocks | where: 'type', 'quantity_tier'
+  assign use_tiers = false
+  if bs.quantity_style == 'tiers' and tier_blocks.size > 0
+    assign use_tiers = true
+  endif
+  assign qty_id = form_id | append: '-qty'
+  assign qty_label = 'anvil.product.quantity' | t
+  assign label_class = 'av-legend'
+  if bs.quantity_show_label == false
+    assign label_class = 'av-visually-hidden'
+  endif
+-%}
+{{ 'anvil-offer-cards.css' | asset_url | stylesheet_tag }}
+<anvil-quantity
+  class="av-quantity{% if use_tiers %} av-quantity--tiers{% else %} av-enhance{% endif %}"
+  form-id="{{ form_id }}"
+  section-id="{{ section.id }}"
+  {%- if cap > 0 %} cap="{{ cap }}"{% endif %}
+  {%- if use_tiers %} data-anvil-unit-tpl="{{ 'anvil.product.per_unit_html' | t: price: '[price]' | escape }}"{% endif %}
+  {{ block.shopify_attributes }}
+>
+  {%- if use_tiers -%}
+    {%- liquid
+      assign default_tier = bs.quantity_tier_default | default: 1
+      if default_tier > tier_blocks.size
+        assign default_tier = 1
+      endif
+    -%}
+    <fieldset class="av-offer-cards av-tiers">
+      <legend class="{{ label_class }}">{{ qty_label }}</legend>
+      <div class="av-offer-cards__list">
+        {%- for tier in tier_blocks -%}
+          {%- liquid
+            assign checked = false
+            if forloop.index == default_tier
+              assign checked = true
+            endif
+          -%}
+          {% render 'anvil-pb-quantity-tier',
+            tier: tier,
+            variant: variant,
+            form_id: form_id,
+            checked: checked,
+            q_min: q_min,
+            q_max: q_max,
+            q_step: q_step
+          %}
+        {%- endfor -%}
+      </div>
+      {%- if request.design_mode -%}
+        <p
+          class="av-form-message av-form-message--error av-tiers__warn"
+          role="status"
+          hidden
+          data-anvil-tier-warn
+          data-anvil-tpl="{{ 'anvil.editor.tier_mismatch' | t: title: '[title]', expected: '[expected]', actual: '[actual]' | escape }}"
+        ></p>
+      {%- endif -%}
+    </fieldset>
+  {%- else -%}
+    <label class="{{ label_class }}" for="{{ qty_id }}">{{ qty_label }}</label>
+    <div class="av-qty">
+      <button type="button" class="av-qty__btn av-enhanced-only" data-anvil-step="-1" aria-label="{{ 'anvil.cart.decrease' | t }}" aria-disabled="true">
+        {%- render 'anvil-icon', name: 'minus', size: 16 -%}
+      </button>
+      <input
+        class="av-qty__input"
+        id="{{ qty_id }}"
+        type="number"
+        name="quantity"
+        form="{{ form_id }}"
+        value="{{ q_min }}"
+        min="{{ q_min }}"
+        step="{{ q_step }}"
+        {%- if q_max > 0 %} max="{{ q_max }}"{% endif %}
+        inputmode="numeric"
+      >
+      <button type="button" class="av-qty__btn av-enhanced-only" data-anvil-step="1" aria-label="{{ 'anvil.cart.increase' | t }}"{% if q_max > 0 and q_max <= q_min %} aria-disabled="true"{% endif %}>
+        {%- render 'anvil-icon', name: 'plus', size: 16 -%}
+      </button>
+    </div>
+    {%- if request.design_mode and bs.quantity_style == 'tiers' -%}
+      <p class="av-example-note">{{ 'anvil.editor.no_tiers' | t }}</p>
+    {%- endif -%}
+  {%- endif -%}
+</anvil-quantity>
+<script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>

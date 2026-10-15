@@ -1,0 +1,157 @@
+{% doc %}
+  Product block `price` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with the
+  fixed arguments product, block, section, form_id and current_variant.
+
+  Price of the current variant with the bind targets of WAVE1-CONTRACTS §3, so the variant picker updates it at
+  once: data-anvil-bind="price", "compare" (struck through, hidden when there is no compare-at saving), and in the
+  badge "savings" (money) or "savings_percent" (a whole number rounded down, as on the offer cards, so a saving is
+  never overstated; the % sign and the words around it come from the locale string). The rest follows the variant
+  on the client too, so Featured product (where no server fetch runs) never shows another variant's state: the
+  hidden "Sale price" / "Price" labels and the text badge (binds sale / regular), the sale and sold-out classes
+  (price_state) and the unit price (unit, unit_ref). On the product page the whole block is also one server-truth
+  node (data-anvil-server-truth="price-<section>-<block>"), so after the picker's Section Rendering fetch the
+  server's version replaces it: market-priced money and the badge wording end up as Shopify renders them.
+  Savings come only from compare_at_price when it is higher than the price (docs/HONEST.md). The badge format
+  follows the block setting, or Theme settings > Badges when set to "theme". The tax and shipping note links the
+  shipping policy when the store has one. Money follows Theme settings > Currency (snippets/anvil-money).
+  Styles: assets/anvil-pb-content.css and the shared .av-price rules in assets/anvil-base.css.
+
+  @param {object} product - The product; its first available variant stands in when current_variant is blank
+  @param {object} block - The price block
+  @param {object} section - The product section; its id scopes the server-truth key
+  @param {string} form_id - The section's product form id; prefixes the price's id
+  @param {object} current_variant - The variant the shell selected (URL, preselected offer card or first available)
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign variant = current_variant
+  if variant == blank and product != blank
+    assign variant = product.selected_or_first_available_variant
+  endif
+-%}
+{%- if variant != blank -%}
+  {%- liquid
+    assign price_size = s.size | default: 'lg'
+    assign price = variant.price
+    assign compare = variant.compare_at_price | default: 0
+
+    assign on_sale = false
+    assign saved = 0
+    assign saved_pct = 0
+    if compare > price
+      assign on_sale = true
+      assign saved = compare | minus: price
+      assign saved_pct = saved | times: 100 | divided_by: compare
+    endif
+
+    capture price_money
+      render 'anvil-money', amount: price
+    endcapture
+    assign compare_money = ''
+    if on_sale
+      capture compare_money
+        render 'anvil-money', amount: compare
+      endcapture
+    endif
+
+    assign badge_format = s.badge | default: 'theme'
+    if badge_format == 'theme'
+      assign badge_format = settings.badge_sale_format | default: 'percent'
+    endif
+    assign badge_tpl = ''
+    assign badge_bind = ''
+    assign badge_value = ''
+    case badge_format
+      when 'amount'
+        assign badge_tpl = 'anvil.price.save_amount' | t: amount: 'ANVILVALUE'
+        assign badge_bind = 'savings'
+        if on_sale
+          capture badge_value
+            render 'anvil-money', amount: saved
+          endcapture
+        endif
+      when 'percent'
+        assign badge_tpl = 'anvil.price.save_percent' | t: percent: 'ANVILVALUE'
+        assign badge_bind = 'savings_percent'
+        if on_sale
+          assign badge_value = saved_pct
+        endif
+      when 'text'
+        assign badge_tpl = 'anvil.price.sale' | t
+    endcase
+    comment
+      The locale string is split around a sentinel so the bound number sits inside the translated words
+      ("Save 20%", "20 % de remise") and the picker only has to write the number.
+    endcomment
+    assign badge_parts = badge_tpl | split: 'ANVILVALUE'
+
+    assign price_classes = 'av-price av-price--' | append: price_size
+    if on_sale
+      assign price_classes = price_classes | append: ' av-price--sale'
+    endif
+    if variant.available == false
+      assign price_classes = price_classes | append: ' av-price--sold-out'
+    endif
+    assign unit = variant.unit_price_measurement
+    assign any_unit = false
+    for v in product.variants
+      if v.unit_price_measurement
+        assign any_unit = true
+        break
+      endif
+    endfor
+  -%}
+  {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+  <div class="av-pb-price" id="{{ form_id }}-price" data-anvil-server-truth="price-{{ section.id }}-{{ block.id }}" {{ block.shopify_attributes }}>
+    <div class="{{ price_classes }}" data-anvil-bind="price_state">
+      <span class="av-price__current">
+        <span class="av-visually-hidden" data-anvil-bind="sale"{% unless on_sale %} hidden{% endunless %}>{{ 'anvil.price.sale_price' | t }}</span>
+        <span class="av-visually-hidden" data-anvil-bind="regular"{% if on_sale %} hidden{% endif %}>{{ 'anvil.price.price' | t }}</span>
+        <span data-anvil-bind="price">{{ price_money | strip }}</span>
+      </span>
+      {%- if s.show_compare -%}
+        <span class="av-pb-price__was">
+          <span class="av-visually-hidden">{{ 'anvil.price.regular_price' | t }}</span>
+          <s class="av-price__compare" data-anvil-bind="compare"{% unless on_sale %} hidden{% endunless %}>{{ compare_money | strip }}</s>
+        </span>
+      {%- endif -%}
+      {%- if badge_bind != blank -%}
+        {%- comment -%}
+          One inner span: .av-badge is an inline-flex box with a gap, which would split "Save", the number and "%".
+        {%- endcomment -%}
+        <span class="av-badge av-badge--sale av-price__badge av-pb-price__badge">
+          <span>
+            {{- badge_parts[0] -}}
+            <span data-anvil-bind="{{ badge_bind }}"{% unless on_sale %} hidden{% endunless %}>{{ badge_value | strip }}</span>
+            {{- badge_parts[1] -}}
+          </span>
+        </span>
+      {%- elsif badge_tpl != blank -%}
+        <span class="av-badge av-badge--sale av-price__badge" data-anvil-bind="sale"{% unless on_sale %} hidden{% endunless %}>{{ badge_tpl }}</span>
+      {%- endif -%}
+      {%- if s.show_unit and any_unit -%}
+        <span class="av-price__unit" data-anvil-bind-box{% if unit == blank %} hidden{% endif %}>
+          <span class="av-visually-hidden">{{ 'anvil.price.unit_price' | t }}</span>
+          <span data-anvil-bind="unit">{% if unit != blank %}{% render 'anvil-money', amount: variant.unit_price %}{% endif %}</span>
+          <span aria-hidden="true">/</span><span class="av-visually-hidden">{{ 'anvil.price.per' | t }}</span>
+          <span data-anvil-bind="unit_ref">{% if unit != blank %}{% if unit.reference_value != 1 %}{{ unit.reference_value }}{% endif %}{{ unit.reference_unit }}{% endif %}</span>
+        </span>
+      {%- endif -%}
+    </div>
+    {%- if s.show_tax_note -%}
+      <p class="av-pb-price__note">
+        {%- if shop.shipping_policy.body != blank -%}
+          {%- if cart.taxes_included -%}
+            {{ 'anvil.product.tax_included_shipping_html' | t: link: shop.shipping_policy.url }}
+          {%- else -%}
+            {{ 'anvil.product.tax_shipping_html' | t: link: shop.shipping_policy.url }}
+          {%- endif -%}
+        {%- elsif cart.taxes_included -%}
+          {{ 'anvil.cart.taxes_included_note' | t }}
+        {%- else -%}
+          {{ 'anvil.cart.taxes_note' | t }}
+        {%- endif -%}
+      </p>
+    {%- endif -%}
+  </div>
+{%- endif -%}

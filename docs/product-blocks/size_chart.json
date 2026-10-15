@@ -1,0 +1,67 @@
+{
+  "type": "size_chart",
+  "name": "Size chart",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "select",
+      "id": "chart_source",
+      "label": "Chart source",
+      "options": [
+        {
+          "value": "page",
+          "label": "Page"
+        },
+        {
+          "value": "image",
+          "label": "Image"
+        }
+      ],
+      "default": "page"
+    },
+    {
+      "type": "page",
+      "id": "chart_page",
+      "label": "Page",
+      "info": "Used when the source is Page. Tables in the page scroll sideways on phones."
+    },
+    {
+      "type": "image_picker",
+      "id": "chart_image",
+      "label": "Image",
+      "visible_if": "{{ block.settings.chart_source == 'image' }}"
+    },
+    {
+      "type": "text",
+      "id": "chart_link_text",
+      "label": "Link text",
+      "info": "Leave blank for \"Size chart\"."
+    },
+    {
+      "type": "text",
+      "id": "chart_title",
+      "label": "Chart title",
+      "info": "Heading inside the chart window. Leave blank to use the page title or the link text."
+    },
+    {
+      "type": "select",
+      "id": "chart_icon",
+      "label": "Icon",
+      "options": [
+        {
+          "value": "ruler",
+          "label": "Ruler"
+        },
+        {
+          "value": "none",
+          "label": "None"
+        }
+      ],
+      "default": "ruler"
+    },
+    {
+      "type": "paragraph",
+      "content": "The variant picker can open this chart next to the option named in its size chart setting."
+    }
+  ]
+}

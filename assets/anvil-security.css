@@ -1,0 +1,39 @@
+/* Anvil country-rule overlay (Theme settings > Security)
+   Loaded by snippets/anvil-security.liquid only when the country rule covers the page for this shopper; the
+   right-click and shortcut toggles need no styles. The rule uses the shopper's Shopify Market country, not
+   geo-IP, and is cosmetic: it hides the page, it does not stop anyone reaching the store. */
+
+.av-country-block {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: var(--av-gutter);
+  overflow: auto;
+}
+
+.av-country-block__card {
+  width: 100%;
+  max-width: 32rem;
+  text-align: center;
+  display: grid;
+  gap: var(--av-space-4);
+  justify-items: center;
+}
+
+.av-country-block__logo {
+  width: var(--av-logo-w);
+  height: auto;
+}
+
+.av-country-block__title {
+  font-family: var(--av-font-heading);
+  font-weight: var(--av-heading-weight);
+  font-size: var(--av-text-2xl);
+  line-height: 1.1;
+}
+
+.av-is-blocked body > :not(.av-country-block) {
+  display: none;
+}

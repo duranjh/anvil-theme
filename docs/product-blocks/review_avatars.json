@@ -1,0 +1,17 @@
+{
+  "type": "review_avatars",
+  "name": "Review avatars",
+  "settings": [
+    {"type": "inline_richtext", "id": "avatars_text", "label": "Text", "default": "Example: loved by customers like you — replace with something you can back up", "info": "Do not type a number of customers or reviews. Turn on the review count below to show the count your review app records."},
+    {"type": "checkbox", "id": "avatars_show_count", "label": "Show the review count", "default": true, "info": "From the product's review count, filled in by your review app. Hidden when there is none."},
+    {"type": "checkbox", "id": "avatars_show_stars", "label": "Show rating stars", "default": false, "info": "From the product's review rating. Hidden when there is none."},
+    {"type": "select", "id": "avatars_size", "label": "Avatar size", "options": [{"value": "sm", "label": "Small"}, {"value": "md", "label": "Medium"}], "default": "md"},
+    {"type": "text_alignment", "id": "avatars_align", "label": "Alignment", "default": "left"},
+    {"type": "header", "content": "Avatars"},
+    {"type": "image_picker", "id": "avatar_1", "label": "Avatar 1", "info": "Use photos of real customers only with their permission, or neutral images."},
+    {"type": "image_picker", "id": "avatar_2", "label": "Avatar 2"},
+    {"type": "image_picker", "id": "avatar_3", "label": "Avatar 3"},
+    {"type": "image_picker", "id": "avatar_4", "label": "Avatar 4"},
+    {"type": "image_picker", "id": "avatar_5", "label": "Avatar 5"}
+  ]
+}

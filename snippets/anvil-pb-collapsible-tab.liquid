@@ -1,0 +1,54 @@
+{% doc %}
+  Product block `collapsible_tab` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid
+  with the fixed arguments product, block, section, form_id and current_variant; it reads block.
+
+  One accordion row: a native <details> inside <anvil-collapsible> (assets/anvil-core.js animates the height only
+  when motion is allowed; without JavaScript the <details> still opens and closes). The summary holds an optional
+  icon, the heading as an h2 (the next level under the product title's h1, so the outline never skips a level)
+  and a chevron. The body shows the rich text, then the chosen page's content; tables are wrapped in a labelled
+  scroll region. The heading falls back to the page title; a row with neither heading nor page title is skipped on
+  the storefront and shown with a placeholder in the editor. Adjacent rows share one border.
+  Styles: assets/anvil-pb-content.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign tab_heading = s.heading | strip
+  if tab_heading == blank and s.page != blank
+    assign tab_heading = s.page.title
+  endif
+  if tab_heading == blank and request.design_mode
+    assign tab_heading = 'anvil.editor.untitled_tab' | t
+  endif
+
+  assign table_label = 'anvil.a11y.scroll_table' | t | escape
+  assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
+  assign page_body = ''
+  if s.page != blank
+    assign page_body = s.page.content | replace: '<table', table_open | replace: '</table>', '</table></div>'
+  endif
+-%}
+{%- if tab_heading != blank -%}
+  {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+  {{ 'anvil-prose.css' | asset_url | stylesheet_tag }}
+  <anvil-collapsible class="av-pb-collapsible-tab" {{ block.shopify_attributes }}>
+    <details class="av-pb-collapsible-tab__details"{% if s.open %} open{% endif %}>
+      <summary class="av-pb-collapsible-tab__summary">
+        {%- if s.icon != blank and s.icon != 'none' -%}
+          {%- render 'anvil-icon', name: s.icon, size: 20, class: 'av-pb-collapsible-tab__icon' -%}
+        {%- endif -%}
+        <h2 class="av-pb-collapsible-tab__heading">{{ tab_heading | escape }}</h2>
+        {%- render 'anvil-icon', name: 'chevron-down', size: 20, class: 'av-pb-collapsible-tab__chevron' -%}
+      </summary>
+      <div class="av-pb-collapsible-tab__body">
+        <div class="av-pb-collapsible-tab__content av-prose">
+          {{- s.content -}}
+          {{- page_body -}}
+        </div>
+      </div>
+    </details>
+  </anvil-collapsible>
+{%- endif -%}

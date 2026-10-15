@@ -1,0 +1,49 @@
+{
+  "type": "buy_buttons",
+  "name": "Buy buttons",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "text",
+      "id": "atc_label",
+      "label": "Button label",
+      "info": "Leave blank for Add to cart."
+    },
+    {
+      "type": "text",
+      "id": "atc_sold_out_label",
+      "label": "Sold-out label",
+      "info": "Leave blank for Sold out."
+    },
+    {
+      "type": "select",
+      "id": "atc_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Primary" },
+        { "value": "accent", "label": "Accent" },
+        { "value": "secondary", "label": "Outline" }
+      ],
+      "default": "primary"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dynamic_checkout",
+      "label": "Show express checkout buttons",
+      "default": false,
+      "info": "Express buttons send shoppers straight to checkout, so they skip the cart drawer and never see upsells, gifts or the free-shipping bar."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_secure_line",
+      "label": "Show secure checkout line",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "atc_secure_text",
+      "label": "Secure line text",
+      "info": "Leave blank for Secure checkout. Keep it to facts about your checkout."
+    }
+  ]
+}

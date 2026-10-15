@@ -1,0 +1,44 @@
+{% doc %}
+  Product block `title` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with the
+  fixed arguments product, block, section, form_id and current_variant; it reads product, block and section.
+
+  The page heading: the product name, or the block's custom headline in its place, so the page keeps exactly one
+  h1. It is an h1 on product templates and an h2 in a section that picks its own product (Featured product, which
+  has a `product` setting), so a featured product never adds a second h1 to a page. With a custom headline the
+  product name can follow as a plain paragraph. A blank product (editor placeholder) shows the example name.
+  Styles: assets/anvil-pb-content.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign heading_tag = 'h2'
+  if template.name == 'product' and section.settings.product == blank
+    assign heading_tag = 'h1'
+  endif
+
+  if product == blank
+    assign product_name = 'anvil.card.example_product' | t
+  else
+    assign product_name = product.title
+  endif
+  assign headline = s.headline | strip_html | strip
+
+  assign title_size = s.size | default: 'md'
+  assign title_align = s.align | default: 'left'
+  assign title_classes = 'av-pb-title av-pb-title--' | append: title_size | append: ' av-pb-align--' | append: title_align
+  if s.uppercase
+    assign title_classes = title_classes | append: ' av-pb-title--upper'
+  endif
+-%}
+{{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+<div class="{{ title_classes }}" style="--av-pb-mt: {{ s.space_top | default: 0 }}px; --av-pb-mb: {{ s.space_bottom | default: 0 }}px;" {{ block.shopify_attributes }}>
+  <{{ heading_tag }} class="av-pb-title__heading">
+    {%- if headline != blank -%}{{ headline | escape }}{%- else -%}{{ product_name | escape }}{%- endif -%}
+  </{{ heading_tag }}>
+  {%- if headline != blank and s.show_name -%}
+    <p class="av-pb-title__name">{{ product_name | escape }}</p>
+  {%- endif -%}
+</div>

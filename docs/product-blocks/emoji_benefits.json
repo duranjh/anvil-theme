@@ -1,0 +1,10 @@
+{
+  "type": "emoji_benefits",
+  "name": "Emoji benefits",
+  "settings": [
+    {"type": "textarea", "id": "benefits", "label": "Benefits", "default": "✅ Example benefit — replace with something true about your product\n🚚 Example: ships within 2 business days\n↩️ Example: 30-day returns — match your policy", "info": "One benefit per line, up to 12. Start a line with an emoji to use it as the icon. Only list what you can back up."},
+    {"type": "checkbox", "id": "benefits_check", "label": "Check icon for lines without an emoji", "default": true},
+    {"type": "select", "id": "benefits_size", "label": "Text size", "options": [{"value": "sm", "label": "Small"}, {"value": "md", "label": "Medium"}, {"value": "lg", "label": "Large"}], "default": "md"},
+    {"type": "select", "id": "benefits_spacing", "label": "Line spacing", "options": [{"value": "compact", "label": "Compact"}, {"value": "regular", "label": "Regular"}], "default": "regular"}
+  ]
+}

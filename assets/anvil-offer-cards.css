@@ -1,0 +1,444 @@
+/* anvil-offer-cards.css — product form blocks: variant picker (dropdowns, pills, swatches, offer cards), quantity
+   stepper and tier cards, buy buttons. Loaded by the picker-form snippets (snippets/anvil-pb-variant-picker,
+   -quantity, -buy-buttons). Radios sit invisibly over their card or pill, so the whole surface is the control and
+   keyboard focus draws on the visible box. */
+
+anvil-variant-picker,
+anvil-quantity {
+  display: block;
+}
+
+/* Without JavaScript the picker cannot reach the form; the buy buttons block shows a plain variant select. */
+.no-js anvil-variant-picker {
+  display: none;
+}
+
+/* The picker's controls ship disabled and its module enables them; until then they look normal, not faded. */
+anvil-variant-picker:not(:defined) :is(.av-pill__input, .av-offer-card__input) {
+  cursor: default;
+}
+
+anvil-variant-picker:not(:defined) .av-offer-card__input:disabled + .av-offer-card__body {
+  opacity: 1;
+}
+
+anvil-variant-picker:not(:defined) select:disabled {
+  color: inherit;
+  opacity: 1;
+}
+
+.av-picker {
+  display: grid;
+  gap: var(--av-space-5);
+}
+
+.av-picker__group,
+.av-offer-cards {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.av-picker__legend {
+  margin-bottom: var(--av-space-2);
+  padding: 0;
+}
+
+.av-picker__current {
+  font-weight: 400;
+  color: var(--av-fg-muted);
+}
+
+.av-picker__field {
+  display: grid;
+  gap: var(--av-space-2);
+}
+
+.av-picker__values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--av-space-2);
+}
+
+.av-picker__chart {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--av-space-1);
+  min-height: 24px;
+  margin-top: var(--av-space-2);
+  font-size: var(--av-text-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Shared radio surface ---------------------------------------------------- */
+.av-pill,
+.av-offer-card {
+  position: relative;
+  display: block;
+}
+
+.av-pill__input,
+.av-offer-card__input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.av-offer-card__input:disabled {
+  cursor: not-allowed;
+}
+
+/* Pills --------------------------------------------------------------------- */
+.av-pill__body {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--av-control-h);
+  min-height: var(--av-control-h);
+  padding: var(--av-space-2) var(--av-space-4);
+  font-size: var(--av-text-sm);
+  line-height: 1.2;
+  color: var(--av-fg);
+  background: var(--av-bg);
+  border: var(--av-border-w-pill) solid var(--av-input-border);
+  border-radius: var(--av-radius-pill);
+}
+
+.av-pill.av-is-unavailable .av-pill__body {
+  color: var(--av-fg-muted);
+  text-decoration: line-through;
+}
+
+.av-pill__input:checked + .av-pill__body {
+  color: var(--av-bg);
+  background: var(--av-fg);
+  border-color: var(--av-fg);
+}
+
+.av-pills--outline .av-pill__input:checked + .av-pill__body,
+.av-pills--underline .av-pill__input:checked + .av-pill__body {
+  color: var(--av-fg);
+  background: var(--av-bg);
+}
+
+.av-pills--outline .av-pill__input:checked + .av-pill__body {
+  box-shadow: inset 0 0 0 1px var(--av-fg);
+}
+
+.av-pills--underline .av-pill__input:checked + .av-pill__body {
+  text-decoration: underline 2px;
+  text-underline-offset: 4px;
+}
+
+/* Swatches: Shopify's option swatch (colour or image) or the theme's fallback colour */
+.av-pill--swatch .av-pill__body,
+.av-pill--swatch .av-pill__input:checked + .av-pill__body {
+  width: var(--av-swatch-size);
+  height: var(--av-swatch-size);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  background: var(--av-swatch) center / cover no-repeat;
+  border: var(--av-border-w-swatch) solid var(--av-input-border);
+  border-radius: var(--av-radius-swatch);
+}
+
+.av-pill--swatch .av-pill__input:checked + .av-pill__body {
+  border-color: var(--av-bg);
+  box-shadow: 0 0 0 2px var(--av-fg);
+}
+
+.av-pill--swatch.av-is-unavailable .av-pill__body {
+  opacity: 0.5;
+}
+
+.av-pill--swatch.av-is-unavailable::after {
+  content: "";
+  position: absolute;
+  inset: 50% -10% auto;
+  height: 2px;
+  background: var(--av-fg);
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+/* After the selected styles, so the focus ring also shows on the selected pill or swatch */
+.av-pill .av-pill__input:focus-visible + .av-pill__body,
+.av-offer-card__input:focus-visible + .av-offer-card__body {
+  outline: 2px solid transparent;
+  box-shadow: var(--av-focus-ring);
+}
+
+/* Offer cards and tier cards ------------------------------------------------ */
+.av-offer-cards__list {
+  display: grid;
+  gap: var(--av-space-3);
+  padding-top: var(--av-space-2);
+}
+
+.av-offer-cards--grid .av-offer-cards__list {
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+}
+
+.av-offer-card__body {
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-3);
+  height: 100%;
+  min-height: var(--av-control-h-lg);
+  padding: var(--av-space-3) var(--av-space-4);
+  color: var(--av-fg);
+  background: var(--av-bg);
+  border: max(1px, var(--av-border-w-input)) solid var(--av-input-border);
+  border-radius: var(--av-radius-card);
+}
+
+.av-offer-card__body::before {
+  content: "";
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--av-input-border);
+  border-radius: 50%;
+}
+
+.av-offer-card__input:checked + .av-offer-card__body {
+  border-color: var(--av-accent);
+  background: rgb(var(--av-accent-rgb) / 0.06);
+  box-shadow: inset 0 0 0 1px var(--av-accent);
+}
+
+.av-offer-card__input:checked + .av-offer-card__body::before {
+  border-color: var(--av-accent);
+  background: radial-gradient(circle, var(--av-accent) 0 40%, transparent 46%);
+}
+
+.av-offer-card__input:checked:focus-visible + .av-offer-card__body {
+  box-shadow: inset 0 0 0 1px var(--av-accent), var(--av-focus-ring);
+}
+
+.av-offer-card__input:disabled + .av-offer-card__body {
+  opacity: 0.5;
+}
+
+.av-offer-card__badge {
+  position: absolute;
+  top: 0;
+  right: var(--av-space-4);
+  transform: translateY(-50%);
+}
+
+.av-offer-card__media {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: var(--av-radius-media);
+}
+
+.av-offer-card__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.av-offer-card.av-is-unavailable .av-offer-card__media {
+  opacity: 0.5;
+}
+
+.av-offer-card__text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.av-offer-card__label {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.av-offer-card__caption {
+  font-size: var(--av-text-sm);
+  color: var(--av-fg-muted);
+}
+
+.av-offer-card__benefit {
+  font-size: var(--av-text-xs);
+  font-weight: 600;
+  color: var(--av-accent);
+}
+
+.av-offer-card__price {
+  display: grid;
+  flex: none;
+  justify-items: end;
+  gap: 2px;
+  text-align: end;
+}
+
+.av-offer-card__now {
+  font-weight: 700;
+}
+
+.av-offer-card__compare,
+.av-offer-card__status {
+  font-size: var(--av-text-sm);
+  color: var(--av-fg-muted);
+}
+
+.av-offer-card__save {
+  font-size: var(--av-text-xs);
+  font-weight: 600;
+  color: var(--av-price-sale, var(--av-accent));
+}
+
+.av-tier__hint {
+  color: var(--av-error);
+}
+
+.av-offer-cards--grid .av-offer-card__body {
+  flex-direction: column;
+  justify-content: center;
+  padding-top: var(--av-space-6);
+  text-align: center;
+}
+
+.av-offer-cards--grid .av-offer-card__body::before {
+  position: absolute;
+  top: var(--av-space-3);
+  left: var(--av-space-3);
+}
+
+.av-offer-cards--grid .av-offer-card__price {
+  justify-items: center;
+  text-align: center;
+}
+
+.av-offer-cards--grid .av-offer-card__badge {
+  right: 50%;
+  transform: translate(50%, -50%);
+}
+
+/* Quantity ------------------------------------------------------------------ */
+.av-quantity {
+  display: grid;
+  gap: var(--av-space-2);
+  justify-items: start;
+}
+
+.av-quantity--tiers {
+  justify-items: stretch;
+}
+
+.av-qty__btn:disabled,
+.av-qty__btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.av-tiers__warn {
+  margin-top: var(--av-space-3);
+}
+
+/* Buy buttons: the element is display: contents, so its parts join the form's own column and the error and secure
+   lines can follow the express checkout buttons the section prints after it. */
+anvil-product-form.av-buy {
+  display: contents;
+}
+
+.av-buy__error,
+.av-buy__secure {
+  order: 1;
+}
+
+.av-buy__secure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--av-space-2);
+  margin: 0;
+  font-size: var(--av-text-sm);
+  color: var(--av-fg-muted);
+}
+
+shopify-accelerated-checkout {
+  --shopify-accelerated-checkout-button-block-size: var(--av-control-h-lg);
+  --shopify-accelerated-checkout-button-border-radius: var(--av-radius-button);
+  --shopify-accelerated-checkout-skeleton-background-color: rgb(var(--av-fg-rgb) / 0.08);
+}
+
+/* Narrow phones (320–389 px): the saving, the compare-at price and the status move to a second row, so the price
+   column stays one price wide and the label keeps a line of its own; padding and gaps tighten a little. */
+@media (max-width: 389px) {
+  .av-offer-cards--stack .av-offer-card__body {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "radio text now"
+      "radio save compare"
+      "radio status status";
+    column-gap: var(--av-space-2);
+    row-gap: 0;
+    padding-inline: var(--av-space-3);
+  }
+
+  .av-offer-cards--stack .av-offer-card__body:has(.av-offer-card__media) {
+    grid-template-columns: 18px auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "radio media text now"
+      "radio media save compare"
+      "radio media status status";
+  }
+
+  .av-offer-cards--stack .av-offer-card__body::before {
+    grid-area: radio;
+  }
+
+  .av-offer-cards--stack .av-offer-card__media {
+    grid-area: media;
+    width: 44px;
+    height: 44px;
+  }
+
+  .av-offer-cards--stack .av-offer-card__text {
+    grid-area: text;
+  }
+
+  .av-offer-cards--stack .av-offer-card__price {
+    display: contents;
+  }
+
+  .av-offer-cards--stack .av-offer-card__now {
+    grid-area: now;
+    justify-self: end;
+  }
+
+  .av-offer-cards--stack .av-offer-card__compare {
+    grid-area: compare;
+    justify-self: end;
+  }
+
+  .av-offer-cards--stack .av-offer-card__save {
+    grid-area: save;
+  }
+
+  .av-offer-cards--stack .av-offer-card__status {
+    grid-area: status;
+  }
+}
+
+@media (min-width: 750px) {
+  .av-offer-card__media {
+    width: 64px;
+    height: 64px;
+  }
+}

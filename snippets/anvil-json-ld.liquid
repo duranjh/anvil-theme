@@ -9,8 +9,8 @@
 {% enddoc %}
 {%- liquid
   assign page_type = request.page_type
-  assign home_label = 'general.breadcrumbs.home' | t
-  assign collections_label = 'general.breadcrumbs.collections' | t
+  assign home_label = 'anvil.breadcrumbs.home' | t
+  assign collections_label = 'anvil.breadcrumbs.collections' | t
 -%}
 {%- if page_type == 'index' -%}
   {%- liquid

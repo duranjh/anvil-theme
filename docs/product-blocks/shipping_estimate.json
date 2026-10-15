@@ -1,0 +1,175 @@
+{
+  "type": "shipping_estimate",
+  "name": "Estimated shipping",
+  "limit": 2,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Dates are counted from today in your store's time zone (Settings > General) and recalculated in the shopper's browser, so cached pages stay current."
+    },
+    {
+      "type": "range",
+      "id": "ship_processing_min",
+      "label": "Processing days, minimum",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "default": 1,
+      "info": "Days you need before a parcel leaves. Use the same numbers as your shipping policy: shoppers read these dates as a promise."
+    },
+    {
+      "type": "range",
+      "id": "ship_processing_max",
+      "label": "Processing days, maximum",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "default": 2
+    },
+    {
+      "type": "range",
+      "id": "ship_delivery_min",
+      "label": "Delivery days, minimum",
+      "min": 0,
+      "max": 60,
+      "step": 1,
+      "default": 3,
+      "info": "Your carrier's real transit time, not the best case."
+    },
+    {
+      "type": "range",
+      "id": "ship_delivery_max",
+      "label": "Delivery days, maximum",
+      "min": 0,
+      "max": 60,
+      "step": 1,
+      "default": 7,
+      "info": "With both maximums at 0 nothing is shown."
+    },
+    {
+      "type": "checkbox",
+      "id": "ship_skip_weekends",
+      "label": "Count business days only",
+      "default": true,
+      "info": "Saturdays and Sundays are not counted; weekend orders start counting on Monday. Public holidays are not known to the theme."
+    },
+    {
+      "type": "range",
+      "id": "ship_cutoff_hour",
+      "label": "Same-day cut-off hour",
+      "min": 0,
+      "max": 23,
+      "step": 1,
+      "default": 0,
+      "info": "Orders at or after this hour (24-hour clock, store time) count from the next day. 0 means no cut-off."
+    },
+    {
+      "type": "text",
+      "id": "ship_timezone",
+      "label": "Time zone note",
+      "info": "Optional short label shown with the dates, for example \"ET\". The dates always use your store's time zone."
+    },
+    {
+      "type": "select",
+      "id": "ship_date_format",
+      "label": "Date format",
+      "options": [
+        {
+          "value": "short",
+          "label": "Oct 20"
+        },
+        {
+          "value": "long",
+          "label": "October 20"
+        },
+        {
+          "value": "weekday",
+          "label": "Mon, Oct 20"
+        },
+        {
+          "value": "weekday_long",
+          "label": "Monday, October 20"
+        }
+      ],
+      "default": "weekday"
+    },
+    {
+      "type": "text",
+      "id": "ship_estimate_text",
+      "label": "Text",
+      "info": "Leave blank for \"Order now, arrives between [date] and [date]\". Write [from] and [to] where the dates go. Hidden while the selected variant is sold out or does not ship."
+    },
+    {
+      "type": "select",
+      "id": "ship_icon",
+      "label": "Icon",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "truck",
+          "label": "Truck"
+        },
+        {
+          "value": "package",
+          "label": "Package"
+        },
+        {
+          "value": "package-check",
+          "label": "Package check"
+        },
+        {
+          "value": "box",
+          "label": "Box"
+        },
+        {
+          "value": "plane",
+          "label": "Plane"
+        },
+        {
+          "value": "ship",
+          "label": "Ship"
+        },
+        {
+          "value": "calendar",
+          "label": "Calendar"
+        },
+        {
+          "value": "clock",
+          "label": "Clock"
+        },
+        {
+          "value": "map-pin",
+          "label": "Map pin"
+        },
+        {
+          "value": "home",
+          "label": "Home"
+        },
+        {
+          "value": "check-circle",
+          "label": "Check circle"
+        },
+        {
+          "value": "shopping-bag",
+          "label": "Shopping bag"
+        },
+        {
+          "value": "shopping-cart",
+          "label": "Shopping cart"
+        },
+        {
+          "value": "receipt",
+          "label": "Receipt"
+        },
+        {
+          "value": "gift",
+          "label": "Gift"
+        }
+      ],
+      "default": "truck"
+    }
+  ]
+}

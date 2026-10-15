@@ -1,0 +1,127 @@
+{% # theme-check-disable UnusedDocParam %}
+{% doc %}
+  Product block "Custom product field" (custom_field): one input whose value is saved on the cart line as a line item
+  property named after the label. The input sits outside the product form and joins it through form="form_id".
+  Types: text, textarea, checkbox (posts "Yes" when ticked), select (options one per line), date (today or later).
+  "Hidden at checkout" prefixes the property name with an underscore, which Shopify hides at checkout (the order in
+  the admin still shows it). Required fields are checked by assets/anvil-commerce.js before the product form adds
+  to the cart; the section's form is novalidate, so without JavaScript the field is optional. Empty optional fields
+  are left out of the add. Nothing renders without a label.
+  product, section and current_variant are passed by the dispatcher (WAVE1-CONTRACTS §1) and not needed here.
+
+  @param {object} product - The product
+  @param {object} block - This block
+  @param {object} section - The product section
+  @param {string} form_id - Id of the section's product form; the input's form attribute
+  @param {object} [current_variant] - The variant the section opened with
+{% enddoc %}
+{% # theme-check-enable UnusedDocParam %}
+{%- liquid
+  assign bs = block.settings
+  assign field_label = bs.field_label | strip
+  assign field_id = form_id | append: '-' | append: block.id
+  assign prop = field_label | replace: '[', '(' | replace: ']', ')'
+  if bs.field_hidden
+    assign prop = '_' | append: prop
+  endif
+  assign prop_name = 'properties[' | append: prop | append: ']'
+  assign required_msg = 'anvil.product.field_required' | t
+  assign described = field_id | append: '-error'
+  if bs.field_help != blank
+    assign described = field_id | append: '-help ' | append: described
+  endif
+  assign field_type = bs.field_type | default: 'text'
+-%}
+{%- if field_label != blank -%}
+  {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+  <div class="av-cfield av-field av-cfield--{{ field_type }}" {{ block.shopify_attributes }} data-anvil-field-wrap>
+    {%- if field_type == 'checkbox' -%}
+      <label class="av-check" for="{{ field_id }}">
+        <input
+          type="checkbox"
+          id="{{ field_id }}"
+          name="{{ prop_name | escape }}"
+          value="{{ 'anvil.product.field_yes' | t }}"
+          form="{{ form_id }}"
+          aria-describedby="{{ described }}"
+          data-anvil-field="{{ required_msg | escape }}"
+          {% if bs.field_required %}
+            required
+          {% endif %}
+        >
+        <span>
+          {{- field_label | escape -}}
+          {%- if bs.field_required %} <span class="av-field__required" aria-hidden="true">*</span>{% endif -%}
+        </span>
+      </label>
+    {%- else -%}
+      <label class="av-field__label" for="{{ field_id }}">
+        {{- field_label | escape -}}
+        {%- if bs.field_required %} <span class="av-field__required" aria-hidden="true">*</span>{% endif -%}
+      </label>
+      {%- case field_type -%}
+        {%- when 'textarea' -%}
+          <textarea
+            class="av-field__input"
+            id="{{ field_id }}"
+            name="{{ prop_name | escape }}"
+            form="{{ form_id }}"
+            rows="3"
+            placeholder="{{ bs.field_placeholder | escape }}"
+            aria-describedby="{{ described }}"
+            data-anvil-field="{{ required_msg | escape }}"
+            {% if bs.field_required %}
+              required
+            {% endif %}
+          ></textarea>
+        {%- when 'select' -%}
+          {%- assign option_list = bs.field_options | newline_to_br | split: '<br />' -%}
+          <div class="av-field__select av-dropdown av-dropdown--{{ settings.dropdown_style }}">
+            <select
+              class="av-field__input"
+              id="{{ field_id }}"
+              name="{{ prop_name | escape }}"
+              form="{{ form_id }}"
+              aria-describedby="{{ described }}"
+              data-anvil-field="{{ required_msg | escape }}"
+              {% if bs.field_required %}
+                required
+              {% endif %}
+            >
+              <option value="">{{ 'anvil.product.field_choose' | t }}</option>
+              {%- for raw_option in option_list -%}
+                {%- assign option_text = raw_option | strip -%}
+                {%- if option_text != blank -%}
+                  <option value="{{ option_text | escape }}">{{ option_text | escape }}</option>
+                {%- endif -%}
+              {%- endfor -%}
+            </select>
+          </div>
+        {%- else -%}
+          <input
+            class="av-field__input"
+            id="{{ field_id }}"
+            name="{{ prop_name | escape }}"
+            form="{{ form_id }}"
+            {% if field_type == 'date' %}
+              type="date" min="{{ 'now' | date: '%Y-%m-%d' }}"
+            {% else %}
+              type="text" autocomplete="off" placeholder="{{ bs.field_placeholder | escape }}"
+            {% endif %}
+            aria-describedby="{{ described }}"
+            data-anvil-field="{{ required_msg | escape }}"
+            {% if bs.field_required %}
+              required
+            {% endif %}
+          >
+      {%- endcase -%}
+    {%- endif -%}
+    {%- if bs.field_help != blank -%}
+      <p class="av-field__hint" id="{{ field_id }}-help">{{ bs.field_help | escape }}</p>
+    {%- endif -%}
+    <p class="av-field__error" id="{{ field_id }}-error" data-anvil-field-error></p>
+  </div>
+  <script type="module" src="{{ 'anvil-commerce.js' | asset_url }}"></script>
+{%- elsif request.design_mode -%}
+  <p class="av-editor-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.field_no_label' | t }}</p>
+{%- endif -%}

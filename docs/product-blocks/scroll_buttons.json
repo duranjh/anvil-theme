@@ -1,0 +1,114 @@
+{
+  "type": "scroll_buttons",
+  "name": "Scroll-to buttons",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Each target is a section's anchor id, set in that section under Layout > Anchor id (for example reviews). A button shows once it has a label and a target."
+    },
+    {
+      "type": "text",
+      "id": "btn_1_label",
+      "label": "Button 1 label",
+      "default": "Example: see reviews"
+    },
+    {
+      "type": "text",
+      "id": "btn_1_target",
+      "label": "Button 1 target",
+      "default": "reviews"
+    },
+    {
+      "type": "text",
+      "id": "btn_2_label",
+      "label": "Button 2 label"
+    },
+    {
+      "type": "text",
+      "id": "btn_2_target",
+      "label": "Button 2 target"
+    },
+    {
+      "type": "text",
+      "id": "btn_3_label",
+      "label": "Button 3 label"
+    },
+    {
+      "type": "text",
+      "id": "btn_3_target",
+      "label": "Button 3 target"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "options": [
+        {
+          "value": "primary",
+          "label": "Solid button"
+        },
+        {
+          "value": "secondary",
+          "label": "Outline button"
+        },
+        {
+          "value": "ghost",
+          "label": "Subtle button"
+        },
+        {
+          "value": "link",
+          "label": "Text link"
+        }
+      ],
+      "default": "secondary"
+    },
+    {
+      "type": "select",
+      "id": "size",
+      "label": "Size",
+      "options": [
+        {
+          "value": "sm",
+          "label": "Small"
+        },
+        {
+          "value": "md",
+          "label": "Medium"
+        }
+      ],
+      "default": "sm"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        {
+          "value": "row",
+          "label": "Side by side"
+        },
+        {
+          "value": "stack",
+          "label": "Stacked"
+        },
+        {
+          "value": "fill",
+          "label": "Fill the width"
+        }
+      ],
+      "default": "row"
+    },
+    {
+      "type": "text_alignment",
+      "id": "align",
+      "label": "Alignment",
+      "default": "left"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_icon",
+      "label": "Show arrow icon",
+      "default": true
+    }
+  ]
+}

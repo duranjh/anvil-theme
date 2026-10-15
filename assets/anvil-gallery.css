@@ -1,0 +1,413 @@
+/* anvil-gallery.css — the product media gallery (snippets/anvil-gallery.liquid, <anvil-gallery>, anvil-gallery.js).
+   Phones: one scroll-snap track (optional peek of the next slide), dots under or on the image or a counter, an
+   optional thumbnail row. From 750 px (where the product shell goes two-column): thumbnails left of or under a
+   one-at-a-time viewer with arrows, no thumbnails (arrows only), or every media stacked. The lightbox is a native
+   <dialog>. Controls that need the module stay hidden (or keep their space, invisible) until <anvil-gallery> is
+   defined, so nothing shifts and no dead control shows without JavaScript. Tokens only; motion gated by
+   prefers-reduced-motion and html[data-animations="off"]. */
+
+.av-gallery {
+  --av-gallery-thumb: 60px;
+  --av-gallery-gap: var(--av-space-3);
+  display: grid;
+  gap: var(--av-gallery-gap);
+  min-width: 0;
+}
+
+.av-gallery__viewer {
+  position: relative;
+  min-width: 0;
+}
+
+/* ---------- track and slides ---------- */
+.av-gallery__track {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--av-space-2);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.av-gallery__track::-webkit-scrollbar {
+  display: none;
+}
+
+.av-gallery__slide {
+  position: relative;
+  flex: 0 0 calc(100% - var(--av-gallery-peek, 0px));
+  min-width: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.av-gallery__zoom {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  border-radius: var(--av-radius-media);
+  cursor: zoom-in;
+}
+
+.av-gallery__zoom:focus-visible {
+  outline-offset: -4px;
+}
+
+/* hover magnifier: anvil-gallery.js sets .av-is-zoomed and the pointer position on mouse devices only */
+.av-gallery__slide.av-is-zoomed .av-media__img {
+  transform: scale(2);
+  transform-origin: var(--av-zx, 50%) var(--av-zy, 50%);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .av-gallery--zoom-hover .av-gallery__zoom {
+    cursor: crosshair;
+  }
+}
+
+/* play / pause for videos whose controls are off */
+.av-gallery__play {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: var(--av-space-3);
+  inset-inline-start: var(--av-space-3);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--av-radius-button);
+  background: var(--av-btn-bg);
+  color: var(--av-btn-fg);
+  box-shadow: var(--av-shadow-sm);
+}
+
+.av-gallery__play .av-icon + .av-icon,
+.av-gallery__play.av-is-playing .av-icon:first-child {
+  display: none;
+}
+
+.av-gallery__play.av-is-playing .av-icon + .av-icon {
+  display: block;
+}
+
+/* ---------- pager (phones) ---------- */
+.av-gallery__pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--av-slider-dot-gap, var(--av-space-2));
+  pointer-events: none;
+}
+
+.av-gallery__pager--dots-under {
+  min-height: 16px;
+  margin-top: var(--av-space-3);
+}
+
+.av-gallery__dot {
+  width: var(--av-slider-dot, 8px);
+  height: var(--av-slider-dot, 8px);
+  border-radius: var(--av-radius-pill);
+  background: var(--av-fg);
+  opacity: 0.3;
+}
+
+.av-dots--bars .av-gallery__dot {
+  width: calc(var(--av-slider-dot, 8px) * 3);
+}
+
+.av-gallery__dot.av-is-active {
+  opacity: 1;
+}
+
+.av-gallery__pager--dots-overlay,
+.av-gallery__pager--numeric {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: var(--av-space-3);
+  padding: var(--av-space-1) var(--av-space-3);
+  border-radius: var(--av-radius-pill);
+  background: rgb(var(--av-bg-rgb) / 0.85);
+  color: var(--av-fg);
+}
+
+.av-gallery__pager--dots-overlay {
+  left: 50%;
+  max-width: calc(100% - 2 * var(--av-space-3));
+  translate: -50% 0;
+}
+
+.av-gallery__pager--numeric {
+  inset-inline-end: var(--av-space-3);
+  font-size: var(--av-text-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+}
+
+/* ---------- thumbnails ---------- */
+.av-gallery__thumbs {
+  position: relative;
+  min-width: 0;
+}
+
+.av-gallery__thumb-list {
+  display: flex;
+  gap: var(--av-space-2);
+  padding: 3px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.av-gallery__thumb-list::-webkit-scrollbar {
+  display: none;
+}
+
+.av-gallery__thumb {
+  position: relative;
+  flex: 0 0 var(--av-gallery-thumb);
+  width: var(--av-gallery-thumb);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--av-radius-input);
+  background: rgb(var(--av-fg-rgb) / 0.06);
+}
+
+.av-gallery__thumb[aria-current="true"] {
+  border-color: var(--av-fg);
+}
+
+.av-gallery__thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.av-gallery__badge {
+  position: absolute;
+  inset-block-end: var(--av-space-1);
+  inset-inline-end: var(--av-space-1);
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--av-radius-badge);
+  background: var(--av-btn-bg);
+  color: var(--av-btn-fg);
+}
+
+/* ---------- desktop arrows ---------- */
+.av-gallery__arrow {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  inset-inline-start: var(--av-space-3);
+  display: none;
+  place-items: center;
+  width: var(--av-slider-arrow, 44px);
+  height: var(--av-slider-arrow, 44px);
+  border: var(--av-border-w-button) solid var(--av-border);
+  border-radius: var(--av-radius-button);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  box-shadow: var(--av-shadow-sm);
+  translate: 0 -50%;
+}
+
+.av-gallery__arrow--next {
+  inset-inline-start: auto;
+  inset-inline-end: var(--av-space-3);
+}
+
+/* ---------- states ---------- */
+anvil-gallery:not(:defined) .av-gallery__thumbs,
+anvil-gallery:not(:defined) .av-gallery__pager {
+  visibility: hidden;
+}
+
+.av-gallery.av-is-single .av-gallery__thumbs,
+.av-gallery.av-is-single .av-gallery__pager,
+.av-gallery.av-is-single .av-gallery__arrow {
+  display: none;
+}
+
+@media (max-width: 749px) {
+  .av-gallery--m-hidden .av-gallery__thumbs {
+    display: none;
+  }
+}
+
+@media (min-width: 750px) {
+  .av-gallery {
+    --av-gallery-thumb: 72px;
+  }
+
+  .av-gallery__slide {
+    flex-basis: 100%;
+  }
+
+  .av-gallery__pager,
+  .av-gallery--d-hidden .av-gallery__thumbs,
+  .av-gallery--d-stacked .av-gallery__thumbs {
+    display: none;
+  }
+
+  anvil-gallery.av-gallery:defined:not(.av-gallery--d-stacked, .av-is-single) .av-gallery__arrow {
+    display: grid;
+  }
+
+  /* thumbnails in a column left of the viewer, as tall as the viewer and scrolling inside it */
+  .av-gallery--d-left:not(.av-is-single) {
+    grid-template-columns: calc(var(--av-gallery-thumb) + 6px) minmax(0, 1fr);
+  }
+
+  .av-gallery--d-left:not(.av-is-single) .av-gallery__viewer {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .av-gallery--d-left .av-gallery__thumbs {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .av-gallery--d-left .av-gallery__thumb-list {
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+  }
+
+  /* every media under the previous one; the page scrolls, not the track */
+  .av-gallery--d-stacked .av-gallery__track {
+    flex-direction: column;
+    gap: var(--av-gallery-gap);
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  .av-gallery--d-stacked .av-gallery__slide {
+    flex: none;
+    width: 100%;
+  }
+}
+
+/* ---------- lightbox ---------- */
+.av-gallery__lightbox {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--av-bg);
+  color: var(--av-fg);
+}
+
+.av-gallery__lightbox[open] {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.av-gallery__lightbox::backdrop {
+  background: var(--av-bg);
+}
+
+html:has(.av-gallery__lightbox[open]) {
+  overflow: hidden;
+}
+
+.av-gallery__stage {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  cursor: zoom-in;
+}
+
+.av-gallery__stage.av-is-zoomed {
+  cursor: grab;
+}
+
+.av-gallery__stage.av-is-zoomed.av-is-panning {
+  cursor: grabbing;
+}
+
+/* the stage takes every pointer; the image never starts a native drag */
+.av-gallery__stage img {
+  position: absolute;
+  pointer-events: none;
+  inset: 0;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+}
+
+.av-gallery__lb-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--av-space-3);
+  padding: var(--av-space-3) var(--av-space-4) calc(var(--av-space-3) + env(safe-area-inset-bottom, 0px));
+}
+
+.av-gallery__lb-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: var(--av-border-w-button) solid var(--av-border);
+  border-radius: var(--av-radius-button);
+  background: var(--av-bg);
+  color: var(--av-fg);
+}
+
+.av-gallery__lb-btn[aria-pressed="true"] {
+  background: var(--av-fg);
+  color: var(--av-bg);
+}
+
+.av-gallery__lb-close {
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--av-space-3) + env(safe-area-inset-top, 0px));
+  inset-inline-end: var(--av-space-3);
+}
+
+.av-gallery__lb-count {
+  min-width: 5ch;
+  font-size: var(--av-text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-animations="off"]) .av-gallery__dot {
+    transition: opacity var(--av-dur) var(--av-ease);
+  }
+
+  html:not([data-animations="off"]) .av-gallery__stage img {
+    transition: transform var(--av-dur) var(--av-ease);
+  }
+
+  html:not([data-animations="off"]) .av-gallery__stage.av-is-panning img {
+    transition: none;
+  }
+
+  html:not([data-animations="off"]) .av-gallery__lightbox[open] {
+    animation: av-gallery-in var(--av-dur) var(--av-ease);
+  }
+}
+
+@keyframes av-gallery-in {
+  from {
+    opacity: 0;
+  }
+}

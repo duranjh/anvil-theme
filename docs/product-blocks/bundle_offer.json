@@ -1,0 +1,53 @@
+{
+  "type": "bundle_offer",
+  "name": "Bundle offer",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "text",
+      "id": "bundle_heading",
+      "label": "Heading",
+      "default": "Pair it with"
+    },
+    {
+      "type": "product_list",
+      "id": "bundle_products",
+      "label": "Products",
+      "limit": 3
+    },
+    {
+      "type": "checkbox",
+      "id": "bundle_include_current",
+      "label": "Include this product",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "bundle_preselect_all",
+      "label": "Preselect companion products",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "bundle_show_images",
+      "label": "Show images",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "bundle_discount_note",
+      "label": "Discount note",
+      "info": "Only fill this in when an automatic discount for these products exists under Discounts, for example \"10% off the set\". Shoppers see it with \"Discount applied at checkout\". The total always shows the real prices."
+    },
+    {
+      "type": "text",
+      "id": "bundle_button_label",
+      "label": "Button label",
+      "info": "Leave blank for \"Add selected to cart\"."
+    },
+    {
+      "type": "paragraph",
+      "content": "The total is the sum of the real prices of the ticked items. All items are added in one step."
+    }
+  ]
+}

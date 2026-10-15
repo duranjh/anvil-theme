@@ -2,6 +2,207 @@
   "sections": {
     "main": {
       "type": "main-product",
+      "blocks": {
+        "rating": {
+          "type": "rating",
+          "settings": {
+            "rating_show_number": true,
+            "rating_show_count": true,
+            "rating_size": "md",
+            "rating_align": "left"
+          }
+        },
+        "title": {
+          "type": "title",
+          "settings": {
+            "show_name": true,
+            "size": "lg",
+            "align": "left",
+            "uppercase": false,
+            "space_top": 0,
+            "space_bottom": 0
+          }
+        },
+        "price": {
+          "type": "price",
+          "settings": {
+            "size": "lg",
+            "show_compare": true,
+            "badge": "theme",
+            "show_unit": true,
+            "show_tax_note": false
+          }
+        },
+        "variant_picker": {
+          "type": "variant_picker",
+          "settings": {
+            "picker_style": "cards",
+            "picker_hide_sold_out": false,
+            "pills_use_swatches": true,
+            "offer_cards_option": "1",
+            "offer_cards_preselect": 0,
+            "offer_cards_savings": "amount",
+            "offer_cards_image_source": "variant",
+            "offer_cards_layout": "stack"
+          }
+        },
+        "offer_card_1": {
+          "type": "offer_card",
+          "settings": {
+            "card_variant_position": 1,
+            "card_label": "Example: 1 pack",
+            "card_caption": "Replace with what this option includes",
+            "card_badge_backed_by_sales": false,
+            "card_show_image": true
+          }
+        },
+        "offer_card_2": {
+          "type": "offer_card",
+          "settings": {
+            "card_variant_position": 2,
+            "card_label": "Example: 2 pack",
+            "card_caption": "Replace with what this option includes",
+            "card_badge": "Most popular",
+            "card_badge_backed_by_sales": false,
+            "card_benefit": "Example: replace with a real benefit of this option",
+            "card_show_image": true
+          }
+        },
+        "offer_card_3": {
+          "type": "offer_card",
+          "settings": {
+            "card_variant_position": 3,
+            "card_label": "Example: 3 pack",
+            "card_caption": "Replace with what this option includes",
+            "card_badge_backed_by_sales": false,
+            "card_show_image": true
+          }
+        },
+        "quantity": {
+          "type": "quantity",
+          "settings": {
+            "quantity_style": "stepper",
+            "quantity_show_label": true,
+            "quantity_max": 0
+          }
+        },
+        "buy_buttons": {
+          "type": "buy_buttons",
+          "settings": {
+            "atc_style": "primary",
+            "show_dynamic_checkout": false,
+            "show_secure_line": true
+          }
+        },
+        "text_icon_shipping": {
+          "type": "text_icon",
+          "settings": {
+            "text": "Example: ships within 2 business days — replace with your real handling time",
+            "icon_name": "truck",
+            "text_size": "md",
+            "align": "left",
+            "bg_enabled": true,
+            "bg_style": "subtle",
+            "radius": "pill",
+            "space_top": 0,
+            "space_bottom": 0
+          }
+        },
+        "payment_badges": {
+          "type": "payment_badges",
+          "settings": {
+            "badges_source": "shop",
+            "badges_size": "md",
+            "badges_align": "left"
+          }
+        },
+        "shipping_checkpoints": {
+          "type": "shipping_checkpoints",
+          "settings": {
+            "ship_processing_min": 0,
+            "ship_processing_max": 0,
+            "ship_delivery_min": 0,
+            "ship_delivery_max": 0,
+            "ship_skip_weekends": true,
+            "ship_cutoff_hour": 0,
+            "ship_date_format": "weekday"
+          }
+        },
+        "icons_text": {
+          "type": "icons_text",
+          "settings": {
+            "layout": "stacked",
+            "align": "center",
+            "columns_mobile": "2",
+            "columns": "4"
+          }
+        },
+        "description": {
+          "type": "description",
+          "settings": {
+            "display": "collapsed",
+            "preview_words": 40,
+            "text_size": "md"
+          }
+        },
+        "tab_details": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "How it works",
+            "icon": "info",
+            "content": "<p>Example: how the product is used, step by step. Replace this with details that are true for this product.</p>",
+            "open": false
+          }
+        },
+        "tab_shipping": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Shipping",
+            "icon": "truck",
+            "content": "<p>Example: where you ship, how long orders take and what shipping costs. Replace this with your real shipping policy.</p>",
+            "open": false
+          }
+        },
+        "tab_returns": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Returns",
+            "icon": "rotate-ccw",
+            "content": "<p>Example: your return window and how a customer starts a return. Replace this with your real return policy.</p>",
+            "open": false
+          }
+        },
+        "sticky_atc": {
+          "type": "sticky_atc",
+          "settings": {
+            "sticky_atc_mobile": true,
+            "sticky_atc_desktop": false,
+            "sticky_atc_show_image": true,
+            "sticky_atc_show_price": true,
+            "sticky_atc_show_quantity": false
+          }
+        }
+      },
+      "block_order": [
+        "rating",
+        "title",
+        "price",
+        "variant_picker",
+        "offer_card_1",
+        "offer_card_2",
+        "offer_card_3",
+        "quantity",
+        "buy_buttons",
+        "text_icon_shipping",
+        "payment_badges",
+        "shipping_checkpoints",
+        "icons_text",
+        "description",
+        "tab_details",
+        "tab_shipping",
+        "tab_returns",
+        "sticky_atc"
+      ],
       "settings": {}
     },
     "icon_bar": {

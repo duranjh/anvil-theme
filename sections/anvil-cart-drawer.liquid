@@ -1,163 +1,572 @@
+{%- comment -%}
+  Cart drawer (static section, rendered once by layout/theme.liquid when Theme settings > Cart > Cart type is
+  "Drawer"; DESIGN-money-path §G, WAVE1-CONTRACTS §7).
+  - <anvil-cart-drawer> (assets/anvil-cart-drawer.js) wraps a native modal <dialog>. The swap root for the Section
+    Rendering API is the inner .av-cart-drawer__frame (data-anvil-section="anvil-cart-drawer"), so a re-render never
+    closes the dialog. <anvil-cart-form cart-id="drawer"> (assets/anvil-cart.js) handles steppers, removal, the note
+    and the discount field.
+  - Without JavaScript everything posts to the cart: the <form> is empty and every input points at it with the form
+    attribute, so upsell cards and custom Liquid can carry their own forms without nesting.
+  - Blocks render in the scrolling body or, with "Show in the footer", in the pinned footer. With no blocks configured
+    the default stack renders (items, discount field and note when their theme settings are on, subtotals, checkout,
+    payment icons). With blocks configured, items and checkout are added if the merchant left them out, so the
+    drawer can never lose its lines or its checkout button.
+  - Spend gift rules (gift_threshold) are written outside the swap root: they depend on settings, not on the cart.
+    A rule is written only while its gift variant is available, so a sold-out gift is never promised or requested;
+    data-anvil-cart-count lets the gift engine skip its first cart read on an empty cart.
+  - Upsell cards and line and totals styles come from asset stylesheets (assets/anvil-pb-commerce.css when an
+    upsells block exists, assets/anvil-cart-drawer.css always), never from snippet {% stylesheet %} tags: a drawer
+    that opens empty renders no line or card until the first add re-renders it.
+{%- endcomment -%}
 {%- liquid
   assign s = section.settings
   assign form_id = 'anvil-cart-drawer-form'
-  assign checkout_label = 'anvil.cart.checkout' | t
-  assign update_label = 'anvil.cart.update' | t
   assign continue_label = 'anvil.cart.continue_shopping' | t
   assign continue_url = settings.cart_empty_link | default: routes.all_products_collection_url
-  assign apply_label = 'anvil.cart.apply' | t
+  assign checkout_default = 'anvil.cart.checkout' | t
+  assign apply_default = 'anvil.cart.apply' | t
+  assign note_default = 'anvil.cart.note' | t
+  assign update_label = 'anvil.cart.update' | t
+  assign view_cart_label = 'anvil.cart.view_cart' | t
+  assign ship_after_default = 'anvil.cart.ship_bar_after' | t
+  assign cd_ended_default = 'anvil.countdown.ended' | t
+  assign reached_text = 'anvil.cart.milestone_reached' | t
+  assign locked_text = 'anvil.cart.milestone_locked' | t
+  assign ph_a = '{' | append: '{ remaining }}'
+  assign ph_b = '{' | append: '{remaining}}'
+  assign ph_c = '[remaining]'
 
-  assign savings = 0
-  if settings.cart_show_savings
-    for item in cart.items
-      if item.variant.compare_at_price > item.original_price
-        assign line_saving = item.variant.compare_at_price | minus: item.original_price | times: item.quantity
-        assign savings = savings | plus: line_saving
-      endif
-    endfor
-    assign savings = savings | plus: cart.total_discount
+  assign shop_currency = false
+  if cart.currency.iso_code == shop.currency
+    assign shop_currency = true
   endif
+
+  assign gift_total = 0
+  assign has_gift_line = false
+  for item in cart.items
+    if item.properties['_anvil_gift'] != blank
+      assign gift_total = gift_total | plus: item.final_line_price
+      assign has_gift_line = true
+    endif
+  endfor
+  assign total_ex_gift = cart.total_price | minus: gift_total | at_least: 0
+
+  assign n_items = section.blocks | where: 'type', 'items' | size
+  assign n_checkout = section.blocks | where: 'type', 'checkout' | size
+  assign n_terms = section.blocks | where: 'type', 'policies_check' | size
+  assign n_countdown = section.blocks | where: 'type', 'countdown' | size
+  assign n_upsells = section.blocks | where: 'type', 'upsells' | size
+  assign gift_blocks = section.blocks | where: 'type', 'gift_threshold'
+  assign gift_label = gift_blocks.first.settings.gift_label
+  assign gift_rules = ''
+  for blk in gift_blocks
+    assign rule_product = blk.settings.gift_product
+    assign rule_threshold = blk.settings.gift_threshold_amount | times: 100 | round
+    assign rule_index = blk.settings.gift_variant_position | default: 1 | minus: 1 | at_least: 0
+    assign rule_variant = rule_product.variants[rule_index] | default: rule_product.selected_or_first_available_variant
+    if rule_variant.available and rule_threshold > 0 and shop_currency
+      assign gift_rules = gift_rules | append: '<script type="application/json" data-anvil-gift-rule data-anvil-cart-count="' | append: cart.item_count | append: '">{"key":"spend:' | append: rule_threshold | append: '","trigger":"spend","threshold":' | append: rule_threshold | append: ',"giftVariantId":' | append: rule_variant.id | append: ',"excludeGifts":true}</script>'
+    endif
+  endfor
+
+  comment
+    Render list: "b:<index>" is a configured block, "v:<type>" a built-in in the body, "f:<type>" one in the footer.
+    Every entry ends with a comma; split drops the trailing empty item.
+  endcomment
+  if section.blocks.size > 0
+    assign entries = ''
+    if n_items == 0
+      assign entries = 'v:items,'
+    endif
+    for blk in section.blocks
+      assign entries = entries | append: 'b:' | append: forloop.index0 | append: ','
+    endfor
+    if n_checkout == 0
+      assign entries = entries | append: 'f:checkout,'
+    endif
+  else
+    assign entries = 'v:items,'
+    if settings.cart_show_discount_field
+      assign entries = entries | append: 'f:discount_field,'
+    endif
+    if settings.cart_show_note
+      assign entries = entries | append: 'f:note,'
+    endif
+    assign entries = entries | append: 'f:subtotals,f:checkout,f:payment_badges,'
+  endif
+  assign entries = entries | split: ','
+  assign empty_ok = 'items,image,text_icon,icons_text,custom_liquid,upsells,countdown' | split: ','
+
+  assign body_html = ''
+  assign foot_html = ''
 -%}
+{%- for entry in entries -%}
+  {%- liquid
+    assign entry_kind = entry | slice: 0
+    assign entry_key = entry | slice: 2, 40
+    assign b = nil
+    if entry_kind == 'b'
+      assign b_index = entry_key | plus: 0
+      assign b = section.blocks[b_index]
+    endif
+    assign t = b.type | default: entry_key
+    assign bs = b.settings
+    assign in_foot = bs.place_in_footer
+    assign b_attrs = b.shopify_attributes
+    assign b_id = b.id | default: entry_key
+    if cart.empty?
+      unless in_foot != true and entry_kind != 'f' and empty_ok contains t
+        continue
+      endunless
+    endif
+  -%}
+  {%- capture inner -%}
+    {%- case t -%}
+      {%- when 'items' -%}
+        {%- if cart.empty? -%}
+          <div class="av-cart-drawer__empty">
+            <p class="av-cart-drawer__empty-text">{{ 'anvil.cart.empty' | t }}</p>
+            {% render 'anvil-button', label: continue_label, url: continue_url, style: 'secondary', size: 'md' %}
+          </div>
+        {%- else -%}
+          {%- liquid
+            assign i_image = bs.show_image | default: true, allow_false: true
+            assign i_variant = bs.show_variant | default: true, allow_false: true
+            assign i_discounts = bs.show_discounts | default: true, allow_false: true
+            assign i_compare = bs.show_compare_at | default: false, allow_false: true
+          -%}
+          <ul class="av-cart-drawer__lines av-list-reset" role="list">
+            {%- for item in cart.items -%}
+              {% render 'anvil-cart-line', item: item, form_id: form_id, show_image: i_image, show_variant: i_variant, show_discounts: i_discounts, show_compare_at: i_compare, gift_label: gift_label, size: 'sm' %}
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+      {%- when 'subtotals' -%}
+        {%- liquid
+          assign st_discounts = bs.show_discounts | default: true, allow_false: true
+          assign st_compare = bs.show_compare_savings | default: true, allow_false: true
+          assign st_tax = bs.show_tax_note | default: true, allow_false: true
+        -%}
+        {% render 'anvil-cart-totals', show_discounts: st_discounts, show_compare_savings: st_compare, show_tax_note: st_tax %}
+
+      {%- when 'checkout' -%}
+        {%- liquid
+          assign ck_label = bs.checkout_label | default: checkout_default
+          assign ck_attrs = 'name="checkout" data-anvil-checkout form="' | append: form_id | append: '"'
+          assign ck_icons = bs.show_payment_icons | default: false, allow_false: true
+          assign ck_view = bs.show_view_cart | default: false, allow_false: true
+        -%}
+        <div class="av-cart-drawer__checkout">
+          {%- if n_terms > 0 -%}
+            <p class="av-cart-drawer__hint" id="anvil-cart-drawer-terms-hint" data-anvil-terms-hint hidden>{{ 'anvil.cart.checkout_locked' | t }}</p>
+          {%- endif -%}
+          {% render 'anvil-button', label: ck_label, style: 'primary', size: 'lg', full: true, type: 'submit', attrs: ck_attrs %}
+          {%- if bs.secure_text != blank -%}
+            <p class="av-cart-drawer__secure">{% render 'anvil-icon', name: 'lock', size: 14 %}<span>{{ bs.secure_text | escape }}</span></p>
+          {%- endif -%}
+          {%- if ck_icons -%}
+            {% render 'anvil-payment-badges', source: 'shop', size: 'sm', uid: 'drawer-ck' %}
+          {%- endif -%}
+          {%- if ck_view -%}
+            {% render 'anvil-button', label: view_cart_label, url: routes.cart_url, style: 'link', size: 'sm' %}
+          {%- endif -%}
+        </div>
+
+      {%- when 'free_ship_bar' -%}
+        {%- liquid
+          assign fs_threshold = 0
+          assign fs_matched = false
+          assign fs_lines = bs.ship_bar_market_thresholds | newline_to_br | split: '<br />'
+          for fs_line in fs_lines
+            assign fs_pair = fs_line | strip | split: ':'
+            if fs_pair.size == 2
+              assign fs_handle = fs_pair.first | strip | downcase
+              if fs_handle == localization.market.handle
+                assign fs_threshold = fs_pair.last | strip | times: 100 | round
+                assign fs_matched = true
+                break
+              endif
+            endif
+          endfor
+          if fs_matched == false and shop_currency
+            assign fs_threshold = bs.ship_bar_threshold | times: 100 | round
+          endif
+          assign fs_total = cart.total_price
+          assign fs_exclude = bs.ship_bar_exclude_gift | default: true, allow_false: true
+          if fs_exclude
+            assign fs_total = total_ex_gift
+          endif
+        -%}
+        {%- if fs_threshold > 0 -%}
+          {%- liquid
+            assign fs_remaining = fs_threshold | minus: fs_total
+            assign fs_ratio = fs_total | times: 1.0 | divided_by: fs_threshold | round: 3 | at_most: 1
+          -%}
+          <div class="av-cart-drawer__progress{% if fs_remaining <= 0 %} av-is-complete{% endif %}">
+            <p class="av-cart-drawer__progress-text">
+              {%- if fs_remaining > 0 -%}
+                {%- capture fs_money -%}<strong>{% render 'anvil-money', amount: fs_remaining %}</strong>{%- endcapture -%}
+                {{ bs.ship_bar_text_before | escape | replace: ph_a, fs_money | replace: ph_b, fs_money | replace: ph_c, fs_money }}
+              {%- else -%}
+                {%- render 'anvil-icon', name: 'check-circle', size: 16 -%}
+                {{ bs.ship_bar_text_after | default: ship_after_default | escape }}
+              {%- endif -%}
+            </p>
+            <div class="av-cart-drawer__track" aria-hidden="true">
+              <span class="av-cart-drawer__fill" data-anvil-progress="ship-{{ b_id }}" style="--av-progress: {{ fs_ratio }}"></span>
+            </div>
+          </div>
+        {%- elsif request.design_mode -%}
+          <p class="av-cart-drawer__editor-note">{{ 'anvil.editor.ship_bar_hidden' | t }}</p>
+        {%- endif -%}
+
+      {%- when 'checkpoints_bar' -%}
+        {%- liquid
+          comment
+            One pass over the three slots: a slot counts when its amount is above the previous one. The bar is split
+            into equal segments, one per checkpoint, and the fill is (segments passed + share of the current one).
+          endcomment
+          assign cp_count = 0
+          assign cp_last = 0
+          assign cp_passed = 0.0
+          assign cp_list = ''
+          for n in (1..3)
+            assign cp_key = 'cp_' | append: n | append: '_amount'
+            assign cp_amount = bs[cp_key] | times: 100 | round
+            if cp_amount > cp_last and shop_currency
+              assign cp_count = cp_count | plus: 1
+              assign cp_list = cp_list | append: n | append: ','
+              assign cp_span = cp_amount | minus: cp_last
+              assign cp_part = total_ex_gift | minus: cp_last | times: 1.0 | divided_by: cp_span | at_most: 1 | at_least: 0
+              assign cp_passed = cp_passed | plus: cp_part
+              assign cp_last = cp_amount
+            endif
+          endfor
+          assign cp_slots = cp_list | split: ','
+          assign cp_divisor = cp_count | at_least: 1
+          assign cp_fill = cp_passed | divided_by: cp_divisor | round: 3
+        -%}
+        {%- if cp_count > 0 -%}
+          <div class="av-cart-drawer__checkpoints" style="--av-cp-count: {{ cp_count }}">
+            {%- if bs.cp_heading != blank -%}
+              <p class="av-cart-drawer__progress-text">{{ bs.cp_heading | escape }}</p>
+            {%- endif -%}
+            <div class="av-cart-drawer__track" aria-hidden="true">
+              <span class="av-cart-drawer__fill" data-anvil-progress="cp-{{ b_id }}" style="--av-progress: {{ cp_fill }}"></span>
+            </div>
+            <ol class="av-cart-drawer__marks av-list-reset" role="list">
+              {%- for slot in cp_slots -%}
+                {%- liquid
+                  assign cp_key = 'cp_' | append: slot | append: '_amount'
+                  assign cp_amount = bs[cp_key] | times: 100 | round
+                  assign cp_label_key = 'cp_' | append: slot | append: '_label'
+                  assign cp_icon_key = 'cp_' | append: slot | append: '_icon'
+                  assign cp_icon = bs[cp_icon_key] | default: 'check'
+                  assign cp_class = ''
+                  assign cp_sr = locked_text
+                  if total_ex_gift >= cp_amount
+                    assign cp_class = ' av-is-reached'
+                    assign cp_sr = reached_text
+                  endif
+                -%}
+                <li class="av-cart-drawer__mark{{ cp_class }}">
+                  <span class="av-cart-drawer__mark-icon">{% render 'anvil-icon', name: cp_icon, size: 16 %}</span>
+                  <span class="av-cart-drawer__mark-label">{{ bs[cp_label_key] | escape }}</span>
+                  <span class="av-cart-drawer__mark-amount">{% render 'anvil-money', amount: cp_amount %}</span>
+                  <span class="av-visually-hidden">{{ cp_sr }}</span>
+                </li>
+              {%- endfor -%}
+            </ol>
+          </div>
+        {%- elsif request.design_mode -%}
+          <p class="av-cart-drawer__editor-note">{{ 'anvil.editor.checkpoints_hidden' | t }}</p>
+        {%- endif -%}
+
+      {%- when 'countdown' -%}
+        {%- liquid
+          comment
+            Only a full YYYY-MM-DD date counts: a bare time would restart every day, which is a fake deadline.
+            Without a time zone the end is read in the store's time zone and written as one absolute instant
+            (data-anvil-end), so every shopper counts down to the same moment.
+          endcomment
+          assign cd_ends = bs.countdown_ends_at | strip
+          assign cd_zone = bs.countdown_timezone | strip
+          assign cd_mode = bs.countdown_expired | default: 'hide'
+          assign cd_dash = cd_ends | slice: 7, 1
+          assign cd_dashes = cd_ends | slice: 4, 1 | append: cd_dash
+          assign cd_end_s = 0
+          if cd_dashes == '--'
+            assign cd_end_s = cd_ends | date: '%s' | plus: 0
+          endif
+          assign cd_now_s = 'now' | date: '%s' | plus: 0
+          assign cd_left = cd_end_s | minus: cd_now_s | at_least: 0
+          assign cd_days = cd_left | divided_by: 86400
+          if cd_days < 10
+            assign cd_days = cd_days | prepend: '0'
+          endif
+          assign cd_hours = cd_left | modulo: 86400 | divided_by: 3600 | prepend: '0' | slice: -2, 2
+          assign cd_minutes = cd_left | modulo: 3600 | divided_by: 60 | prepend: '0' | slice: -2, 2
+          assign cd_seconds = cd_left | modulo: 60 | prepend: '0' | slice: -2, 2
+          assign cd_state = ''
+          assign cd_hide = ''
+          assign cd_text_hide = ' hidden'
+          if cd_left == 0
+            assign cd_state = ' av-is-expired'
+            assign cd_hide = ' hidden'
+            assign cd_text_hide = ''
+          endif
+          assign cd_root_hide = ''
+          if cd_mode == 'hide' and request.design_mode == false
+            assign cd_root_hide = cd_hide
+          endif
+          assign cd_text = bs.countdown_expired_text | default: cd_ended_default
+        -%}
+        {%- if cd_end_s > 0 -%}
+          <anvil-countdown class="av-cart-drawer__countdown{{ cd_state }}" ends-at="{{ cd_ends | escape }}"{% if cd_zone != blank %} timezone="{{ cd_zone | escape }}"{% else %} data-anvil-end="{{ cd_end_s }}"{% endif %} expired="{{ cd_mode }}"{{ cd_root_hide }}>
+            <p class="av-cart-drawer__cd-label">{{ bs.countdown_label | escape }}</p>
+            <div class="av-cart-drawer__cd-units" data-anvil-running{{ cd_hide }}>
+              <div class="av-cart-drawer__cd-unit"><span class="av-cart-drawer__cd-value" data-anvil-cd="days">{{ cd_days }}</span><span class="av-cart-drawer__cd-name">{{ 'anvil.countdown.days' | t }}</span></div>
+              <div class="av-cart-drawer__cd-unit"><span class="av-cart-drawer__cd-value" data-anvil-cd="hours">{{ cd_hours }}</span><span class="av-cart-drawer__cd-name">{{ 'anvil.countdown.hours' | t }}</span></div>
+              <div class="av-cart-drawer__cd-unit"><span class="av-cart-drawer__cd-value" data-anvil-cd="minutes">{{ cd_minutes }}</span><span class="av-cart-drawer__cd-name">{{ 'anvil.countdown.minutes' | t }}</span></div>
+              <div class="av-cart-drawer__cd-unit"><span class="av-cart-drawer__cd-value" data-anvil-cd="seconds">{{ cd_seconds }}</span><span class="av-cart-drawer__cd-name">{{ 'anvil.countdown.seconds' | t }}</span></div>
+            </div>
+            {%- if cd_mode == 'text' -%}
+              <p class="av-cart-drawer__cd-ended" data-anvil-expired{{ cd_text_hide }}>{{ cd_text | escape }}</p>
+            {%- endif -%}
+          </anvil-countdown>
+        {%- elsif request.design_mode -%}
+          <p class="av-cart-drawer__editor-note">{{ 'anvil.editor.no_date_set' | t }}</p>
+        {%- endif -%}
+
+      {%- when 'upsells' -%}
+        {%- liquid
+          assign up_source = bs.upsell_source | default: 'manual'
+          assign up_limit = bs.upsell_limit | default: 2
+          assign up_hide = bs.upsell_hide_in_cart | default: true, allow_false: true
+          assign up_layout = bs.upsell_layout | default: 'list'
+          assign cart_ids = cart.items | map: 'product_id' | join: ','
+          assign cart_ids_wrapped = ',' | append: cart_ids | append: ','
+        -%}
+        {%- if up_source == 'recommendations' -%}
+          {%- unless cart.empty? -%}
+            {%- liquid
+              assign up_intent = bs.upsell_intent | default: 'related'
+              assign up_fetch = up_limit | plus: cart.items.size | at_most: 10
+              assign up_url = routes.product_recommendations_url | append: '?section_id=anvil-upsell-row&product_id=' | append: cart.items.first.product_id | append: '&limit=' | append: up_fetch | append: '&intent=' | append: up_intent
+            -%}
+            <div class="av-cart-drawer__upsells" data-anvil-drawer-recs data-anvil-url="{{ up_url | escape }}" data-anvil-limit="{{ up_limit }}"{% if up_hide %} data-anvil-exclude="{{ cart_ids }}"{% endif %} hidden>
+              {%- if bs.upsell_heading != blank -%}
+                <h3 class="av-cart-drawer__block-title">{{ bs.upsell_heading | escape }}</h3>
+              {%- endif -%}
+              <ul class="av-cart-drawer__upsell-list av-cart-drawer__upsell-list--{{ up_layout }} av-list-reset" role="list" data-anvil-recs-list></ul>
+            </div>
+          {%- endunless -%}
+        {%- else -%}
+          {%- capture up_cards -%}
+            {%- assign up_shown = 0 -%}
+            {%- for up_product in bs.upsell_products -%}
+              {%- liquid
+                assign up_id = ',' | append: up_product.id | append: ','
+                if up_hide and cart_ids_wrapped contains up_id
+                  continue
+                endif
+                if up_shown >= up_limit
+                  break
+                endif
+                assign up_shown = up_shown | plus: 1
+              -%}
+              <li class="av-cart-drawer__upsell">{% render 'anvil-product-card-mini', product: up_product, show_price: true, button: 'add', source_tag: 'drawer' %}</li>
+            {%- endfor -%}
+          {%- endcapture -%}
+          {%- assign up_cards = up_cards | strip -%}
+          {%- if up_cards != '' -%}
+            <div class="av-cart-drawer__upsells">
+              {%- if bs.upsell_heading != blank -%}
+                <h3 class="av-cart-drawer__block-title">{{ bs.upsell_heading | escape }}</h3>
+              {%- endif -%}
+              <ul class="av-cart-drawer__upsell-list av-cart-drawer__upsell-list--{{ up_layout }} av-list-reset" role="list">{{ up_cards }}</ul>
+            </div>
+          {%- elsif request.design_mode and bs.upsell_products == blank -%}
+            <p class="av-cart-drawer__editor-note">{{ 'anvil.editor.upsells_empty' | t }}</p>
+          {%- endif -%}
+        {%- endif -%}
+
+      {%- when 'gift_threshold' -%}
+        {%- liquid
+          assign g_product = bs.gift_product
+          assign g_threshold = bs.gift_threshold_amount | times: 100 | round
+          assign g_key = 'spend:' | append: g_threshold
+          assign g_index = bs.gift_variant_position | default: 1 | minus: 1 | at_least: 0
+          assign g_variant = g_product.variants[g_index] | default: g_product.selected_or_first_available_variant
+          assign g_has_line = false
+          for item in cart.items
+            if item.properties['_anvil_gift'] == g_key
+              assign g_has_line = true
+              break
+            endif
+          endfor
+          assign g_bar = bs.gift_show_bar | default: true, allow_false: true
+        -%}
+        {%- if g_product != blank and g_threshold > 0 and shop_currency and g_variant.available or g_has_line -%}
+          {%- liquid
+            assign g_remaining = g_threshold | minus: total_ex_gift
+            assign g_ratio = total_ex_gift | times: 1.0 | divided_by: g_threshold | round: 3 | at_most: 1
+          -%}
+          {%- if g_remaining > 0 or g_has_line -%}
+            <div class="av-cart-drawer__progress av-cart-drawer__progress--gift{% if g_remaining <= 0 %} av-is-complete{% endif %}">
+              <p class="av-cart-drawer__progress-text">
+                {%- render 'anvil-icon', name: 'gift', size: 16 -%}
+                {%- if g_remaining > 0 -%}
+                  {%- capture g_money -%}<strong>{% render 'anvil-money', amount: g_remaining %}</strong>{%- endcapture -%}
+                  <span>{{ bs.gift_text_before | escape | replace: ph_a, g_money | replace: ph_b, g_money | replace: ph_c, g_money }}</span>
+                {%- else -%}
+                  <span>{{ bs.gift_text_after | escape }}</span>
+                {%- endif -%}
+              </p>
+              {%- if g_bar -%}
+                <div class="av-cart-drawer__track" aria-hidden="true">
+                  <span class="av-cart-drawer__fill" data-anvil-progress="gift-{{ b_id }}" style="--av-progress: {{ g_ratio }}"></span>
+                </div>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        {%- elsif request.design_mode -%}
+          <p class="av-cart-drawer__editor-note">{{ 'anvil.editor.gift_not_ready' | t }}</p>
+        {%- endif -%}
+
+      {%- when 'text_icon' -%}
+        {% render 'anvil-text-icon', icon: bs.icon, image: bs.icon_image, text: bs.text, size: bs.size, pill: bs.pill, class: 'av-cart-drawer__text-icon' %}
+
+      {%- when 'image' -%}
+        {%- if bs.image != blank -%}
+          {%- assign im_name = bs.link_label | default: bs.image.alt | default: bs.link -%}
+          {%- capture im_media -%}
+            {%- if bs.link != blank -%}
+              {% render 'anvil-media', image: bs.image, ratio: bs.ratio, widths: '280, 420, 560, 840, 1120', sizes: '(min-width: 750px) 560px, 100vw', alt: '' %}
+            {%- else -%}
+              {% render 'anvil-media', image: bs.image, ratio: bs.ratio, widths: '280, 420, 560, 840, 1120', sizes: '(min-width: 750px) 560px, 100vw' %}
+            {%- endif -%}
+          {%- endcapture -%}
+          <div class="av-cart-drawer__image" style="--av-cart-image-w: {{ bs.width | default: 100 }}%">
+            {%- if bs.link != blank -%}
+              <a class="av-cart-drawer__image-link" href="{{ bs.link }}" aria-label="{{ im_name | escape }}">{{ im_media }}</a>
+            {%- else -%}
+              {{ im_media }}
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+
+      {%- when 'icons_text' -%}
+        {% render 'anvil-icons-text', settings: bs, columns_mobile: bs.columns_mobile, columns: bs.columns_mobile %}
+
+      {%- when 'payment_badges' -%}
+        {%- liquid
+          assign pb_source = bs.badges_source | default: 'shop'
+          assign pb_size = bs.badges_size | default: 'sm'
+        -%}
+        {%- assign pb_uid = 'drawer-' | append: b_id -%}
+        {% render 'anvil-payment-badges', source: pb_source, filter: bs.badges_filter, settings: bs, size: pb_size, align: 'center', uid: pb_uid %}
+
+      {%- when 'discount_field' -%}
+        {%- assign df_button = bs.discount_button | default: apply_default -%}
+        <div class="av-cart-drawer__discount av-field av-enhanced-only">
+          <label class="av-field__label" for="anvil-cart-drawer-code">{{ 'anvil.cart.discount_code' | t }}</label>
+          <div class="av-field--inline">
+            <input class="av-field__input" id="anvil-cart-drawer-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="{{ bs.discount_placeholder | escape }}" data-anvil-discount-input data-anvil-focus-key="code">
+            {% render 'anvil-button', label: df_button, style: 'secondary', size: 'md', attrs: 'data-anvil-discount-apply data-anvil-focus-key="code-apply"' %}
+          </div>
+          {%- capture df_codes -%}
+            {%- for application in cart.discount_applications -%}
+              {%- if application.type == 'discount_code' -%}
+                <li class="av-cart-drawer__code" data-anvil-code="{{ application.title | escape }}">
+                  {%- render 'anvil-icon', name: 'tag', size: 14 -%}
+                  <span>{{ application.title | escape }}</span>
+                  <button type="button" class="av-cart-drawer__code-remove" data-anvil-remove-code="{{ application.title | escape }}" data-anvil-focus-key="code-rm-{{ forloop.index }}" aria-label="{{ 'anvil.cart.remove_code' | t: code: application.title }}">
+                    {%- render 'anvil-icon', name: 'x', size: 16 -%}
+                  </button>
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endcapture -%}
+          {%- if df_codes != blank -%}
+            <ul class="av-cart-drawer__codes av-list-reset" role="list" aria-label="{{ 'anvil.cart.applied_codes' | t }}">{{ df_codes }}</ul>
+          {%- endif -%}
+        </div>
+
+      {%- when 'note' -%}
+        <div class="av-cart-drawer__note av-field">
+          <label class="av-field__label" for="anvil-cart-drawer-note">{{ bs.note_label | default: note_default | escape }}</label>
+          <textarea class="av-field__input av-cart-drawer__textarea" id="anvil-cart-drawer-note" name="note" form="{{ form_id }}" rows="2" placeholder="{{ bs.note_placeholder | escape }}" data-anvil-note data-anvil-focus-key="note">{{ cart.note | escape }}</textarea>
+        </div>
+
+      {%- when 'policies_check' -%}
+        {%- assign pc_links = bs.show_policy_links | default: true, allow_false: true -%}
+        <div class="av-cart-drawer__terms">
+          <div class="av-check">
+            <input type="checkbox" id="anvil-cart-drawer-terms" name="attributes[anvil_terms_accepted]" value="yes" form="{{ form_id }}" required{% if cart.attributes['anvil_terms_accepted'] != blank %} checked{% endif %} data-anvil-terms data-anvil-focus-key="terms">
+            <label for="anvil-cart-drawer-terms">{{ bs.policy_text }}</label>
+          </div>
+          {%- if pc_links and shop.policies.size > 0 -%}
+            <ul class="av-cart-drawer__policies av-list-reset" role="list">
+              {%- for policy in shop.policies -%}
+                <li><a class="av-link" href="{{ policy.url }}">{{ policy.title | escape }}</a></li>
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+        </div>
+
+      {%- when 'custom_liquid' -%}
+        {{ bs.custom_liquid }}
+    {%- endcase -%}
+  {%- endcapture -%}
+  {%- liquid
+    assign inner = inner | strip
+    if inner != ''
+      assign t_class = t | replace: '_', '-'
+      assign wrapped = '<div class="av-cart-drawer__block av-cart-drawer__block--' | append: t_class | append: '" ' | append: b_attrs | append: '>' | append: inner | append: '</div>'
+      if in_foot or entry_kind == 'f'
+        assign foot_html = foot_html | append: wrapped
+      else
+        assign body_html = body_html | append: wrapped
+      endif
+    endif
+  -%}
+{%- endfor -%}
+{{ 'anvil-cart-drawer.css' | asset_url | stylesheet_tag }}
 <anvil-cart-drawer
   id="anvil-cart-drawer"
   class="av-cart-drawer"
   data-section-id="{{ section.id }}"
   {%- if request.design_mode and s.drawer_preview_open %} data-anvil-preview-open{% endif %}
 >
+  {{- gift_rules -}}
   <dialog class="av-cart-drawer__dialog av-scheme av-scheme--{{ s.color_scheme.id }}" aria-labelledby="anvil-cart-drawer-title">
     <div class="av-cart-drawer__frame" data-anvil-section="anvil-cart-drawer" data-anvil-cart-render="anvil-cart-drawer">
       <div class="av-cart-drawer__head">
         <h2 class="av-cart-drawer__title" id="anvil-cart-drawer-title" tabindex="-1" data-anvil-focus-fallback>
           {%- if s.drawer_title != blank -%}{{ s.drawer_title | escape }}{%- else -%}{{ 'anvil.cart.title' | t }}{%- endif -%}
         </h2>
-        <span class="av-cart-drawer__count av-muted">{{ 'anvil.cart.item_count' | t: count: cart.item_count }}</span>
-        <button type="button" class="av-cart-drawer__close" data-anvil-close aria-label="{{ 'anvil.a11y.close' | t }}">
+        <span class="av-cart-drawer__count">{{ 'anvil.cart.item_count' | t: count: cart.item_count }}</span>
+        <button type="button" class="av-cart-drawer__close" data-anvil-close data-anvil-focus-key="close" aria-label="{{ 'anvil.a11y.close' | t }}">
           {% render 'anvil-icon', name: 'x', size: 24 %}
         </button>
       </div>
       <anvil-cart-form class="av-cart-drawer__enhance av-enhance" cart-id="drawer">
-        <form action="{{ routes.cart_url }}" method="post" id="{{ form_id }}" class="av-cart-drawer__form" data-anvil-cart-form>
-          <div class="av-cart-drawer__body" data-anvil-scroll="drawer-body">
-            {%- if cart.empty? -%}
-              <div class="av-cart-drawer__empty">
-                <p class="av-cart-drawer__empty-text">{{ 'anvil.cart.empty' | t }}</p>
-                {% render 'anvil-button', label: continue_label, url: continue_url, style: 'secondary', size: 'md' %}
-              </div>
-            {%- else -%}
-              <ul class="av-cart-drawer__lines av-list-reset">
-                {%- for item in cart.items -%}
-                  {%- assign item_title = item.product.title | escape -%}
-                  <li class="av-cart-drawer__line" data-anvil-line="{{ item.key }}">
-                    {%- if item.image -%}
-                      <a class="av-cart-drawer__media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
-                        {{ item.image | image_url: width: 240 | image_tag: widths: '120, 240', sizes: '80px', loading: 'lazy', alt: '', class: 'av-cart-drawer__img' }}
-                      </a>
-                    {%- endif -%}
-                    <div class="av-cart-drawer__info">
-                      <a class="av-cart-drawer__name" href="{{ item.url }}">{{ item_title }}</a>
-                      {%- if settings.cart_show_vendor and item.vendor != blank -%}
-                        <p class="av-cart-drawer__meta">{{ item.vendor | escape }}</p>
-                      {%- endif -%}
-                      {%- unless item.product.has_only_default_variant -%}
-                        <p class="av-cart-drawer__meta">{{ item.variant.title | escape }}</p>
-                      {%- endunless -%}
-                      {%- for property in item.properties -%}
-                        {%- assign prop_first = property.first | slice: 0 -%}
-                        {%- if property.last != blank and prop_first != '_' -%}
-                          <p class="av-cart-drawer__meta">{{ property.first | escape }}: {{ property.last | escape }}</p>
-                        {%- endif -%}
-                      {%- endfor -%}
-                      {%- if item.selling_plan_allocation -%}
-                        <p class="av-cart-drawer__meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</p>
-                      {%- endif -%}
-                      {%- for allocation in item.line_level_discount_allocations -%}
-                        <p class="av-cart-drawer__meta av-cart-drawer__meta--discount">{{ allocation.discount_application.title | escape }} (&minus;{% render 'anvil-money', amount: allocation.amount %})</p>
-                      {%- endfor -%}
-                      <div class="av-cart-drawer__controls">
-                        <div class="av-qty av-cart-drawer__qty">
-                          <button type="button" class="av-qty__btn av-cart-drawer__step av-enhanced-only" data-anvil-step="-1" data-anvil-focus-key="dec-{{ item.key }}" aria-label="{{ 'anvil.cart.decrease_for' | t: title: item.product.title }}">&minus;</button>
-                          <input class="av-qty__input" type="number" name="updates[]" value="{{ item.quantity }}" min="0" inputmode="numeric" aria-label="{{ 'anvil.cart.quantity_for' | t: title: item.product.title }}" data-anvil-quantity data-anvil-focus-key="qty-{{ item.key }}">
-                          <button type="button" class="av-qty__btn av-cart-drawer__step av-enhanced-only" data-anvil-step="1" data-anvil-focus-key="inc-{{ item.key }}" aria-label="{{ 'anvil.cart.increase_for' | t: title: item.product.title }}">+</button>
-                        </div>
-                        <a class="av-cart-drawer__remove" href="{{ item.url_to_remove }}" data-anvil-remove data-anvil-focus-key="rm-{{ item.key }}" aria-label="{{ 'anvil.cart.remove' | t }}: {{ item_title }}">{{ 'anvil.cart.remove' | t }}</a>
-                      </div>
-                    </div>
-                    <div class="av-cart-drawer__price">
-                      {%- if item.original_line_price != item.final_line_price -%}
-                        <s class="av-cart-drawer__was av-muted"><span class="av-visually-hidden">{{ 'anvil.price.regular_price' | t }}</span> {% render 'anvil-money', amount: item.original_line_price %}</s>
-                      {%- endif -%}
-                      <span class="av-cart-drawer__now">
-                        {%- if item.original_line_price != item.final_line_price -%}<span class="av-visually-hidden">{{ 'anvil.price.sale_price' | t }} </span>{%- endif -%}
-                        {%- if item.final_line_price == 0 -%}{{ 'anvil.cart.free' | t }}{%- else -%}{% render 'anvil-money', amount: item.final_line_price %}{%- endif -%}
-                      </span>
-                    </div>
-                  </li>
-                {%- endfor -%}
-              </ul>
-            {%- endif -%}
-          </div>
-          {%- unless cart.empty? -%}
-            <div class="av-cart-drawer__foot">
-              <p class="av-cart-drawer__error av-form-message av-form-message--error" role="alert" data-anvil-cart-error hidden></p>
-              {%- if settings.cart_show_note -%}
-                <div class="av-cart-drawer__note av-field">
-                  <label class="av-field__label" for="anvil-cart-drawer-note">{{ 'anvil.cart.note' | t }}</label>
-                  <textarea class="av-field__input av-cart-drawer__textarea" id="anvil-cart-drawer-note" name="note" rows="2" data-anvil-note data-anvil-focus-key="note">{{ cart.note }}</textarea>
-                </div>
-              {%- endif -%}
-              {%- if settings.cart_show_discount_field -%}
-                <div class="av-cart-drawer__discount av-field av-enhanced-only">
-                  <label class="av-field__label" for="anvil-cart-drawer-code">{{ 'anvil.cart.discount_code' | t }}</label>
-                  <div class="av-field--inline">
-                    <input class="av-field__input" id="anvil-cart-drawer-code" type="text" autocomplete="off" autocapitalize="characters" data-anvil-discount-input data-anvil-focus-key="code">
-                    {% render 'anvil-button', label: apply_label, style: 'secondary', size: 'md', attrs: 'data-anvil-discount-apply data-anvil-focus-key="code-apply"' %}
-                  </div>
-                  {%- assign has_codes = false -%}
-                  {%- for application in cart.discount_applications -%}
-                    {%- if application.type == 'discount_code' -%}{%- assign has_codes = true -%}{%- endif -%}
-                  {%- endfor -%}
-                  {%- if has_codes -%}
-                    <ul class="av-cart-drawer__codes av-list-reset" aria-label="{{ 'anvil.cart.applied_codes' | t }}">
-                      {%- for application in cart.discount_applications -%}
-                        {%- if application.type == 'discount_code' -%}
-                          <li class="av-cart-drawer__code" data-anvil-code="{{ application.title | escape }}">
-                            <span>{{ application.title | escape }}</span>
-                            <button type="button" class="av-cart-drawer__code-remove" data-anvil-remove-code="{{ application.title | escape }}" aria-label="{{ 'anvil.cart.remove_code' | t: code: application.title }}">
-                              {% render 'anvil-icon', name: 'x', size: 16 %}
-                            </button>
-                          </li>
-                        {%- endif -%}
-                      {%- endfor -%}
-                    </ul>
-                  {%- endif -%}
-                </div>
-              {%- endif -%}
-              {%- for discount in cart.cart_level_discount_applications -%}
-                <div class="av-cart-drawer__row av-cart-drawer__row--discount">
-                  <span>{{ discount.title | escape }}</span>
-                  <span>&minus;{% render 'anvil-money', amount: discount.total_allocated_amount %}</span>
-                </div>
-              {%- endfor -%}
-              {%- if savings > 0 -%}
-                {%- capture savings_money -%}{% render 'anvil-money', amount: savings %}{%- endcapture -%}
-                <p class="av-cart-drawer__row av-cart-drawer__row--savings">{{ 'anvil.cart.you_save_html' | t: amount: savings_money }}</p>
-              {%- endif -%}
-              <div class="av-cart-drawer__row av-cart-drawer__row--total">
-                <span>{{ 'anvil.cart.subtotal' | t }}</span>
-                <span>{% render 'anvil-money', amount: cart.total_price %}</span>
-              </div>
-              <p class="av-cart-drawer__tax av-muted">
-                {%- if cart.taxes_included -%}{{ 'anvil.cart.taxes_included_note' | t }}{%- else -%}{{ 'anvil.cart.taxes_note' | t }}{%- endif -%}
-              </p>
-              <div class="av-cart-drawer__actions">
-                {% render 'anvil-button', label: checkout_label, style: 'primary', size: 'lg', full: true, type: 'submit', attrs: 'name="checkout"' %}
-                <div class="av-fallback-only">
-                  {% render 'anvil-button', label: update_label, style: 'secondary', size: 'md', full: true, type: 'submit' %}
-                </div>
-              </div>
+        <form action="{{ routes.cart_url }}" method="post" id="{{ form_id }}" class="av-cart-drawer__form" data-anvil-cart-form></form>
+        <div class="av-cart-drawer__body" data-anvil-scroll="drawer-body" data-anvil-drawer-body>
+          {{- body_html -}}
+        </div>
+        {%- unless cart.empty? -%}
+          <div class="av-cart-drawer__foot" data-anvil-scroll="drawer-foot" data-anvil-drawer-footer>
+            <p class="av-cart-drawer__error av-form-message av-form-message--error" role="alert" data-anvil-cart-error hidden></p>
+            {{- foot_html -}}
+            <div class="av-cart-drawer__update av-fallback-only">
+              {%- assign update_attrs = 'formnovalidate form="' | append: form_id | append: '"' -%}
+              {% render 'anvil-button', label: update_label, style: 'secondary', size: 'md', full: true, type: 'submit', attrs: update_attrs %}
             </div>
-          {%- endunless -%}
-        </form>
+          </div>
+        {%- endunless -%}
       </anvil-cart-form>
     </div>
     <div class="av-visually-hidden" role="status" aria-live="polite" data-anvil-live></div>
@@ -165,222 +574,34 @@
 </anvil-cart-drawer>
 <script type="module" src="{{ 'anvil-cart-drawer.js' | asset_url }}"></script>
 <script type="module" src="{{ 'anvil-cart.js' | asset_url }}"></script>
-{% stylesheet %}
-  .av-cart-drawer {
-    display: contents;
-  }
-  .av-cart-drawer__dialog {
-    position: fixed;
-    inset: 0 0 0 auto;
-    width: min(100%, var(--av-drawer-width, 420px));
-    height: 100dvh;
-    max-height: none;
-    max-width: none;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: var(--av-radius-drawer) 0 0 var(--av-radius-drawer);
-    background: var(--av-bg);
-    color: var(--av-fg);
-    box-shadow: var(--av-shadow-drawer);
-  }
-  .av-cart-drawer__dialog[open],
-  .av-cart-drawer__frame,
-  .av-cart-drawer__enhance {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  .av-cart-drawer__frame,
-  .av-cart-drawer__enhance {
-    flex: 1 1 auto;
-  }
-  .av-cart-drawer__dialog::backdrop {
-    background: rgb(var(--av-overlay-rgb, 0 0 0) / var(--av-overlay-a, 0.45));
-  }
-  .av-cart-drawer__head {
-    display: flex;
-    align-items: center;
-    gap: var(--av-space-3);
-    padding: var(--av-space-4);
-    border-bottom: 1px solid var(--av-border);
-  }
-  .av-cart-drawer__title {
-    margin: 0;
-    font-size: var(--av-text-lg);
-  }
-  .av-cart-drawer__count {
-    font-size: var(--av-text-sm);
-  }
-  .av-cart-drawer__close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    margin-left: auto;
-    color: inherit;
-    border-radius: var(--av-radius-button);
-  }
-  .av-cart-drawer__form {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-  .av-cart-drawer__body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: var(--av-space-4);
-  }
-  .av-cart-drawer__empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--av-space-4);
-    padding: var(--av-space-8) 0;
-    text-align: center;
-  }
-  .av-cart-drawer__empty-text {
-    font-size: var(--av-text-md);
-  }
-  .av-cart-drawer__lines {
-    display: flex;
-    flex-direction: column;
-    gap: var(--av-space-4);
-  }
-  .av-cart-drawer__line {
-    display: grid;
-    grid-template-columns: 80px 1fr auto;
-    gap: var(--av-space-3);
-    align-items: start;
-  }
-  .av-cart-drawer__line[aria-busy="true"] {
-    opacity: 0.6;
-  }
-  .av-cart-drawer__media {
-    display: block;
-    width: 80px;
-    aspect-ratio: 1;
-    overflow: hidden;
-    border-radius: var(--av-radius-media);
-    background: rgb(var(--av-fg-rgb) / 0.05);
-  }
-  .av-cart-drawer__img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .av-cart-drawer__name {
-    text-decoration: none;
-    font-weight: 600;
-  }
-  .av-cart-drawer__name:hover {
-    text-decoration: underline;
-  }
-  .av-cart-drawer__meta {
-    margin-top: var(--av-space-1);
-    font-size: var(--av-text-xs);
-    color: var(--av-fg-muted);
-  }
-  .av-cart-drawer__meta--discount {
-    color: var(--av-fg);
-  }
-  .av-cart-drawer__controls {
-    display: flex;
-    align-items: center;
-    gap: var(--av-space-3);
-    margin-top: var(--av-space-2);
-  }
-  .av-cart-drawer__remove {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    font-size: var(--av-text-xs);
-    color: var(--av-fg-muted);
-  }
-  .av-cart-drawer__price {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: var(--av-space-1);
-    font-size: var(--av-text-sm);
-  }
-  .av-cart-drawer__foot {
-    display: grid;
-    gap: var(--av-space-2);
-    padding: var(--av-space-4);
-    border-top: 1px solid var(--av-border);
-    background: var(--av-bg);
-  }
-  .av-cart-drawer__textarea {
-    min-height: 0;
-  }
-  .av-cart-drawer__codes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--av-space-2);
-  }
-  .av-cart-drawer__code {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--av-space-1);
-    padding-inline-start: var(--av-space-3);
-    font-size: var(--av-text-xs);
-    font-weight: 600;
-    border: 1px solid var(--av-border);
-    border-radius: var(--av-radius-pill);
-  }
-  .av-cart-drawer__code-remove {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-  }
-  .av-cart-drawer__row {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--av-space-3);
-    font-size: var(--av-text-sm);
-  }
-  .av-cart-drawer__row--savings {
-    justify-content: flex-start;
-    color: var(--av-success);
-  }
-  .av-cart-drawer__row--total {
-    font-size: var(--av-text-md);
-    font-weight: 700;
-  }
-  .av-cart-drawer__tax {
-    font-size: var(--av-text-xs);
-  }
-  .av-cart-drawer__actions {
-    display: flex;
-    flex-direction: column;
-    gap: var(--av-space-2);
-    margin-top: var(--av-space-1);
-  }
-{% endstylesheet %}
+{%- if n_countdown > 0 -%}
+  <script type="module" src="{{ 'anvil-countdown.js' | asset_url }}"></script>
+{%- endif -%}
+{%- comment -%}
+  The gift engine also loads when the cart already holds a gift line, so a gift whose rule is not on this page (a
+  quantity gift from a product page) is still removed once its condition fails.
+{%- endcomment -%}
+{%- if gift_rules != '' or has_gift_line -%}
+  <script type="module" src="{{ 'anvil-gifts.js' | asset_url }}"></script>
+{%- endif -%}
+{%- if n_upsells > 0 -%}
+  {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+  <script type="module" src="{{ 'anvil-commerce.js' | asset_url }}"></script>
+{%- endif -%}
 {% schema %}
 {
   "name": "Cart drawer",
   "settings": [
     {
       "type": "paragraph",
-      "content": "Width, open-after-add, the order note, the discount field, vendors and the savings line are set under Theme settings > Cart and Drawers."
+      "content": "Width, open-after-add, vendors and the savings line are set under Theme settings > Cart and Drawers & popups. With no blocks added, the drawer shows line items, the discount field and order note (when switched on in Theme settings), subtotals, the checkout button and payment icons."
     },
     {
-      "type": "text",
-      "id": "drawer_title",
-      "label": "Heading",
-      "default": "Your cart"
+      "type": "paragraph",
+      "content": "Once you add blocks, the blocks decide what shows. Line items and the checkout button are added for you if you leave their blocks out."
     },
-    {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "Colour scheme",
-      "default": "scheme-1"
-    },
+    { "type": "text", "id": "drawer_title", "label": "Heading", "default": "Your cart" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
     {
       "type": "checkbox",
       "id": "drawer_preview_open",
@@ -389,6 +610,223 @@
       "default": false
     }
   ],
-  "blocks": []
+  "blocks": [
+    {
+      "type": "items",
+      "name": "Line items",
+      "limit": 1,
+      "settings": [
+        { "type": "checkbox", "id": "show_image", "label": "Show images", "default": true },
+        { "type": "checkbox", "id": "show_variant", "label": "Show variant names", "default": true },
+        { "type": "checkbox", "id": "show_discounts", "label": "Show discounts on each line", "default": true },
+        { "type": "checkbox", "id": "show_compare_at", "label": "Strike through compare-at prices", "info": "Uses the compare-at price on each variant. Only enter a compare-at price the product really sold for.", "default": false },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "info": "The footer stays pinned under the scrolling list.", "default": false }
+      ]
+    },
+    {
+      "type": "subtotals",
+      "name": "Subtotals",
+      "limit": 1,
+      "settings": [
+        { "type": "paragraph", "content": "The \"You save\" line shows Shopify discounts and follows Theme settings > Cart > Show a savings line." },
+        { "type": "checkbox", "id": "show_discounts", "label": "List order discounts", "default": true },
+        { "type": "checkbox", "id": "show_compare_savings", "label": "Show compare-at savings", "info": "A separate line computed from compare-at prices. Only enter a compare-at price the product really sold for.", "default": true },
+        { "type": "checkbox", "id": "show_tax_note", "label": "Show the taxes and shipping note", "default": true },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": true }
+      ]
+    },
+    {
+      "type": "checkout",
+      "name": "Checkout button",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "checkout_label", "label": "Button label", "placeholder": "Check out", "info": "Leave empty to use the theme's wording." },
+        { "type": "text", "id": "secure_text", "label": "Line under the button", "placeholder": "Secure checkout", "info": "Keep it to facts about your checkout; do not claim certifications you do not hold." },
+        { "type": "checkbox", "id": "show_payment_icons", "label": "Show payment icons", "info": "Icons come from the payment methods enabled in your store.", "default": false },
+        { "type": "checkbox", "id": "show_view_cart", "label": "Show a link to the cart page", "default": false },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": true }
+      ]
+    },
+    {
+      "type": "free_ship_bar",
+      "name": "Free shipping bar",
+      "settings": [
+        { "type": "number", "id": "ship_bar_threshold", "label": "Free shipping minimum", "info": "In your store currency. Enter the same minimum as your free shipping rate (Settings > Shipping and delivery). The bar only shows progress; it does not create free shipping." },
+        { "type": "textarea", "id": "ship_bar_market_thresholds", "label": "Minimum per market", "placeholder": "canada:75\neurope:60.50", "info": "One line per market: market-handle:amount, in that market's currency, with a dot for decimals. In another currency with no line here the bar is hidden." },
+        { "type": "text", "id": "ship_bar_text_before", "label": "Message before the minimum", "default": "You are [remaining] away from free shipping", "info": "[remaining] becomes the amount still needed." },
+        { "type": "text", "id": "ship_bar_text_after", "label": "Message once reached", "default": "You qualify for free shipping" },
+        { "type": "checkbox", "id": "ship_bar_exclude_gift", "label": "Leave gift lines out of the total", "default": true },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
+      ]
+    },
+    {
+      "type": "checkpoints_bar",
+      "name": "Checkpoints bar",
+      "settings": [
+        { "type": "paragraph", "content": "Visual only: reaching a checkpoint applies nothing. Create the matching automatic discounts or shipping rates in Shopify. Amounts are in your store currency, lowest first; the bar is hidden in other currencies." },
+        { "type": "text", "id": "cp_heading", "label": "Heading" },
+        { "type": "header", "content": "Checkpoint 1" },
+        { "type": "number", "id": "cp_1_amount", "label": "Cart total" },
+        { "type": "text", "id": "cp_1_label", "label": "Label", "placeholder": "Free shipping" },
+        { "type": "select", "id": "cp_1_icon", "label": "Icon", "options": [ { "value": "check", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "gift", "label": "Gift" }, { "value": "percent", "label": "Percent" }, { "value": "tag", "label": "Tag" }, { "value": "star", "label": "Star" }, { "value": "package", "label": "Package" }, { "value": "sparkles", "label": "Sparkles" } ], "default": "truck" },
+        { "type": "header", "content": "Checkpoint 2" },
+        { "type": "number", "id": "cp_2_amount", "label": "Cart total" },
+        { "type": "text", "id": "cp_2_label", "label": "Label" },
+        { "type": "select", "id": "cp_2_icon", "label": "Icon", "options": [ { "value": "check", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "gift", "label": "Gift" }, { "value": "percent", "label": "Percent" }, { "value": "tag", "label": "Tag" }, { "value": "star", "label": "Star" }, { "value": "package", "label": "Package" }, { "value": "sparkles", "label": "Sparkles" } ], "default": "percent" },
+        { "type": "header", "content": "Checkpoint 3" },
+        { "type": "number", "id": "cp_3_amount", "label": "Cart total" },
+        { "type": "text", "id": "cp_3_label", "label": "Label" },
+        { "type": "select", "id": "cp_3_icon", "label": "Icon", "options": [ { "value": "check", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "gift", "label": "Gift" }, { "value": "percent", "label": "Percent" }, { "value": "tag", "label": "Tag" }, { "value": "star", "label": "Star" }, { "value": "package", "label": "Package" }, { "value": "sparkles", "label": "Sparkles" } ], "default": "gift" },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
+      ]
+    },
+    {
+      "type": "countdown",
+      "name": "Countdown timer",
+      "settings": [
+        { "type": "text", "id": "countdown_ends_at", "label": "Ends at", "placeholder": "2026-12-31T23:59", "info": "A real end date and time, written YYYY-MM-DDTHH:MM. There is no evergreen or per-visitor mode: a timer that restarts for each shopper is a fake deadline." },
+        { "type": "text", "id": "countdown_timezone", "label": "Time zone", "placeholder": "America/New_York", "info": "IANA time zone name. Leave empty to use your store's time zone; every shopper sees the same deadline." },
+        { "type": "text", "id": "countdown_label", "label": "Label", "default": "Offer ends in" },
+        { "type": "select", "id": "countdown_expired", "label": "When it ends", "options": [ { "value": "hide", "label": "Hide the timer" }, { "value": "text", "label": "Show a message" } ], "default": "hide" },
+        { "type": "text", "id": "countdown_expired_text", "label": "Message when ended", "default": "This offer has ended" },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
+      ]
+    },
+    {
+      "type": "upsells",
+      "name": "Product upsells",
+      "settings": [
+        { "type": "text", "id": "upsell_heading", "label": "Heading", "default": "Add something extra" },
+        { "type": "select", "id": "upsell_source", "label": "Products", "options": [ { "value": "manual", "label": "Picked by hand" }, { "value": "recommendations", "label": "Shopify recommendations" } ], "default": "manual" },
+        { "type": "product_list", "id": "upsell_products", "label": "Products to show", "limit": 4 },
+        { "type": "select", "id": "upsell_intent", "label": "Recommendation type", "options": [ { "value": "related", "label": "Related" }, { "value": "complementary", "label": "Complementary" } ], "default": "related", "info": "Recommendations are based on the newest item in the cart. Complementary products are set in the Search & Discovery app; when none exist, nothing shows." },
+        { "type": "range", "id": "upsell_limit", "label": "Products shown", "min": 1, "max": 4, "step": 1, "default": 2 },
+        { "type": "checkbox", "id": "upsell_hide_in_cart", "label": "Hide products already in the cart", "default": true },
+        { "type": "select", "id": "upsell_layout", "label": "Layout", "options": [ { "value": "list", "label": "List" }, { "value": "row", "label": "Scrolling row" } ], "default": "list" },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
+      ]
+    },
+    {
+      "type": "gift_threshold",
+      "name": "Free gift at threshold",
+      "settings": [
+        { "type": "paragraph", "content": "Adds the gift once the cart total reaches the amount and removes it below. The theme does not make it free: create a Buy X Get Y automatic discount in Shopify for that. The cart says \"Free\" only when Shopify prices the line at zero." },
+        { "type": "product", "id": "gift_product", "label": "Gift product" },
+        { "type": "range", "id": "gift_variant_position", "label": "Gift variant (position)", "min": 1, "max": 10, "step": 1, "default": 1, "info": "1 is the product's first variant. While it is sold out the block shows nothing and no gift is added." },
+        { "type": "number", "id": "gift_threshold_amount", "label": "Cart total that unlocks the gift", "info": "In your store currency; the gift is not added in other currencies. Gift lines are left out of the total." },
+        { "type": "text", "id": "gift_label", "label": "Label on the gift line", "default": "Gift" },
+        { "type": "text", "id": "gift_text_before", "label": "Message before the amount", "default": "Spend [remaining] more to unlock a gift", "info": "[remaining] becomes the amount still needed. Only promise a gift your discount really gives." },
+        { "type": "text", "id": "gift_text_after", "label": "Message once added", "default": "Your gift is in the cart" },
+        { "type": "checkbox", "id": "gift_show_bar", "label": "Show a progress bar", "default": true },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
+      ]
+    },
+    {
+      "type": "text_icon",
+      "name": "Text with icon",
+      "settings": [
+        { "type": "select", "id": "icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "lock", "label": "Lock" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "tag", "label": "Tag" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "star", "label": "Star" }, { "value": "leaf", "label": "Leaf" }, { "value": "message-circle", "label": "Chat" }, { "value": "credit-card", "label": "Card" } ], "default": "check-circle" },
+        { "type": "image_picker", "id": "icon_image", "label": "Custom icon", "info": "Replaces the icon." },
+        { "type": "inline_richtext", "id": "text", "label": "Text", "default": "Example: free returns within 30 days — replace with a promise your store keeps", "info": "State only what your shipping and returns policies back up." },
+        { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" } ], "default": "sm" },
+        { "type": "checkbox", "id": "pill", "label": "Show on a background pill", "default": false },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
+      ]
+    },
+    {
+      "type": "image",
+      "name": "Image",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "select", "id": "ratio", "label": "Shape", "options": [ { "value": "adapt", "label": "Original" }, { "value": "1:1", "label": "Square" }, { "value": "4:5", "label": "Portrait" }, { "value": "16:9", "label": "Landscape" }, { "value": "21:9", "label": "Wide" } ], "default": "adapt" },
+        { "type": "range", "id": "width", "label": "Width", "min": 20, "max": 100, "step": 5, "unit": "%", "default": 100 },
+        { "type": "url", "id": "link", "label": "Link" },
+        { "type": "text", "id": "link_label", "label": "Link description", "info": "Says where the link goes, for screen readers. Needed when the image is linked." },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
+      ]
+    },
+    {
+      "type": "icons_text",
+      "name": "Icons with text",
+      "settings": [
+        { "type": "range", "id": "columns_mobile", "label": "Columns", "min": 1, "max": 4, "step": 1, "default": 2 },
+        { "type": "header", "content": "Item 1" },
+        { "type": "select", "id": "item_1_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat" } ], "default": "truck" },
+        { "type": "image_picker", "id": "item_1_image", "label": "Custom icon" },
+        { "type": "text", "id": "item_1_heading", "label": "Heading", "default": "Example: tracked shipping", "info": "Short, and true for your store. Leave heading and text empty to hide this item." },
+        { "type": "inline_richtext", "id": "item_1_text", "label": "Text" },
+        { "type": "header", "content": "Item 2" },
+        { "type": "select", "id": "item_2_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat" } ], "default": "rotate-ccw" },
+        { "type": "image_picker", "id": "item_2_image", "label": "Custom icon" },
+        { "type": "text", "id": "item_2_heading", "label": "Heading", "default": "Example: easy returns", "info": "Short, and true for your store. Leave heading and text empty to hide this item." },
+        { "type": "inline_richtext", "id": "item_2_text", "label": "Text" },
+        { "type": "header", "content": "Item 3" },
+        { "type": "select", "id": "item_3_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat" } ], "default": "none" },
+        { "type": "image_picker", "id": "item_3_image", "label": "Custom icon" },
+        { "type": "text", "id": "item_3_heading", "label": "Heading", "info": "Short, and true for your store. Leave heading and text empty to hide this item." },
+        { "type": "inline_richtext", "id": "item_3_text", "label": "Text" },
+        { "type": "header", "content": "Item 4" },
+        { "type": "select", "id": "item_4_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat" } ], "default": "none" },
+        { "type": "image_picker", "id": "item_4_image", "label": "Custom icon" },
+        { "type": "text", "id": "item_4_heading", "label": "Heading", "info": "Short, and true for your store. Leave heading and text empty to hide this item." },
+        { "type": "inline_richtext", "id": "item_4_text", "label": "Text" },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
+      ]
+    },
+    {
+      "type": "payment_badges",
+      "name": "Payment badges",
+      "settings": [
+        { "type": "select", "id": "badges_source", "label": "Icons", "options": [ { "value": "shop", "label": "Payment methods enabled in your store" }, { "value": "custom", "label": "Images I upload" } ], "default": "shop" },
+        { "type": "text", "id": "badges_filter", "label": "Show only these methods", "info": "Comma-separated payment type names as Shopify lists them. Leave empty to show every enabled method." },
+        { "type": "image_picker", "id": "badge_image_1", "label": "Image 1", "info": "Upload only logos you are allowed to use. The image's alt text names it for screen readers." },
+        { "type": "image_picker", "id": "badge_image_2", "label": "Image 2" },
+        { "type": "image_picker", "id": "badge_image_3", "label": "Image 3" },
+        { "type": "image_picker", "id": "badge_image_4", "label": "Image 4" },
+        { "type": "select", "id": "badges_size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" } ], "default": "sm" },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": true }
+      ]
+    },
+    {
+      "type": "discount_field",
+      "name": "Discount field",
+      "limit": 1,
+      "settings": [
+        { "type": "paragraph", "content": "Applied codes are listed with a remove button. Without JavaScript the field is hidden and shoppers enter codes at checkout." },
+        { "type": "text", "id": "discount_placeholder", "label": "Placeholder" },
+        { "type": "text", "id": "discount_button", "label": "Button label", "placeholder": "Apply" },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": true }
+      ]
+    },
+    {
+      "type": "note",
+      "name": "Cart note",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "note_label", "label": "Label", "placeholder": "Order note" },
+        { "type": "text", "id": "note_placeholder", "label": "Placeholder" },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": true }
+      ]
+    },
+    {
+      "type": "policies_check",
+      "name": "Policies checkbox",
+      "limit": 1,
+      "settings": [
+        { "type": "paragraph", "content": "Checkout stays disabled until the box is ticked. The answer is saved on the order as the cart attribute anvil_terms_accepted." },
+        { "type": "inline_richtext", "id": "policy_text", "label": "Checkbox text", "default": "I have read and agree to the store policies" },
+        { "type": "checkbox", "id": "show_policy_links", "label": "Link the store policies", "info": "Lists the policies written under Settings > Policies.", "default": true },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": true }
+      ]
+    },
+    {
+      "type": "custom_liquid",
+      "name": "Custom Liquid",
+      "settings": [
+        { "type": "liquid", "id": "custom_liquid", "label": "Liquid code", "info": "Renders exactly as written. Do not use it for timers, stock counts, ratings or reviews that are not real; Anvil's own blocks show these from real data." },
+        { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
+      ]
+    }
+  ]
 }
 {% endschema %}

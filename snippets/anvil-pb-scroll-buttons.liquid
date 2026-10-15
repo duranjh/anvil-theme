@@ -1,0 +1,50 @@
+{% doc %}
+  Product block `scroll_buttons` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with
+  the fixed arguments product, block, section, form_id and current_variant; it reads block.
+
+  Up to three buttons that jump to sections on the page. Every Anvil section's root carries its anchor setting
+  (default: the section id) as its id, so a target "reviews" links to #reviews; targets are handleized the same way
+  and a leading # is ignored. The links work without JavaScript. <anvil-scroll-links> (assets/anvil-pb-content.js)
+  scrolls smoothly, below the sticky header (--av-header-offset), instantly under
+  reduced motion or html[data-animations="off"], and moves focus to the target so keyboard and screen-reader users
+  land where they jumped. A slot needs both a label and a target to render. Styles: assets/anvil-pb-content.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign btn_layout = s.layout | default: 'row'
+  assign btn_align = s.align | default: 'left'
+  assign btn_full = false
+  if btn_layout == 'fill'
+    assign btn_full = true
+  endif
+  assign btn_icon = ''
+  if s.show_icon
+    assign btn_icon = 'arrow-down'
+  endif
+
+  capture items
+    for i in (1..3)
+      assign label_key = 'btn_' | append: i | append: '_label'
+      assign target_key = 'btn_' | append: i | append: '_target'
+      assign btn_label = s[label_key] | strip | escape
+      assign btn_target = s[target_key] | remove: '#' | handleize
+      if btn_label != blank and btn_target != blank
+        assign btn_url = '#' | append: btn_target
+        echo '<li class="av-pb-scroll-buttons__item">'
+        render 'anvil-button', label: btn_label, url: btn_url, style: s.style, size: s.size, full: btn_full, icon: btn_icon
+        echo '</li>'
+      endif
+    endfor
+  endcapture
+-%}
+{%- if items != blank -%}
+  {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+  <anvil-scroll-links class="av-pb-scroll-buttons av-pb-scroll-buttons--{{ btn_layout }} av-pb-align--{{ btn_align }}" {{ block.shopify_attributes }}>
+    <ul class="av-pb-scroll-buttons__list av-list-reset">{{ items }}</ul>
+  </anvil-scroll-links>
+  <script type="module" src="{{ 'anvil-pb-content.js' | asset_url }}"></script>
+{%- endif -%}

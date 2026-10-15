@@ -1,0 +1,73 @@
+{
+  "type": "custom_field",
+  "name": "Custom product field",
+  "settings": [
+    {
+      "type": "text",
+      "id": "field_label",
+      "label": "Label",
+      "default": "Engraving text (example, rename me)",
+      "info": "Shown to shoppers and saved on the order as the property name."
+    },
+    {
+      "type": "select",
+      "id": "field_type",
+      "label": "Field type",
+      "options": [
+        {
+          "value": "text",
+          "label": "Short text"
+        },
+        {
+          "value": "textarea",
+          "label": "Long text"
+        },
+        {
+          "value": "checkbox",
+          "label": "Checkbox"
+        },
+        {
+          "value": "select",
+          "label": "Drop-down"
+        },
+        {
+          "value": "date",
+          "label": "Date"
+        }
+      ],
+      "default": "text"
+    },
+    {
+      "type": "textarea",
+      "id": "field_options",
+      "label": "Drop-down options",
+      "info": "One option per line.",
+      "visible_if": "{{ block.settings.field_type == 'select' }}"
+    },
+    {
+      "type": "text",
+      "id": "field_placeholder",
+      "label": "Placeholder",
+      "visible_if": "{{ block.settings.field_type == 'text' or block.settings.field_type == 'textarea' }}"
+    },
+    {
+      "type": "text",
+      "id": "field_help",
+      "label": "Help text"
+    },
+    {
+      "type": "checkbox",
+      "id": "field_required",
+      "label": "Required",
+      "default": false,
+      "info": "Add to cart waits until the shopper fills it in, with or without JavaScript (the browser's own check)."
+    },
+    {
+      "type": "checkbox",
+      "id": "field_hidden",
+      "label": "Hide at checkout",
+      "default": false,
+      "info": "Starts the property name with an underscore, which Shopify hides at checkout. You still see it on the order in your admin."
+    }
+  ]
+}

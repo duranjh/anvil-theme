@@ -1,0 +1,79 @@
+{
+  "type": "popup",
+  "name": "Popup",
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Link text",
+      "default": "Shipping and returns",
+      "info": "When empty, the page title is used."
+    },
+    {
+      "type": "page",
+      "id": "page",
+      "label": "Page",
+      "info": "The page's content opens in a dialog. Without JavaScript the link opens the page itself."
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "options": [
+        {
+          "value": "link",
+          "label": "Text link"
+        },
+        {
+          "value": "secondary",
+          "label": "Outline button"
+        },
+        {
+          "value": "primary",
+          "label": "Solid button"
+        }
+      ],
+      "default": "link"
+    },
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "Icon",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "info",
+          "label": "Information"
+        },
+        {
+          "value": "truck",
+          "label": "Truck"
+        },
+        {
+          "value": "rotate-ccw",
+          "label": "Return arrow"
+        },
+        {
+          "value": "ruler",
+          "label": "Ruler"
+        },
+        {
+          "value": "help-circle",
+          "label": "Question"
+        },
+        {
+          "value": "file-text",
+          "label": "Document"
+        },
+        {
+          "value": "shield-check",
+          "label": "Shield"
+        }
+      ],
+      "default": "none"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{% doc %}
+  Product block `complementary` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with
+  the fixed arguments product, block, section, form_id and current_variant; it reads product and block.
+
+  Products from Shopify's complementary recommendations (set per product in the Search & Discovery app). The
+  recommendations object only has products inside a section rendered by the Product Recommendations endpoint, so
+  <anvil-complementary> (assets/anvil-pb-content.js) requests
+  routes.product_recommendations_url?product_id=…&limit=…&intent=complementary&section_id=anvil-upsell-row once
+  the block's column (the block itself in the editor) comes within 400 px of the viewport, and moves that
+  section's list ([data-anvil-upsell-row], a row of anvil-product-card-mini cards) into the slot. A response
+  without a single product link counts as empty. The block stays hidden until products arrive, and stays hidden
+  when there are none or the request fails; in the editor it is visible with a note instead. The block loads what
+  the cards need itself, because that section is never part of the page: assets/anvil-pb-commerce.css (list and
+  card styles) and assets/anvil-commerce.js (the cards' one-tap Add). Styles: assets/anvil-pb-content.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign comp_limit = s.limit | default: 3
+  assign comp_url = routes.product_recommendations_url | append: '?product_id=' | append: product.id | append: '&limit=' | append: comp_limit | append: '&intent=complementary&section_id=anvil-upsell-row'
+-%}
+{%- if product != blank -%}
+  {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+  {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+  <anvil-complementary class="av-pb-complementary" data-anvil-url="{{ comp_url | escape }}"{% unless request.design_mode %} hidden{% endunless %} {{ block.shopify_attributes }}>
+    {%- if s.heading != blank -%}
+      <h2 class="av-pb-complementary__heading">{{ s.heading | escape }}</h2>
+    {%- endif -%}
+    <div class="av-pb-complementary__list" data-anvil-slot aria-busy="true">
+      {%- if request.design_mode -%}
+        <p class="av-pb-complementary__note">{{ 'anvil.editor.complementary_empty' | t }}</p>
+      {%- endif -%}
+    </div>
+  </anvil-complementary>
+  <script type="module" src="{{ 'anvil-pb-content.js' | asset_url }}"></script>
+  <script type="module" src="{{ 'anvil-commerce.js' | asset_url }}"></script>
+{%- endif -%}

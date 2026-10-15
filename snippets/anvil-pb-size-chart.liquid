@@ -1,0 +1,80 @@
+{% # theme-check-disable UnusedDocParam %}
+{% doc %}
+  Product block "Size chart" (size_chart): a link that opens the chart (a page's content or an image) in an
+  <anvil-dialog>. The dialog id is "anvil-size-chart-<section id>", so the variant picker can open the same chart next
+  to its size option with <button data-anvil-open="anvil-size-chart-{{ section.id }}">. Without JavaScript the link
+  goes to the page, or to the full-size image. Nothing renders until a page or an image is chosen.
+  product, form_id and current_variant are passed by the dispatcher (WAVE1-CONTRACTS §1) and not needed here.
+
+  @param {object} product - The product
+  @param {object} block - This block
+  @param {object} section - The product section; part of the dialog id
+  @param {string} form_id - Id of the section's product form
+  @param {object} [current_variant] - The variant the section opened with
+{% enddoc %}
+{% # theme-check-enable UnusedDocParam %}
+{%- liquid
+  assign bs = block.settings
+  assign chart_page = bs.chart_page
+  assign chart_image = bs.chart_image
+  assign chart_href = ''
+  if bs.chart_source == 'image'
+    assign chart_page = nil
+    if chart_image != blank
+      assign chart_href = chart_image | image_url: width: 2000
+    endif
+  else
+    assign chart_image = nil
+    if chart_page != blank
+      assign chart_href = chart_page.url
+    endif
+  endif
+  assign dialog_id = 'anvil-size-chart-' | append: section.id
+  assign link_text = bs.chart_link_text | strip
+  if link_text == blank
+    assign link_text = 'anvil.product.size_chart' | t
+  endif
+  assign chart_title = bs.chart_title | strip
+  if chart_title == blank
+    if chart_page != blank
+      assign chart_title = chart_page.title
+    else
+      assign chart_title = link_text
+    endif
+  endif
+  assign table_label = 'anvil.a11y.scroll_table' | t
+  assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
+-%}
+{%- if chart_href != blank -%}
+  {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+  {{ 'anvil-pb-commerce.css' | asset_url | stylesheet_tag }}
+  {{ 'anvil-prose.css' | asset_url | stylesheet_tag }}
+  <div class="av-size-chart" {{ block.shopify_attributes }}>
+    <a class="av-size-chart__link" href="{{ chart_href }}" data-anvil-open="{{ dialog_id }}" aria-haspopup="dialog">
+      {%- if bs.chart_icon != 'none' -%}
+        {%- render 'anvil-icon', name: 'ruler', size: 18 -%}
+      {%- endif -%}
+      <span>{{ link_text | escape }}</span>
+    </a>
+    <anvil-dialog id="{{ dialog_id }}">
+      <dialog class="av-dialog av-dialog--sheet av-size-chart__dialog" aria-labelledby="{{ dialog_id }}-title">
+        <h2 class="av-dialog__title" id="{{ dialog_id }}-title">{{ chart_title | escape }}</h2>
+        <button class="av-dialog__close" type="button" data-anvil-close>
+          {%- render 'anvil-icon', name: 'x', size: 22 -%}
+          <span class="av-visually-hidden">{{ 'anvil.a11y.close' | t }}</span>
+        </button>
+        {%- if chart_page != blank -%}
+          <div class="av-prose av-size-chart__content">
+            {{ chart_page.content | replace: '<table', table_open | replace: '</table>', '</table></div>' }}
+          </div>
+        {%- else -%}
+          <div class="av-size-chart__content">
+            {{ chart_image | image_url: width: 1400 | image_tag: widths: '600, 900, 1200, 1400', sizes: '(min-width: 800px) 720px, 100vw', loading: 'lazy', class: 'av-size-chart__img' }}
+          </div>
+        {%- endif -%}
+      </dialog>
+    </anvil-dialog>
+  </div>
+{%- elsif request.design_mode -%}
+  <p class="av-editor-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.size_chart_empty' | t }}</p>
+{%- endif -%}

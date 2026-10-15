@@ -1,0 +1,64 @@
+{% doc %}
+  Product block review_platform_badge ("Review platform badge"): the merchant's own wording and an uploaded platform
+  logo, linked to the source page. The rating number and stars are claims, so they show only when a source URL is set
+  (shoppers can follow it to check them); without it only the words and the logo show, and an editor note says why.
+  Anvil ships no platform logos (docs/HONEST.md).
+  Called by the product block dispatcher with product, block, section, form_id and current_variant
+  (WAVE1-CONTRACTS §1); it reads only block. The arguments are described in prose
+  rather than as LiquidDoc parameters because Theme Check requires every declared parameter to be used.
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign rp_has_url = false
+  if s.badge_source_url != blank
+    assign rp_has_url = true
+  endif
+  assign rp_star_px = 16
+  if s.badge_size == 'md'
+    assign rp_star_px = 18
+  endif
+  assign rp_logo_alt = s.badge_logo_alt | default: s.badge_logo.alt | default: ''
+
+  capture rp_inner
+    if rp_has_url
+      if s.badge_show_stars
+        render 'anvil-stars', rating: s.badge_rating, max: 5, size: rp_star_px
+      endif
+      echo '<span class="av-pb-review-platform-badge__number" aria-hidden="true">'
+      echo s.badge_rating | round: 1
+      echo '</span>'
+      unless s.badge_show_stars
+        assign rp_label = 'anvil.stars.label' | t: rating: s.badge_rating, max: 5
+        echo '<span class="av-visually-hidden">' | append: rp_label | append: '</span>'
+      endunless
+    endif
+    if s.badge_text != blank
+      assign rp_text = s.badge_text | escape
+      echo '<span class="av-pb-review-platform-badge__text">' | append: rp_text | append: '</span>'
+    endif
+    if s.badge_logo != blank
+      echo s.badge_logo | image_url: width: 280 | image_tag: widths: '140, 280', sizes: '140px', loading: 'lazy', alt: rp_logo_alt, class: 'av-pb-review-platform-badge__logo'
+    endif
+  endcapture
+  assign rp_inner = rp_inner | strip
+-%}
+{%- if rp_inner != blank -%}
+  {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+  <div class="av-pb-review-platform-badge av-pb-review-platform-badge--{{ s.badge_size }} av-align--{{ s.badge_align }}" {{ block.shopify_attributes }}>
+    {%- if rp_has_url -%}
+      <a class="av-pb-review-platform-badge__inner" href="{{ s.badge_source_url }}" target="_blank" rel="noopener">
+        {{- rp_inner -}}
+        <span class="av-visually-hidden">{{ 'anvil.a11y.new_window' | t }}</span>
+      </a>
+    {%- else -%}
+      <span class="av-pb-review-platform-badge__inner">{{ rp_inner }}</span>
+      {%- if request.design_mode -%}
+        <p class="av-example-note">{{ 'anvil.editor.platform_badge_no_url' | t }}</p>
+      {%- endif -%}
+    {%- endif -%}
+  </div>
+{%- elsif request.design_mode -%}
+  <div class="av-pb-review-platform-badge" {{ block.shopify_attributes }}>
+    <p class="av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+  </div>
+{%- endif -%}

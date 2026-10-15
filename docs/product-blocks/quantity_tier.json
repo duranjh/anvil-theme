@@ -1,0 +1,56 @@
+{
+  "type": "quantity_tier",
+  "name": "Quantity tier",
+  "limit": 5,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Shows as a card when the Quantity selector style is Tier cards. Choosing the card sets the quantity. The theme only displays a discount; Shopify grants it."
+    },
+    {
+      "type": "range",
+      "id": "tier_qty",
+      "label": "Quantity",
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "default": 1
+    },
+    {
+      "type": "text",
+      "id": "tier_label",
+      "label": "Label",
+      "info": "Leave blank to show Buy 2, Buy 3 and so on. Do not type a saving or a price here; a discount shows only from the two fields below."
+    },
+    {
+      "type": "text",
+      "id": "tier_badge",
+      "label": "Badge",
+      "info": "For example Most popular. It shows only when the box below is ticked."
+    },
+    {
+      "type": "checkbox",
+      "id": "tier_badge_backed_by_sales",
+      "label": "Badge is backed by sales data",
+      "default": false,
+      "info": "Only tick if sales data supports this badge. Shoppers never see it otherwise."
+    },
+    {
+      "type": "range",
+      "id": "tier_discount_percent",
+      "label": "Discount to show",
+      "min": 0,
+      "max": 80,
+      "step": 1,
+      "unit": "%",
+      "default": 0,
+      "info": "First create an automatic Amount off products discount in Shopify with this minimum quantity (up to 25 automatic discounts can be active), then copy its percentage here. The card shows the price with that discount; Shopify applies it at checkout."
+    },
+    {
+      "type": "text",
+      "id": "tier_discount_title",
+      "label": "Discount name",
+      "info": "The automatic discount's title, as shoppers see it at checkout. No discounted price is shown until it is filled in. In the theme editor a red note appears after adding to cart if the cart line's discount differs from this promise."
+    }
+  ]
+}

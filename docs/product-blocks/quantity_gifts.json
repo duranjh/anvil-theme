@@ -1,0 +1,48 @@
+{
+  "type": "quantity_gifts",
+  "name": "Gifts on quantity",
+  "limit": 3,
+  "settings": [
+    {
+      "type": "product",
+      "id": "gift_product",
+      "label": "Gift product"
+    },
+    {
+      "type": "range",
+      "id": "gift_variant_position",
+      "label": "Gift variant position",
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "default": 1,
+      "info": "1 is the gift product's first variant. A sold-out gift hides the block."
+    },
+    {
+      "type": "range",
+      "id": "gift_min_qty",
+      "label": "Minimum quantity",
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "default": 2,
+      "info": "With this many of this product in the cart the gift line is added; below it the line is removed."
+    },
+    {
+      "type": "text",
+      "id": "gift_label",
+      "label": "Text",
+      "info": "Leave blank for \"Buy [count] and we add [gift] to your cart\". [count] becomes the minimum quantity and [gift] the gift's name. Say \"free\" only when the discount below exists."
+    },
+    {
+      "type": "checkbox",
+      "id": "gift_show_image",
+      "label": "Show the gift image",
+      "default": true
+    },
+    {
+      "type": "paragraph",
+      "content": "The theme only adds the gift line. Create a Buy X Get Y automatic discount (buy this product, get the gift at 100% off) so Shopify prices it at zero; the cart shows \"Free\" only then."
+    }
+  ]
+}

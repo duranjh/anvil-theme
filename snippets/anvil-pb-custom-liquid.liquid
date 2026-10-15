@@ -1,0 +1,16 @@
+{% doc %}
+  Product block `custom_liquid` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with
+  the fixed arguments product, block, section, form_id and current_variant; it reads block.
+
+  The merchant's Liquid, rendered as written inside one wrapper that carries the editor attributes. The wrapper
+  collapses (CSS :empty) when the code outputs nothing, so it leaves no gap in the buy column.
+  Styles: assets/anvil-pb-content.css.
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+<div class="av-pb-custom-liquid" {{ block.shopify_attributes }}>
+  {{- block.settings.custom_liquid -}}
+</div>

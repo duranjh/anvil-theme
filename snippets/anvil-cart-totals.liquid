@@ -1,0 +1,65 @@
+{% doc %}
+  Cart totals, shared by the cart drawer and the cart page: the subtotal, cart-level discounts, a savings line from
+  Shopify's discount allocations (cart.total_discount), an optional separate line for compare-at savings, the
+  estimated total and the taxes and shipping note. Every number comes from the cart; nothing is typed in
+  (docs/HONEST.md). Styles live in assets/anvil-cart-drawer.css (load it wherever totals render).
+
+  @param {boolean} [show_savings] - Show "You save" from Shopify discounts (default Theme settings > Cart > Show a savings line)
+  @param {boolean} [show_discounts] - List cart-level discounts between the subtotal and the total (default true)
+  @param {boolean} [show_compare_savings] - Show savings against compare-at prices on their own line (default false)
+  @param {boolean} [show_tax_note] - Show the taxes and shipping note (default true)
+
+  @example
+  {% render 'anvil-cart-totals', show_compare_savings: true %}
+{% enddoc %}
+{%- liquid
+  assign savings_on = show_savings | default: settings.cart_show_savings, allow_false: true
+  assign discounts_on = show_discounts | default: true, allow_false: true
+  assign tax_on = show_tax_note | default: true, allow_false: true
+
+  assign compare_savings = 0
+  if show_compare_savings
+    for item in cart.items
+      if item.variant.compare_at_price > item.original_price
+        assign line_saving = item.variant.compare_at_price | minus: item.original_price | times: item.quantity
+        assign compare_savings = compare_savings | plus: line_saving
+      endif
+    endfor
+  endif
+
+  assign has_cart_discounts = false
+  if discounts_on and cart.cart_level_discount_applications.size > 0
+    assign has_cart_discounts = true
+  endif
+-%}
+<div class="av-cart-totals">
+  {%- if has_cart_discounts -%}
+    <p class="av-cart-totals__row">
+      <span>{{ 'anvil.cart.subtotal' | t }}</span>
+      <span>{% render 'anvil-money', amount: cart.items_subtotal_price %}</span>
+    </p>
+    {%- for discount in cart.cart_level_discount_applications -%}
+      <p class="av-cart-totals__row av-cart-totals__row--discount">
+        <span class="av-cart-totals__label">{% render 'anvil-icon', name: 'tag', size: 14 %}{{ discount.title | escape }}</span>
+        <span>&minus;{% render 'anvil-money', amount: discount.total_allocated_amount %}</span>
+      </p>
+    {%- endfor -%}
+  {%- endif -%}
+  <p class="av-cart-totals__row av-cart-totals__row--total">
+    <span>{% if has_cart_discounts %}{{ 'anvil.cart.estimated_total' | t }}{% else %}{{ 'anvil.cart.subtotal' | t }}{% endif %}</span>
+    <span>{% render 'anvil-money', amount: cart.total_price %}</span>
+  </p>
+  {%- if savings_on and cart.total_discount > 0 -%}
+    {%- capture savings_money -%}{% render 'anvil-money', amount: cart.total_discount %}{%- endcapture -%}
+    <p class="av-cart-totals__savings">{{ 'anvil.cart.you_save_html' | t: amount: savings_money }}</p>
+  {%- endif -%}
+  {%- if compare_savings > 0 -%}
+    {%- capture compare_money -%}{% render 'anvil-money', amount: compare_savings %}{%- endcapture -%}
+    <p class="av-cart-totals__savings">{{ 'anvil.cart.compare_savings_html' | t: amount: compare_money }}</p>
+  {%- endif -%}
+  {%- if tax_on -%}
+    <p class="av-cart-totals__note">
+      {%- if cart.taxes_included -%}{{ 'anvil.cart.taxes_included_note' | t }}{%- else -%}{{ 'anvil.cart.taxes_note' | t }}{%- endif -%}
+    </p>
+  {%- endif -%}
+</div>

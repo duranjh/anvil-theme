@@ -1,0 +1,13 @@
+{
+  "type": "rating",
+  "name": "Rating stars",
+  "limit": 1,
+  "settings": [
+    {"type": "paragraph", "content": "Stars, number and count come from the product's review rating, which your review app fills in. Nothing shows for products without one."},
+    {"type": "checkbox", "id": "rating_show_number", "label": "Show the rating number", "default": true},
+    {"type": "checkbox", "id": "rating_show_count", "label": "Show the review count", "default": true},
+    {"type": "select", "id": "rating_size", "label": "Size", "options": [{"value": "sm", "label": "Small"}, {"value": "md", "label": "Medium"}, {"value": "lg", "label": "Large"}], "default": "md"},
+    {"type": "text_alignment", "id": "rating_align", "label": "Alignment", "default": "left"},
+    {"type": "text", "id": "rating_anchor", "label": "Link to anchor", "info": "Optional. The anchor id of your reviews section or app block, for example reviews. The stars then link there."}
+  ]
+}

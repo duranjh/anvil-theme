@@ -1,0 +1,122 @@
+{% doc %}
+  Offer cards for the variant picker (DESIGN-money-path §B, SPEC §3.2): one radio card per value of the option the
+  cards drive (the picker's offer_cards_option), inside a fieldset whose legend names the option and its selected
+  value. Card N comes from the Nth offer_card block of the section (its card_variant_position picks the option
+  value, 0 = block order); without offer_card blocks every value of the option gets a generated card. With blocks,
+  every value no block points at still gets a generated card after them, so each variant stays selectable (a
+  product with more values than cards, an ad link to another variant). Each card is rendered by
+  snippets/anvil-pb-offer-card.liquid.
+
+  With resolve: true nothing is drawn: the snippet prints only the id of the variant that the picker's
+  offer_cards_preselect points to (card N's value with the other options at their current values), or nothing for
+  0 or a card that does not exist. It is the same rule sections/main-product.liquid applies to current_variant, so
+  a caller can capture it:
+    {% capture preselect_id %}{% render 'anvil-offer-cards', product: product, block: picker_block, section: section, resolve: true %}{% endcapture %}
+  Whether that variant is available is left to the caller.
+
+  @param {object} product - The product
+  @param {object} block - The variant_picker block
+  @param {object} section - The product section (offer_card blocks are read from it)
+  @param {boolean} [resolve] - Print only the preselected variant id
+  @param {object} [option] - product_option the cards drive (default: from offer_cards_option)
+  @param {string} [current] - Name of that option's selected value
+  @param {string} [name] - Radio group name
+  @param {string} [chart] - Size chart button markup, printed under the cards
+{% enddoc %}
+{%- liquid
+  assign bs = block.settings
+  if option == blank
+    assign drive_pos = bs.offer_cards_option | plus: 0
+    if drive_pos < 1 or drive_pos > product.options_with_values.size
+      assign drive_pos = 1
+    endif
+    assign drive_index = drive_pos | minus: 1
+    assign option = product.options_with_values[drive_index]
+  endif
+  assign card_blocks = section.blocks | where: 'type', 'offer_card'
+  assign count = card_blocks.size
+  if count == 0
+    assign count = option.values.size
+  endif
+-%}
+{%- if resolve -%}
+  {%- liquid
+    assign wanted = bs.offer_cards_preselect | plus: 0
+    if wanted > 0 and wanted <= count
+      assign value_pos = wanted
+      if card_blocks.size > 0
+        assign card_index = wanted | minus: 1
+        assign value_pos = card_blocks[card_index].settings.card_variant_position | plus: 0
+        if value_pos < 1
+          assign value_pos = wanted
+        endif
+      endif
+      assign value_index = value_pos | minus: 1
+      echo option.values[value_index].variant.id
+    endif
+  -%}
+{%- elsif option != blank -%}
+  {%- liquid
+    assign mode = bs.offer_cards_savings | default: 'amount'
+    assign layout = bs.offer_cards_layout | default: 'stack'
+    assign show_image = true
+    if bs.offer_cards_image_source == 'none'
+      assign show_image = false
+    endif
+    if current == blank
+      assign current = option.selected_value
+    endif
+  -%}
+  <fieldset class="av-offer-cards av-offer-cards--{{ layout }}">
+    <legend class="av-legend av-picker__legend">
+      {{- option.name | escape }}: <span class="av-picker__current" data-anvil-selected="{{ option.position }}">{{ current | escape }}</span>
+    </legend>
+    <div class="av-offer-cards__list">
+      {%- assign used = ',' -%}
+      {%- for i in (1..count) -%}
+        {%- liquid
+          assign card = nil
+          assign value_pos = i
+          if card_blocks.size > 0
+            assign card_index = i | minus: 1
+            assign card = card_blocks[card_index]
+            assign value_pos = card.settings.card_variant_position | plus: 0
+            if value_pos < 1
+              assign value_pos = i
+            endif
+          endif
+          assign value_index = value_pos | minus: 1
+          assign value = option.values[value_index]
+          assign used = used | append: value_pos | append: ','
+        -%}
+        {% render 'anvil-pb-offer-card',
+          value: value,
+          card: card,
+          name: name,
+          pos: option.position,
+          current: current,
+          mode: mode,
+          show_image: show_image,
+          hide_sold_out: bs.picker_hide_sold_out
+        %}
+      {%- endfor -%}
+      {%- if card_blocks.size > 0 -%}
+        {%- for value in option.values -%}
+          {%- assign probe = ',' | append: forloop.index | append: ',' -%}
+          {%- unless used contains probe -%}
+            {% render 'anvil-pb-offer-card',
+              value: value,
+              name: name,
+              pos: option.position,
+              current: current,
+              mode: mode,
+              show_image: show_image,
+              hide_sold_out: bs.picker_hide_sold_out
+            %}
+          {%- endunless -%}
+        {%- endfor -%}
+      {%- endif -%}
+    </div>
+    {{- chart -}}
+  </fieldset>
+{%- endif -%}

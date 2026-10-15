@@ -1,0 +1,32 @@
+{% doc %}
+  Product block `link_button` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with
+  the fixed arguments product, block, section, form_id and current_variant; it reads block.
+
+  One link styled as a button (snippets/anvil-button): label, URL, style, size, optional icon, full width or
+  aligned. A link that opens a new tab says so to screen readers. Without a label or URL the wrapper stays empty and
+  collapses (CSS :empty), so a half-configured block never shows a button that goes nowhere.
+  Styles: assets/anvil-pb-content.css (button styles live in assets/anvil-base.css).
+
+  No LiquidDoc parameter tags on purpose: the dispatcher always passes all five arguments, and Theme Check
+  reports either the unused ones here (UnusedDocParam) or the undeclared ones at the call site
+  (UnrecognizedRenderSnippetArguments).
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign btn_label = s.label | strip | escape
+  if s.new_tab and btn_label != blank
+    assign new_tab_note = 'anvil.a11y.new_window' | t | escape
+    assign btn_label = btn_label | append: '<span class="av-visually-hidden"> ' | append: new_tab_note | append: '</span>'
+  endif
+  assign btn_icon = s.icon
+  if btn_icon == 'none'
+    assign btn_icon = ''
+  endif
+  assign btn_align = s.align | default: 'left'
+-%}
+{{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+<div class="av-pb-link-button av-pb-align--{{ btn_align }}" {{ block.shopify_attributes }}>
+  {%- if btn_label != blank and s.url != blank -%}
+    {%- render 'anvil-button', label: btn_label, url: s.url, style: s.style, size: s.size, full: s.full, icon: btn_icon, external: s.new_tab -%}
+  {%- endif -%}
+</div>

@@ -1,0 +1,20 @@
+{% doc %}
+  Product block icons_text ("Icons with text"): a trust row of up to four items through snippets/anvil-icons-text,
+  read from the slot settings item_1_icon … item_4_text. Called by the product block dispatcher with product, block,
+  section, form_id and current_variant (WAVE1-CONTRACTS §1); it reads only block. The arguments are described in prose
+  rather than as LiquidDoc parameters because Theme Check requires every declared parameter to be used.
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  capture row
+    render 'anvil-icons-text', settings: s, columns_mobile: s.columns_mobile, columns: s.columns, layout: s.layout, align: s.align
+  endcapture
+  assign row = row | strip
+-%}
+{%- if row != blank -%}
+  <div class="av-pb-icons-text" {{ block.shopify_attributes }}>{{ row }}</div>
+{%- elsif request.design_mode -%}
+  <div class="av-pb-icons-text" {{ block.shopify_attributes }}>
+    <p class="av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+  </div>
+{%- endif -%}

@@ -55,7 +55,7 @@ NAME_MAP = {
     "Timeline": "anvil-timeline",
     "Scrolling images (marquee)": "anvil-image-marquee",
     "Feature grid": "anvil-feature-grid",
-    "Gallery": "anvil-gallery",
+    "Gallery": "anvil-image-gallery",
     "Product videos": "anvil-product-videos",
     "Simple FAQ": "anvil-faq",
     "Theme colours preview": "anvil-palette-preview",

@@ -1,0 +1,93 @@
+{% doc %}
+  Product block `buy_buttons` (DESIGN-money-path §C, WAVE1-CONTRACTS §3–§4, SPEC §3.2), rendered by
+  snippets/anvil-product-block.liquid with product, block, section, form_id and current_variant. The section
+  renders it inside its product form, right after the hidden id input, and prints {{ form | payment_button }}
+  after it when show_dynamic_checkout is on (express buttons default off: they skip the cart drawer).
+
+  <anvil-product-form> (assets/anvil-product.js) intercepts the form's submit and adds every form-associated control
+  (id, quantity, properties[...], items[n][...]) with one cartAdd call that re-renders the cart drawer and bubble;
+  Shopify's 4xx description shows in the alert region, and any other failure falls back to the native post.
+  Without JavaScript the form posts to the cart as usual. For products with options a <noscript> variant select
+  (name="id", after the hidden input, so its value is the one the server reads) replaces the picker, which needs
+  the script.
+  The submit button's label carries data-anvil-bind="add_label" with the merchant's add and sold-out labels, so
+  the variant picker can switch it (add / sold out / unavailable) and disable the button. The server label reads
+  "sold out" only when nothing else can be bought: with options and another available variant the fallback select
+  can reach it, and the picker switches the label on load anyway. The button is disabled only when no variant can
+  be bought. The fallback options print prices with the money filters directly (one filter choice for all of
+  them, not a snippet render per variant).
+  The element is display: contents, so its parts are items of the form's own column, and the error and secure
+  lines sit below the express buttons.
+
+  @param {object} product - The product; decides the fallback select and whether anything can be bought
+  @param {object} block - The buy_buttons block
+  @param {object} section - The product section; its id scopes the element
+  @param {string} form_id - Id of the section's product form
+  @param {object} current_variant - The variant the page opened on; sets the opening label
+{% enddoc %}
+{%- liquid
+  assign bs = block.settings
+  assign variant = current_variant | default: product.selected_or_first_available_variant
+  assign add_label = bs.atc_label | strip
+  if add_label == blank
+    assign add_label = 'anvil.product.add_to_cart' | t
+  endif
+  assign sold_label = bs.atc_sold_out_label | strip
+  if sold_label == blank
+    assign sold_label = 'anvil.product.sold_out' | t
+  endif
+  assign label = add_label
+  assign disabled = false
+  if variant.available == false
+    if product.available == false or product.variants.size == 1
+      assign label = sold_label
+      assign disabled = true
+    endif
+  endif
+  assign secure_text = bs.atc_secure_text | strip
+  if secure_text == blank
+    assign secure_text = 'anvil.product.secure_checkout' | t
+  endif
+  assign btn_style = bs.atc_style | default: 'primary'
+  assign select_id = form_id | append: '-variant'
+-%}
+{{ 'anvil-offer-cards.css' | asset_url | stylesheet_tag }}
+<anvil-product-form class="av-buy" form-id="{{ form_id }}" section-id="{{ section.id }}" {{ block.shopify_attributes }}>
+  {%- unless product.has_only_default_variant -%}
+    <noscript>
+      <div class="av-field av-buy__fallback">
+        <label class="av-field__label" for="{{ select_id }}">{{ 'anvil.product.choose_variant' | t }}</label>
+        <div class="av-field__select av-dropdown av-dropdown--{{ settings.dropdown_style }}">
+          <select class="av-field__input" id="{{ select_id }}" name="id" form="{{ form_id }}">
+            {%- for item in product.variants -%}
+              <option value="{{ item.id }}"{% if item.id == variant.id %} selected{% endif %}>
+                {{- item.title | escape }} — {% if settings.show_currency_code %}{{ item.price | money_with_currency | strip_html }}{% else %}{{ item.price | money | strip_html }}{% endif -%}
+                {%- unless item.available %} — {{ 'anvil.product.sold_out' | t }}{% endunless -%}
+              </option>
+            {%- endfor -%}
+          </select>
+        </div>
+      </div>
+    </noscript>
+  {%- endunless -%}
+  <button
+    type="submit"
+    name="add"
+    form="{{ form_id }}"
+    class="av-btn av-btn--{{ btn_style }} av-btn--lg av-btn--full av-buy__atc"
+    {%- if disabled %} disabled{% endif %}
+  >
+    <span class="av-btn__label" data-anvil-bind="add_label" data-anvil-label-add="{{ add_label | escape }}" data-anvil-label-sold-out="{{ sold_label | escape }}">
+      {{- label | escape -}}
+    </span>
+  </button>
+  <div class="av-form-message av-form-message--error av-buy__error" role="alert" data-anvil-form-error></div>
+  <p class="av-visually-hidden" role="status" data-anvil-form-status></p>
+  {%- if bs.show_secure_line -%}
+    <p class="av-buy__secure">
+      {%- render 'anvil-icon', name: 'lock', size: 16 -%}
+      <span>{{ secure_text | escape }}</span>
+    </p>
+  {%- endif -%}
+</anvil-product-form>
+<script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>

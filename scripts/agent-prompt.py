@@ -6,7 +6,9 @@ Order of the assembled prompt:
   1. docs/CONVENTIONS.md                       (the contract, verbatim)
   2. docs/spec/<slug>.md                        (the spec card; see spec-cards.py)
   3. CHASSIS-API: the {% doc %} headers of every snippets/anvil-*.liquid and
-     blocks/*.liquid, extracted at run time
+     blocks/*.liquid, extracted at run time (product block snippets
+     snippets/anvil-pb-*.liquid are left out: only the product block
+     dispatcher renders them, and their headers are documented in place)
   4. docs/FORBIDDEN.md                          (verbatim)
   5. the two exemplar sections in full: sections/anvil-icon-bar.liquid and
      sections/anvil-faq.liquid
@@ -68,6 +70,8 @@ def chassis_api(root, warnings):
             continue
         for name in sorted(os.listdir(d)):
             if not name.endswith(".liquid") or not name.startswith(prefix):
+                continue
+            if folder == "snippets" and name.startswith("anvil-pb-"):
                 continue
             text = read(os.path.join(d, name))
             doc = extract_doc(text)

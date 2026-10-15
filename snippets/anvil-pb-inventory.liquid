@@ -1,0 +1,103 @@
+{% doc %}
+  Product block `inventory` (docs/WAVE1-CONTRACTS.md §1), rendered by snippets/anvil-product-block.liquid with
+  the fixed arguments product, block, section, form_id and current_variant.
+
+  Stock status of the current variant, only from Shopify's tracked inventory (docs/HONEST.md):
+  - tracked, available, quantity at or under the threshold → the low-stock text with [count] = the real quantity
+  - tracked, available, above the threshold → the in-stock text (when the merchant shows it)
+  - tracked, quantity at zero but "continue selling" → the backorder text (nothing when it is empty)
+  - not available → the sold-out text
+  - inventory not tracked → nothing (an editor-only note explains why)
+  The root is always present (hidden when there is nothing to say) and carries the state as data-state
+  (low_stock | in_stock | backorder | sold_out). Its text span is the variant picker's "stock" bind
+  (assets/anvil-product.js): the merchant's texts and threshold sit in data-anvil-tpl-* / data-anvil-threshold, so
+  every variant change rewrites the line at once from the product JSON's tracked inventory, in Featured product
+  too. On the product page the root is also a server-truth node (data-anvil-server-truth="inventory-<section>-
+  <block>"), which the picker's Section Rendering fetch then replaces with the server's own render.
+  Styles: assets/anvil-pb-content.css.
+
+  @param {object} product - The product; its first available variant stands in when current_variant is blank
+  @param {object} block - The inventory block
+  @param {object} section - The product section; its id scopes the server-truth key
+  @param {string} form_id - The section's product form id; prefixes the line's id
+  @param {object} current_variant - The variant the shell selected (URL, preselected offer card or first available)
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign variant = current_variant
+  if variant == blank and product != blank
+    assign variant = product.selected_or_first_available_variant
+  endif
+
+  assign state = ''
+  assign message = ''
+  assign editor_note = ''
+  assign threshold = s.threshold | default: 10
+  if variant != blank
+    if variant.inventory_management == blank
+      if request.design_mode
+        assign editor_note = 'anvil.editor.untracked_inventory' | t
+      endif
+    elsif variant.available == false
+      assign state = 'out'
+      assign message = s.text_out
+    elsif variant.inventory_quantity <= 0
+      assign state = 'backorder'
+      assign message = s.text_backorder
+    else
+      if variant.inventory_quantity <= threshold
+        assign state = 'low'
+        assign count = variant.inventory_quantity | append: ''
+        assign message = s.text_low | escape | replace: '[count]', count
+      elsif s.show_in_stock
+        assign state = 'in'
+        assign message = s.text_in
+      endif
+    endif
+  endif
+  if state != 'low'
+    assign message = message | escape
+  endif
+  assign message = message | strip
+  assign state_name = ''
+  case state
+    when 'low'
+      assign state_name = 'low_stock'
+    when 'in'
+      assign state_name = 'in_stock'
+    when 'backorder'
+      assign state_name = 'backorder'
+    when 'out'
+      assign state_name = 'sold_out'
+  endcase
+  assign text_in = ''
+  if s.show_in_stock
+    assign text_in = s.text_in
+  endif
+-%}
+{{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
+<p
+  class="av-pb-inventory"
+  id="{{ form_id }}-inventory"
+  data-anvil-server-truth="inventory-{{ section.id }}-{{ block.id }}"
+  data-anvil-bind-box
+  data-state="{{ state_name }}"
+  {% if message == blank and editor_note == blank %}hidden{% endif %}
+  {{ block.shopify_attributes }}
+>
+  {%- if s.show_dot -%}<span class="av-pb-inventory__dot" aria-hidden="true"></span>{%- endif -%}
+  <span
+    class="av-pb-inventory__text"
+    data-anvil-bind="stock"
+    data-anvil-threshold="{{ threshold }}"
+    data-anvil-tpl-low="{{ s.text_low | strip | escape }}"
+    data-anvil-tpl-in="{{ text_in | strip | escape }}"
+    data-anvil-tpl-back="{{ s.text_backorder | strip | escape }}"
+    data-anvil-tpl-out="{{ s.text_out | strip | escape }}"
+  >
+    {{- message -}}
+  </span>
+  {%- if message == blank and editor_note != blank -%}
+    <span class="av-pb-inventory__note">{{ editor_note }}</span>
+  {%- endif -%}
+</p>

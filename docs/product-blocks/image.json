@@ -1,0 +1,72 @@
+{
+  "type": "image",
+  "name": "Image",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image"
+    },
+    {
+      "type": "text",
+      "id": "alt",
+      "label": "Alt text",
+      "info": "Describe what the image shows. Required when the image links somewhere; leave empty for a purely decorative image."
+    },
+    {
+      "type": "select",
+      "id": "ratio",
+      "label": "Aspect ratio",
+      "options": [
+        {
+          "value": "adapt",
+          "label": "Adapt to media"
+        },
+        {
+          "value": "1:1",
+          "label": "Square"
+        },
+        {
+          "value": "4:5",
+          "label": "Portrait 4:5"
+        },
+        {
+          "value": "3:4",
+          "label": "Portrait 3:4"
+        },
+        {
+          "value": "16:9",
+          "label": "Landscape 16:9"
+        }
+      ],
+      "default": "adapt"
+    },
+    {
+      "type": "range",
+      "id": "width",
+      "label": "Width",
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "text_alignment",
+      "id": "align",
+      "label": "Alignment",
+      "default": "left"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "Link"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "Link description",
+      "info": "Read out by screen readers when the image has no alt text, for example \"See the size guide\"."
+    }
+  ]
+}

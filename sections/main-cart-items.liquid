@@ -1,8 +1,26 @@
+{%- comment -%}
+  Cart page lines. Each line is snippets/anvil-cart-line.liquid, the same markup the cart drawer uses, inside a plain
+  <form> that posts updates[<line key>] to the cart, so the page works without JavaScript; <anvil-cart-form
+  cart-id="page"> (assets/anvil-cart.js) adds steppers, typed quantities, removal without a reload and gift-line
+  handling. Line styles come from assets/anvil-cart-drawer.css (shared with the drawer).
+  The summary section (main-cart-footer) points its note and checkout button at this form with form="anvil-cart-form".
+  When a line carries the _anvil_gift property, the gift engine (assets/anvil-gifts.js) loads here too: with
+  Theme settings > Cart type "Page" no drawer exists to load it, and a gift whose condition fails on this page
+  (the shopper lowers the trigger quantity) must still be removed; its key alone tells the engine the condition.
+{%- endcomment -%}
 {%- liquid
   assign continue_label = 'anvil.cart.continue_shopping' | t
   assign continue_url = settings.cart_empty_link | default: routes.all_products_collection_url
   assign update_label = 'anvil.cart.update' | t
+  assign has_gift_line = false
+  for item in cart.items
+    if item.properties['_anvil_gift'] != blank
+      assign has_gift_line = true
+      break
+    endif
+  endfor
 -%}
+{{ 'anvil-cart-drawer.css' | asset_url | stylesheet_tag }}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-cart-items' %}>
   <div class="av-section__inner" data-anvil-cart-render="{{ section.id }}">
     {% render 'anvil-section-head', section: section %}
@@ -21,80 +39,11 @@
       {%- else -%}
         <anvil-cart-form class="av-enhance" cart-id="page">
           <form action="{{ routes.cart_url }}" method="post" id="anvil-cart-form" class="av-cart-items__form" data-anvil-cart-form>
-            {%- comment -%}
-              Explicit table roles: below 750 px the rows are laid out as grids, and the roles keep the table,
-              its rows and its column headers in the accessibility tree in every browser.
-            {%- endcomment -%}
-            <table class="av-cart-items__table" role="table">
-              <caption class="av-visually-hidden">{{ 'anvil.cart.title' | t }}</caption>
-              <thead class="av-cart-items__thead" role="rowgroup">
-                <tr role="row">
-                  <th scope="col" colspan="2" role="columnheader">{{ 'anvil.cart.product' | t }}</th>
-                  <th scope="col" role="columnheader">{{ 'anvil.cart.quantity' | t }}</th>
-                  <th scope="col" class="av-cart-items__th-total" role="columnheader">{{ 'anvil.cart.line_total' | t }}</th>
-                </tr>
-              </thead>
-              <tbody role="rowgroup">
-                {%- for item in cart.items -%}
-                  {%- assign item_title = item.product.title | escape -%}
-                  <tr class="av-cart-items__row" role="row" data-anvil-line="{{ item.key }}">
-                    <td class="av-cart-items__media" role="cell">
-                      {%- if item.image -%}
-                        <a href="{{ item.url }}" tabindex="-1" aria-hidden="true" class="av-cart-items__media-link">
-                          {{ item.image | image_url: width: 300 | image_tag: widths: '150, 300', sizes: '100px', loading: 'lazy', alt: '', class: 'av-cart-items__img' }}
-                        </a>
-                      {%- endif -%}
-                    </td>
-                    <td class="av-cart-items__details" role="cell">
-                      <a class="av-cart-items__name" href="{{ item.url }}">{{ item_title }}</a>
-                      {%- unless item.product.has_only_default_variant -%}
-                        <p class="av-cart-items__meta">{{ item.variant.title | escape }}</p>
-                      {%- endunless -%}
-                      {%- if settings.cart_show_vendor and item.vendor != blank -%}
-                        <p class="av-cart-items__meta">{{ item.vendor | escape }}</p>
-                      {%- endif -%}
-                      {%- for property in item.properties -%}
-                        {%- assign prop_first = property.first | slice: 0 -%}
-                        {%- if property.last != blank and prop_first != '_' -%}
-                          <p class="av-cart-items__meta">{{ property.first | escape }}: {{ property.last | escape }}</p>
-                        {%- endif -%}
-                      {%- endfor -%}
-                      {%- if item.selling_plan_allocation -%}
-                        <p class="av-cart-items__meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</p>
-                      {%- endif -%}
-                      <p class="av-cart-items__meta av-cart-items__unit">
-                        {%- if item.original_price != item.final_price -%}
-                          <s><span class="av-visually-hidden">{{ 'anvil.price.regular_price' | t }}</span> {% render 'anvil-money', amount: item.original_price %}</s>
-                          <span class="av-visually-hidden">{{ 'anvil.price.sale_price' | t }}</span>
-                        {%- endif %}
-                        {% render 'anvil-money', amount: item.final_price %}
-                      </p>
-                      {%- for allocation in item.line_level_discount_allocations -%}
-                        <p class="av-cart-items__meta av-cart-items__meta--discount">{{ allocation.discount_application.title | escape }} (&minus;{% render 'anvil-money', amount: allocation.amount %})</p>
-                      {%- endfor -%}
-                    </td>
-                    <td class="av-cart-items__qty" role="cell">
-                      <div class="av-qty av-cart-items__stepper">
-                        <button type="button" class="av-qty__btn av-cart-items__step av-enhanced-only" data-anvil-step="-1" data-anvil-focus-key="dec-{{ item.key }}" aria-label="{{ 'anvil.cart.decrease_for' | t: title: item.product.title }}">&minus;</button>
-                        <input class="av-qty__input" type="number" name="updates[]" value="{{ item.quantity }}" min="0" inputmode="numeric" aria-label="{{ 'anvil.cart.quantity_for' | t: title: item.product.title }}" data-anvil-quantity data-anvil-focus-key="qty-{{ item.key }}">
-                        <button type="button" class="av-qty__btn av-cart-items__step av-enhanced-only" data-anvil-step="1" data-anvil-focus-key="inc-{{ item.key }}" aria-label="{{ 'anvil.cart.increase_for' | t: title: item.product.title }}">+</button>
-                      </div>
-                      <a class="av-cart-items__remove" href="{{ item.url_to_remove }}" data-anvil-remove data-anvil-focus-key="rm-{{ item.key }}" aria-label="{{ 'anvil.cart.remove' | t }}: {{ item_title }}">{{ 'anvil.cart.remove' | t }}</a>
-                    </td>
-                    <td class="av-cart-items__total" role="cell">
-                      <span class="av-cart-items__cell-label" aria-hidden="true">{{ 'anvil.cart.line_total' | t }}</span>
-                      {%- if item.original_line_price != item.final_line_price -%}
-                        <s class="av-cart-items__was"><span class="av-visually-hidden">{{ 'anvil.price.regular_price' | t }}</span> {% render 'anvil-money', amount: item.original_line_price %}</s>
-                      {%- endif -%}
-                      <span class="av-cart-items__now">
-                        {%- if item.original_line_price != item.final_line_price -%}<span class="av-visually-hidden">{{ 'anvil.price.sale_price' | t }} </span>{%- endif -%}
-                        {%- if item.final_line_price == 0 -%}{{ 'anvil.cart.free' | t }}{%- else -%}{% render 'anvil-money', amount: item.final_line_price %}{%- endif -%}
-                      </span>
-                    </td>
-                  </tr>
-                {%- endfor -%}
-              </tbody>
-            </table>
+            <ul class="av-cart-items__lines av-list-reset" role="list">
+              {%- for item in cart.items -%}
+                {% render 'anvil-cart-line', item: item, form_id: 'anvil-cart-form', show_unit_price: true, show_compare_at: settings.cart_show_savings, size: 'md' %}
+              {%- endfor -%}
+            </ul>
             <p class="av-cart-items__error av-form-message av-form-message--error" role="alert" data-anvil-cart-error hidden></p>
             <div class="av-cart-items__update av-fallback-only">
               {% render 'anvil-button', label: update_label, style: 'secondary', size: 'md', type: 'submit' %}
@@ -102,6 +51,9 @@
           </form>
         </anvil-cart-form>
         <script type="module" src="{{ 'anvil-cart.js' | asset_url }}"></script>
+        {%- if has_gift_line -%}
+          <script type="module" src="{{ 'anvil-gifts.js' | asset_url }}"></script>
+        {%- endif -%}
       {%- endif -%}
     </div>
   </div>
@@ -129,92 +81,13 @@
   .av-cart-items__empty-text {
     font-size: var(--av-text-lg);
   }
-  .av-cart-items__thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+  .av-cart-items__lines {
+    margin: 0;
+    border-top: 1px solid var(--av-border);
   }
-  .av-cart-items__row {
-    display: grid;
-    grid-template-columns: 100px minmax(0, 1fr);
-    grid-template-areas: "media details" "media qty" "media total";
-    gap: var(--av-space-2) var(--av-space-3);
+  .av-cart-items__lines > * {
     padding: var(--av-space-4) 0;
     border-bottom: 1px solid var(--av-border);
-  }
-  .av-cart-items__row td {
-    padding: 0;
-    vertical-align: top;
-  }
-  .av-cart-items__row[aria-busy="true"] {
-    opacity: 0.6;
-  }
-  .av-cart-items__media {
-    grid-area: media;
-  }
-  .av-cart-items__details {
-    grid-area: details;
-  }
-  .av-cart-items__qty {
-    grid-area: qty;
-    display: flex;
-    align-items: center;
-    gap: var(--av-space-3);
-  }
-  .av-cart-items__total {
-    grid-area: total;
-    font-weight: 600;
-  }
-  .av-cart-items__cell-label {
-    margin-inline-end: var(--av-space-2);
-    font-size: var(--av-text-xs);
-    font-weight: 400;
-    color: var(--av-fg-muted);
-  }
-  .av-cart-items__media-link {
-    display: block;
-    aspect-ratio: 1;
-    overflow: hidden;
-    border-radius: var(--av-radius-media);
-    background: rgb(var(--av-fg-rgb) / 0.05);
-  }
-  .av-cart-items__img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .av-cart-items__name {
-    text-decoration: none;
-    font-weight: 600;
-  }
-  .av-cart-items__name:hover {
-    text-decoration: underline;
-  }
-  .av-cart-items__meta {
-    margin-top: var(--av-space-1);
-    font-size: var(--av-text-xs);
-    color: var(--av-fg-muted);
-  }
-  .av-cart-items__meta--discount {
-    color: var(--av-fg);
-  }
-  .av-cart-items__unit s {
-    margin-right: var(--av-space-1);
-  }
-  .av-cart-items__remove {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    font-size: var(--av-text-xs);
-    color: var(--av-fg-muted);
-  }
-  .av-cart-items__was {
-    display: block;
-    font-weight: 400;
-    color: var(--av-fg-muted);
   }
   .av-cart-items__error {
     margin-top: var(--av-space-4);
@@ -225,49 +98,8 @@
     margin-top: var(--av-space-4);
   }
   @media (min-width: 750px) {
-    .av-cart-items__thead {
-      position: static;
-      width: auto;
-      height: auto;
-      overflow: visible;
-      clip-path: none;
-      white-space: normal;
-    }
-    .av-cart-items__thead th {
-      padding: 0 0 var(--av-space-3);
-      text-align: left;
-      font-size: var(--av-text-xs);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--av-fg-muted);
-      border-bottom: 1px solid var(--av-border);
-    }
-    .av-cart-items__th-total {
-      text-align: right;
-    }
-    .av-cart-items__row {
-      display: table-row;
-    }
-    .av-cart-items__row td {
-      padding: var(--av-space-4) var(--av-space-3) var(--av-space-4) 0;
-      border-bottom: 1px solid var(--av-border);
-    }
-    .av-cart-items__media {
-      width: 100px;
-    }
-    .av-cart-items__qty {
-      display: table-cell;
-      width: 220px;
-    }
-    .av-cart-items__remove {
-      margin-left: var(--av-space-3);
-    }
-    .av-cart-items__total {
-      padding-right: 0;
-      text-align: right;
-    }
-    .av-cart-items__cell-label {
-      display: none;
+    .av-cart-items__lines > * {
+      padding: var(--av-space-5) 0;
     }
   }
 {% endstylesheet %}
@@ -284,7 +116,7 @@
     { "type": "header", "content": "Cart items" },
     {
       "type": "paragraph",
-      "content": "Vendors, the order note, the discount field and the savings line are switched on under Theme settings > Cart."
+      "content": "Vendors, the order note, the discount field and the savings line are switched on under Theme settings > Cart. With the savings line on, lines strike through compare-at prices; only enter a compare-at price the product really sold for."
     }
   ]
 }

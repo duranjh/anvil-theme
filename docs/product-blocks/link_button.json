@@ -1,0 +1,116 @@
+{
+  "type": "link_button",
+  "name": "Link button",
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Label",
+      "default": "Learn more"
+    },
+    {
+      "type": "url",
+      "id": "url",
+      "label": "Link",
+      "default": "/collections/all"
+    },
+    {
+      "type": "checkbox",
+      "id": "new_tab",
+      "label": "Open in a new tab",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "options": [
+        {
+          "value": "primary",
+          "label": "Solid button"
+        },
+        {
+          "value": "secondary",
+          "label": "Outline button"
+        },
+        {
+          "value": "ghost",
+          "label": "Subtle button"
+        },
+        {
+          "value": "link",
+          "label": "Text link"
+        }
+      ],
+      "default": "secondary"
+    },
+    {
+      "type": "select",
+      "id": "size",
+      "label": "Size",
+      "options": [
+        {
+          "value": "sm",
+          "label": "Small"
+        },
+        {
+          "value": "md",
+          "label": "Medium"
+        },
+        {
+          "value": "lg",
+          "label": "Large"
+        }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "checkbox",
+      "id": "full",
+      "label": "Full width",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "Icon",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "arrow-right",
+          "label": "Arrow"
+        },
+        {
+          "value": "chevron-right",
+          "label": "Chevron"
+        },
+        {
+          "value": "external-link",
+          "label": "External link"
+        },
+        {
+          "value": "download",
+          "label": "Download"
+        },
+        {
+          "value": "play",
+          "label": "Play"
+        },
+        {
+          "value": "info",
+          "label": "Information"
+        }
+      ],
+      "default": "none"
+    },
+    {
+      "type": "text_alignment",
+      "id": "align",
+      "label": "Alignment",
+      "default": "left"
+    }
+  ]
+}

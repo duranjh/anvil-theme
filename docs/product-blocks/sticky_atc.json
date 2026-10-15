@@ -1,0 +1,48 @@
+{
+  "type": "sticky_atc",
+  "name": "Sticky add to cart",
+  "limit": 1,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "A bar at the bottom of the screen that appears once the main add-to-cart button has scrolled out of view. It adds the same variant and quantity."
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_atc_mobile",
+      "label": "Show on phones",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_atc_desktop",
+      "label": "Show on desktop",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_atc_show_image",
+      "label": "Show image",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_atc_show_price",
+      "label": "Show price",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_atc_show_quantity",
+      "label": "Show quantity",
+      "default": false,
+      "info": "Mirrors the Quantity selector's stepper. Hidden when the section has no stepper."
+    },
+    {
+      "type": "text",
+      "id": "sticky_atc_label",
+      "label": "Button label",
+      "info": "Leave blank to use the Buy buttons label."
+    }
+  ]
+}

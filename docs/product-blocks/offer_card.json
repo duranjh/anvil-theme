@@ -1,0 +1,59 @@
+{
+  "type": "offer_card",
+  "name": "Offer card",
+  "limit": 6,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Shows inside the Variant picker when its style is Offer cards. Price, strike-through and savings come from the variant this card selects."
+    },
+    {
+      "type": "range",
+      "id": "card_variant_position",
+      "label": "Option value position",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "default": 0,
+      "info": "Which value of the card option this card sells: 1 is the first value. On a product with one option this is the variant's position. 0 follows the order of these blocks."
+    },
+    {
+      "type": "text",
+      "id": "card_label",
+      "label": "Label",
+      "info": "Leave blank to show the option value, for example 2 Pack. Do not type prices or savings here; the card computes them."
+    },
+    {
+      "type": "text",
+      "id": "card_caption",
+      "label": "Caption",
+      "info": "Describe what this option includes. Do not type prices, savings or 'was' amounts here; the card computes them from the variant's price and compare-at price."
+    },
+    {
+      "type": "text",
+      "id": "card_badge",
+      "label": "Badge",
+      "info": "For example Most popular. It shows only when the box below is ticked."
+    },
+    {
+      "type": "checkbox",
+      "id": "card_badge_backed_by_sales",
+      "label": "Badge is backed by sales data",
+      "default": false,
+      "info": "Only tick if sales data supports this badge. Shoppers never see it otherwise."
+    },
+    {
+      "type": "text",
+      "id": "card_benefit",
+      "label": "Benefit line",
+      "info": "Only promise what this option really includes, for example a shipping rate or a discount you have set up in Shopify."
+    },
+    {
+      "type": "checkbox",
+      "id": "card_show_image",
+      "label": "Show image",
+      "default": true,
+      "info": "Uses the image assigned to the card's variant, when the picker's card image is set to Variant image."
+    }
+  ]
+}

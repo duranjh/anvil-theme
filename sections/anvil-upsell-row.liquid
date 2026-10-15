@@ -1,0 +1,27 @@
+{%- comment -%}
+  Upsell row: rendered only through Shopify's product recommendations endpoint,
+  routes.product_recommendations_url?section_id=anvil-upsell-row&product_id=…&limit=…&intent=related|complementary.
+  It has no presets, so merchants cannot add it to a page. snippets/anvil-pb-upsells.liquid (and any other upsell
+  list) reads the <li data-anvil-product-id> items of [data-anvil-upsell-row] from the response; prices, the
+  "hide products already in the cart" rule and the item limit are applied by that block. Renders nothing when
+  Shopify returns no recommendations. This section is never part of a page's render tree, so card and list styles
+  live in assets/anvil-pb-commerce.css, which every caller loads (the product upsells and complementary blocks,
+  the cart drawer's upsells block).
+{%- endcomment -%}
+{%- if recommendations.performed? and recommendations.products_count > 0 -%}
+  <ul class="av-upsells__list" role="list" data-anvil-upsell-row data-anvil-intent="{{ recommendations.intent }}">
+    {%- for rec in recommendations.products -%}
+      <li class="av-upsells__item" data-anvil-product-id="{{ rec.id }}">
+        {%- render 'anvil-product-card-mini', product: rec, button: 'add', source_tag: 'upsell' -%}
+      </li>
+    {%- endfor -%}
+  </ul>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Upsell row",
+  "class": "av-upsell-row",
+  "settings": []
+}
+{% endschema %}

@@ -1,0 +1,63 @@
+{% doc %}
+  Product block review_avatars ("Review avatars"): a stack of up to five uploaded avatars (decorative), optional stars
+  and a review count, and the merchant's text. The stars come only from reviews.rating and the count only from
+  reviews.rating_count, the standard metafields review apps write; both are left out when the product has none
+  (docs/HONEST.md). The text is the merchant's words and should not carry numbers.
+  Called by the product block dispatcher with product, block, section, form_id and current_variant
+  (WAVE1-CONTRACTS §1); it reads product and block. The arguments are described in prose
+  rather than as LiquidDoc parameters because Theme Check requires every declared parameter to be used.
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  assign ra_px = 36
+  if s.avatars_size == 'sm'
+    assign ra_px = 28
+  endif
+  assign ra_px_2x = ra_px | times: 2
+  assign ra_widths = ra_px | append: ', ' | append: ra_px_2x
+  assign ra_sizes = ra_px | append: 'px'
+
+  capture ra_stack
+    for i in (1..5)
+      assign ra_key = 'avatar_' | append: i
+      assign ra_img = s[ra_key]
+      if ra_img != blank
+        echo ra_img | image_url: width: ra_px_2x | image_tag: widths: ra_widths, sizes: ra_sizes, loading: 'lazy', alt: '', class: 'av-pb-review-avatars__img'
+      endif
+    endfor
+  endcapture
+  assign ra_stack = ra_stack | strip
+
+  assign ra_rating = product.metafields.reviews.rating.value
+  assign ra_count = product.metafields.reviews.rating_count.value
+
+  capture ra_proof
+    if s.avatars_show_stars and ra_rating != blank and ra_rating.rating != blank
+      assign ra_max = ra_rating.scale_max | default: 5
+      render 'anvil-stars', rating: ra_rating.rating, max: ra_max, size: 16
+    endif
+    if s.avatars_show_count and ra_count != blank and ra_count > 0
+      assign ra_count_text = 'anvil.stars.count' | t: count: ra_count
+      echo '<span class="av-pb-review-avatars__count">' | append: ra_count_text | append: '</span>'
+    endif
+  endcapture
+  assign ra_proof = ra_proof | strip
+-%}
+{%- if ra_stack != blank or ra_proof != blank or s.avatars_text != blank -%}
+  {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+  <div class="av-pb-review-avatars av-pb-review-avatars--{{ s.avatars_size }} av-align--{{ s.avatars_align }}" {{ block.shopify_attributes }}>
+    <div class="av-pb-review-avatars__inner">
+      {%- if ra_stack != blank -%}
+        <span class="av-pb-review-avatars__stack" aria-hidden="true">{{ ra_stack }}</span>
+      {%- endif -%}
+      {{- ra_proof -}}
+      {%- if s.avatars_text != blank -%}
+        <span class="av-pb-review-avatars__text">{{ s.avatars_text }}</span>
+      {%- endif -%}
+    </div>
+  </div>
+{%- elsif request.design_mode -%}
+  <div class="av-pb-review-avatars" {{ block.shopify_attributes }}>
+    <p class="av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+  </div>
+{%- endif -%}

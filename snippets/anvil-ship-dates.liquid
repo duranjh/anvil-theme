@@ -1,0 +1,303 @@
+{% doc %}
+  Estimated ship and delivery dates, computed here from 'now' in the store's time zone (Settings > General) and
+  recomputed by assets/anvil-ship-dates.js (<anvil-ship-dates>), because a cached page can carry an earlier day's
+  dates. Renders nothing when processing_max + delivery_max is 0.
+  Day 0 is today, or tomorrow for an order at or after cutoff_hour. With skip_weekends, Saturdays and Sundays are not
+  counted and an order placed on a weekend starts counting on Monday. Ship = day 0 + processing days; delivery =
+  day 0 + processing + transit days. Dates are anchored at local noon, so daylight-saving days never shift a date.
+  Date text uses the locale formats date_formats.anvil_ship_<format>; styles are in this file's stylesheet.
+
+  @param {number} processing_min - Processing days before the parcel leaves, minimum
+  @param {number} processing_max - Processing days, maximum (raised to processing_min when lower)
+  @param {number} delivery_min - Carrier transit days, minimum
+  @param {number} delivery_max - Carrier transit days, maximum (raised to delivery_min when lower)
+  @param {boolean} [skip_weekends] - Count Monday to Friday only
+  @param {number} [cutoff_hour] - Store-time hour (1-23) from which an order counts from the next day; 0 = none
+  @param {string} [timezone_note] - Short label printed after the dates, for example "ET"
+  @param {string} [format] - short | long | weekday | weekday_long (default weekday)
+  @param {string} [mode] - range (one sentence) | steps (ordered, shipped, delivered timeline); default range
+  @param {string} [labels] - range: the sentence, with {{ from }} and {{ to }} (or [from] / [to]) where the dates
+    go; blank = anvil.product.arrives_between. steps: three labels separated by "|"; a blank part falls back to
+    Ordered / Shipped / Delivered
+  @param {string} [icons] - range: one icon name; steps: three names separated by "|"; blank or "none" = no icon
+
+  @example
+  {% render 'anvil-ship-dates', processing_min: 1, processing_max: 2, delivery_min: 3, delivery_max: 5, skip_weekends: true, mode: 'steps' %}
+{% enddoc %}
+{%- liquid
+  assign p_min = processing_min | plus: 0 | at_least: 0
+  assign p_max = processing_max | plus: 0 | at_least: p_min
+  assign d_min = delivery_min | plus: 0 | at_least: 0
+  assign d_max = delivery_max | plus: 0 | at_least: d_min
+  assign span_max = p_max | plus: d_max
+-%}
+{%- if span_max > 0 -%}
+  {%- liquid
+    assign view = mode | default: 'range'
+    assign fmt = format | default: 'weekday'
+    assign fmt_name = 'anvil_ship_' | append: fmt
+    assign cutoff = cutoff_hour | plus: 0
+    assign skip = false
+    if skip_weekends
+      assign skip = true
+    endif
+
+    assign now_parts = 'now' | date: '%s %H %M %S %Y-%m-%dT%H:%M:%S' | split: ' '
+    assign now_epoch = now_parts[0] | plus: 0
+    assign now_hour = now_parts[1] | plus: 0
+    assign since_midnight = now_hour | times: 3600
+    assign now_minutes = now_parts[2] | plus: 0 | times: 60
+    assign since_midnight = since_midnight | plus: now_minutes | plus: now_parts[3]
+    assign noon = now_epoch | minus: since_midnight | plus: 43200
+
+    assign start = 0
+    if cutoff > 0 and now_hour >= cutoff
+      assign start = 1
+    endif
+    if skip
+      for probe in (1..3)
+        assign probe_day = start | times: 86400 | plus: noon | date: '%u' | plus: 0
+        if probe_day > 5
+          assign start = start | plus: 1
+        else
+          break
+        endif
+      endfor
+    endif
+
+    assign goal_ship_from = p_min
+    assign goal_ship_to = p_max
+    assign goal_from = p_min | plus: d_min
+    assign off_ship_from = 0
+    assign off_ship_to = 0
+    assign off_from = 0
+    assign off_to = 0
+    assign counted = 0
+    for step in (1..200)
+      if counted >= span_max
+        break
+      endif
+      if skip
+        assign step_day = start | plus: step | times: 86400 | plus: noon | date: '%u' | plus: 0
+        if step_day > 5
+          continue
+        endif
+      endif
+      assign counted = counted | plus: 1
+      if counted == goal_ship_from
+        assign off_ship_from = step
+      endif
+      if counted == goal_ship_to
+        assign off_ship_to = step
+      endif
+      if counted == goal_from
+        assign off_from = step
+      endif
+      if counted == span_max
+        assign off_to = step
+      endif
+    endfor
+
+    assign ts_ship_from = start | plus: off_ship_from | times: 86400 | plus: noon
+    assign ts_ship_to = start | plus: off_ship_to | times: 86400 | plus: noon
+    assign ts_from = start | plus: off_from | times: 86400 | plus: noon
+    assign ts_to = start | plus: off_to | times: 86400 | plus: noon
+
+    assign iso_ordered = noon | date: '%Y-%m-%d'
+    assign iso_ship_from = ts_ship_from | date: '%Y-%m-%d'
+    assign iso_ship_to = ts_ship_to | date: '%Y-%m-%d'
+    assign iso_from = ts_from | date: '%Y-%m-%d'
+    assign iso_to = ts_to | date: '%Y-%m-%d'
+  -%}
+  {%- capture time_ordered -%}<time datetime="{{ iso_ordered }}">{{ noon | date: format: fmt_name }}</time>{%- endcapture -%}
+  {%- capture time_ship_from -%}<time datetime="{{ iso_ship_from }}">{{ ts_ship_from | date: format: fmt_name }}</time>{%- endcapture -%}
+  {%- capture time_ship_to -%}<time datetime="{{ iso_ship_to }}">{{ ts_ship_to | date: format: fmt_name }}</time>{%- endcapture -%}
+  {%- capture time_from -%}<time datetime="{{ iso_from }}">{{ ts_from | date: format: fmt_name }}</time>{%- endcapture -%}
+  {%- capture time_to -%}<time datetime="{{ iso_to }}">{{ ts_to | date: format: fmt_name }}</time>{%- endcapture -%}
+  {%- liquid
+    assign range_ship = time_ship_from
+    if iso_ship_to != iso_ship_from
+      assign range_ship = range_ship | append: ' &ndash; ' | append: time_ship_to
+    endif
+    assign range_delivery = time_from
+    if iso_to != iso_from
+      assign range_delivery = range_delivery | append: ' &ndash; ' | append: time_to
+    endif
+    assign icon_list = icons | default: '' | split: '|'
+    assign tz_note = timezone_note | strip
+  -%}
+  <anvil-ship-dates class="av-ship av-ship--{{ view }}">
+    {%- if view == 'steps' -%}
+      {%- assign label_list = labels | default: '' | split: '|' -%}
+      <ol class="av-ship__steps" role="list">
+        {%- for n in (1..3) -%}
+          {%- liquid
+            assign step_label = label_list[forloop.index0] | strip
+            assign step_icon = icon_list[forloop.index0] | strip
+            case n
+              when 1
+                assign step_key = 'ordered'
+                assign step_dates = time_ordered
+                if step_label == blank
+                  assign step_label = 'anvil.product.ordered' | t
+                endif
+              when 2
+                assign step_key = 'ship'
+                assign step_dates = range_ship
+                if step_label == blank
+                  assign step_label = 'anvil.product.shipped' | t
+                endif
+              else
+                assign step_key = 'delivery'
+                assign step_dates = range_delivery
+                if step_label == blank
+                  assign step_label = 'anvil.product.delivered' | t
+                endif
+            endcase
+          -%}
+          <li class="av-ship__step">
+            <span class="av-ship__marker">
+              {%- if step_icon != blank and step_icon != 'none' -%}
+                {%- render 'anvil-icon', name: step_icon, size: 20 -%}
+              {%- endif -%}
+            </span>
+            <span class="av-ship__label">{{ step_label | escape }}</span>
+            <span class="av-ship__date" data-anvil-ship="{{ step_key }}">{{ step_dates }}</span>
+          </li>
+        {%- endfor -%}
+      </ol>
+      {%- if tz_note != blank -%}
+        <p class="av-ship__tz">{{ tz_note | escape }}</p>
+      {%- endif -%}
+    {%- else -%}
+      {%- liquid
+        assign slot_from = '<span data-anvil-ship="from">' | append: time_from | append: '</span>'
+        assign slot_to = '<span data-anvil-ship="to">' | append: time_to | append: '</span>'
+        assign sentence = labels | strip | escape
+        if sentence == blank
+          assign sentence = 'anvil.product.arrives_between' | t: from: '[from]', to: '[to]'
+        endif
+        assign sentence = sentence | replace: '{{ from }}', '[from]' | replace: '{{from}}', '[from]' | replace: '{{ to }}', '[to]' | replace: '{{to}}', '[to]'
+        assign sentence = sentence | replace: '[from]', slot_from | replace: '[to]', slot_to
+        assign range_icon = icon_list.first | strip
+      -%}
+      {%- if range_icon != blank and range_icon != 'none' -%}
+        <span class="av-ship__icon">{%- render 'anvil-icon', name: range_icon, size: 20 -%}</span>
+      {%- endif -%}
+      <p class="av-ship__text">
+        {{- sentence -}}
+        {%- if tz_note != blank %} <span class="av-ship__tz">({{ tz_note | escape }})</span>{% endif -%}
+      </p>
+    {%- endif -%}
+    <script type="application/json" data-anvil-ship-dates>
+      {
+        "now": {{ now_epoch }},
+        "local": {{ now_parts[4] | json }},
+        "pmin": {{ p_min }},
+        "pmax": {{ p_max }},
+        "dmin": {{ d_min }},
+        "dmax": {{ d_max }},
+        "skip": {{ skip }},
+        "cutoff": {{ cutoff }},
+        "format": {{ fmt | json }},
+        "iso": {
+          "ordered": {{ iso_ordered | json }},
+          "shipFrom": {{ iso_ship_from | json }},
+          "shipTo": {{ iso_ship_to | json }},
+          "from": {{ iso_from | json }},
+          "to": {{ iso_to | json }}
+        }
+      }
+    </script>
+  </anvil-ship-dates>
+  <script type="module" src="{{ 'anvil-ship-dates.js' | asset_url }}"></script>
+{%- endif -%}
+
+{% stylesheet %}
+anvil-ship-dates {
+  display: block;
+}
+
+.av-ship--range {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--av-space-2);
+  font-size: var(--av-text-sm);
+  line-height: 1.45;
+}
+
+.av-ship__icon {
+  flex: none;
+  display: inline-flex;
+  color: var(--av-accent);
+}
+
+.av-ship__text {
+  margin: 0;
+}
+
+.av-ship time {
+  font-weight: 600;
+}
+
+.av-ship__tz {
+  color: var(--av-fg-muted);
+  font-size: var(--av-text-xs);
+}
+
+.av-ship__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--av-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.av-ship__step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--av-space-1);
+  text-align: center;
+  font-size: var(--av-text-sm);
+  line-height: 1.35;
+}
+
+.av-ship__step + .av-ship__step::before {
+  content: "";
+  position: absolute;
+  top: 20px;
+  inset-inline-end: 50%;
+  width: calc(100% + var(--av-space-2));
+  border-top: 2px solid var(--av-border);
+}
+
+.av-ship__marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--av-accent);
+  background: var(--av-bg);
+  border: 2px solid var(--av-border);
+  border-radius: var(--av-radius-pill);
+}
+
+.av-ship__label {
+  font-weight: 600;
+}
+
+.av-ship__date {
+  color: var(--av-fg-muted);
+  font-size: var(--av-text-xs);
+}
+
+.av-ship--steps .av-ship__tz {
+  margin: var(--av-space-2) 0 0;
+  text-align: center;
+}
+{% endstylesheet %}

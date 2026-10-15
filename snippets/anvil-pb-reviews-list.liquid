@@ -1,0 +1,60 @@
+{% doc %}
+  Product block reviews_list ("Reviews"): up to three quotes the merchant typed in (text, name, optional photo) under a
+  heading, followed by a disclosure line that always renders, so shoppers know the store entered them. No stars or
+  counts on typed quotes (docs/HONEST.md). The schema points merchants to their review app's block (the section's
+  @app slot) as the recommended route for real reviews. The heading is an h2: on the product page it sits under the
+  product title's h1, and in a featured-product section it sits beside the title, so no level is skipped.
+  Called by the product block dispatcher with product, block, section, form_id and current_variant
+  (WAVE1-CONTRACTS §1); it reads only block. The arguments are described in prose
+  rather than as LiquidDoc parameters because Theme Check requires every declared parameter to be used.
+{% enddoc %}
+{%- liquid
+  assign s = block.settings
+  capture rl_items
+    for i in (1..3)
+      assign rl_key = 'quote_' | append: i | append: '_text'
+      assign rl_text = s[rl_key] | strip
+      if rl_text == blank
+        continue
+      endif
+      assign rl_key = 'quote_' | append: i | append: '_name'
+      assign rl_name = s[rl_key] | strip | escape
+      assign rl_key = 'quote_' | append: i | append: '_image'
+      assign rl_image = s[rl_key]
+      assign rl_text = rl_text | escape | newline_to_br
+      if rl_image != blank
+        echo '<li><figure class="av-pb-reviews-list__quote av-pb-reviews-list__quote--img">'
+        echo rl_image | image_url: width: 96 | image_tag: widths: '48, 96', sizes: '48px', loading: 'lazy', alt: '', class: 'av-pb-reviews-list__img'
+      else
+        echo '<li><figure class="av-pb-reviews-list__quote">'
+      endif
+      echo '<blockquote class="av-pb-reviews-list__text"><p>' | append: rl_text | append: '</p></blockquote>'
+      if rl_name != blank
+        echo '<figcaption class="av-pb-reviews-list__name">' | append: rl_name | append: '</figcaption>'
+      endif
+      echo '</figure></li>'
+    endfor
+  endcapture
+  assign rl_items = rl_items | strip
+  assign rl_disclosure = s.testimonials_disclosure | strip
+  if rl_disclosure == blank
+    assign rl_disclosure = 'anvil.trust.quotes_disclosure' | t
+  endif
+  assign rl_heading_id = 'av-pb-reviews-' | append: block.id
+-%}
+{%- if rl_items != blank -%}
+  {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
+  <div class="av-pb-reviews-list{% if s.quotes_style == 'card' %} av-pb-reviews-list--card{% endif %}" {{ block.shopify_attributes }}>
+    {%- if s.quotes_heading != blank -%}
+      <h2 class="av-pb-reviews-list__heading" id="{{ rl_heading_id }}">{{ s.quotes_heading | escape }}</h2>
+    {%- endif -%}
+    <ul class="av-pb-reviews-list__list" role="list"{% if s.quotes_heading != blank %} aria-labelledby="{{ rl_heading_id }}"{% endif %}>
+      {{- rl_items -}}
+    </ul>
+    <p class="av-pb-reviews-list__disclosure">{{ rl_disclosure | escape }}</p>
+  </div>
+{%- elsif request.design_mode -%}
+  <div class="av-pb-reviews-list" {{ block.shopify_attributes }}>
+    <p class="av-example-note">{{ 'anvil.editor.reviews_list_empty' | t }}</p>
+  </div>
+{%- endif -%}

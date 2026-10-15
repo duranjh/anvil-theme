@@ -1,0 +1,73 @@
+{
+  "type": "video",
+  "name": "Video",
+  "settings": [
+    {
+      "type": "video",
+      "id": "video",
+      "label": "Video"
+    },
+    {
+      "type": "video_url",
+      "id": "video_url",
+      "label": "Or a YouTube or Vimeo link",
+      "accept": [
+        "youtube",
+        "vimeo"
+      ],
+      "info": "Used when no video is picked above. Nothing loads from YouTube or Vimeo until the shopper presses play."
+    },
+    {
+      "type": "image_picker",
+      "id": "poster",
+      "label": "Cover image for a YouTube or Vimeo link"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Video title",
+      "info": "Read out by screen readers; describe what the video shows."
+    },
+    {
+      "type": "select",
+      "id": "ratio",
+      "label": "Aspect ratio",
+      "options": [
+        {
+          "value": "adapt",
+          "label": "Adapt to media"
+        },
+        {
+          "value": "1:1",
+          "label": "Square"
+        },
+        {
+          "value": "4:5",
+          "label": "Portrait 4:5"
+        },
+        {
+          "value": "3:4",
+          "label": "Portrait 3:4"
+        },
+        {
+          "value": "16:9",
+          "label": "Landscape 16:9"
+        }
+      ],
+      "default": "adapt"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "Autoplay muted (uploaded videos)",
+      "default": false,
+      "info": "Plays muted while on screen and never when the shopper prefers reduced motion. Controls stay visible so it can be paused."
+    },
+    {
+      "type": "checkbox",
+      "id": "loop",
+      "label": "Loop",
+      "default": true
+    }
+  ]
+}

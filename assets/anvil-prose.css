@@ -1,0 +1,132 @@
+/* Anvil long-form prose (.av-prose)
+   Merchant rich text with headings, lists, tables, quotes and embeds: page and article bodies, the product
+   description, collapsible tabs, popups, the size chart dialog and the country-rule message. Loaded with
+   stylesheet_tag by sections/main-page, sections/main-article, snippets/anvil-pb-description,
+   anvil-pb-collapsible-tab, anvil-pb-popup, anvil-pb-size-chart and anvil-security (URLs dedupe).
+   Short rich text (.av-rte) stays in assets/anvil-base.css. Tokens only; mobile first. */
+
+.av-prose {
+  font-size: var(--av-text-md);
+  line-height: 1.6;
+}
+
+.av-prose > * + * {
+  margin-top: 1em;
+}
+
+.av-prose > :is(h1, h2, h3, h4, h5, h6) + * {
+  margin-top: 0.5em;
+}
+
+.av-prose > * + :is(h2, h3, h4) {
+  margin-top: 1.5em;
+}
+
+.av-prose h1 {
+  font-size: var(--av-text-3xl);
+}
+
+.av-prose h2 {
+  font-size: var(--av-text-2xl);
+}
+
+.av-prose h3 {
+  font-size: var(--av-text-xl);
+}
+
+.av-prose h4,
+.av-prose h5,
+.av-prose h6 {
+  font-size: var(--av-text-lg);
+}
+
+.av-prose a {
+  color: var(--av-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.av-prose strong {
+  font-weight: 700;
+}
+
+.av-prose ul,
+.av-prose ol {
+  padding-inline-start: 1.5em;
+}
+
+.av-prose li + li {
+  margin-top: 0.35em;
+}
+
+.av-prose img,
+.av-prose video,
+.av-prose iframe {
+  border-radius: var(--av-radius-media);
+}
+
+.av-prose iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+
+.av-prose blockquote {
+  padding-inline-start: var(--av-space-4);
+  border-inline-start: 3px solid var(--av-accent);
+  font-style: italic;
+  color: var(--av-fg-muted);
+}
+
+.av-prose hr {
+  margin: 2em 0;
+}
+
+.av-prose table {
+  font-size: var(--av-text-sm);
+}
+
+/* Liquid wraps merchant tables in .av-prose__table (a focusable, labelled
+   region) so wide size charts scroll sideways while keeping table semantics. */
+.av-prose__table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.av-prose__table > table {
+  min-width: 100%;
+}
+
+.av-prose th,
+.av-prose td {
+  padding: var(--av-space-2) var(--av-space-3);
+  border-bottom: 1px solid var(--av-border);
+  text-align: start;
+}
+
+.av-prose th {
+  font-weight: 600;
+}
+
+.av-prose code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  background: rgb(var(--av-fg-rgb) / 0.06);
+  border-radius: 4px;
+}
+
+.av-prose pre {
+  padding: var(--av-space-4);
+  overflow-x: auto;
+  background: rgb(var(--av-fg-rgb) / 0.06);
+  border-radius: var(--av-radius-box);
+}
+
+.av-prose--sm {
+  font-size: var(--av-text-sm);
+}
+
+.av-prose--lg {
+  font-size: var(--av-text-lg);
+}
