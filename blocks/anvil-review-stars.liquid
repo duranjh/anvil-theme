@@ -1,0 +1,59 @@
+{%- liquid
+  assign s = block.settings
+  assign has_source = false
+  if s.source_url != blank
+    assign has_source = true
+  endif
+  assign logo_alt = s.logo.alt | default: ''
+  capture badge_inner
+    if has_source and s.show_stars
+      render 'anvil-stars', rating: s.rating, size: 18, class: 'av-review-stars__stars'
+    endif
+    if has_source and s.show_number
+      echo '<span class="av-review-stars__number">'
+      echo s.rating
+      echo '/5</span>'
+    endif
+    if s.text != blank
+      echo '<span class="av-review-stars__text">'
+      echo s.text
+      echo '</span>'
+    endif
+    if s.logo != blank
+      echo s.logo | image_url: width: 200 | image_tag: widths: '100, 200', sizes: '100px', loading: 'lazy', alt: logo_alt, class: 'av-review-stars__logo'
+    endif
+  endcapture
+-%}
+<div class="av-review-stars av-review-stars--{{ s.align }}" {{ block.shopify_attributes }}>
+  {%- if has_source -%}
+    <a class="av-review-stars__link" href="{{ s.source_url }}" target="_blank" rel="noopener">{{ badge_inner }}</a>
+  {%- else -%}
+    {{ badge_inner }}
+  {%- endif -%}
+</div>
+{% stylesheet %}
+.av-review-stars{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2);font-family:var(--av-font-body);font-size:var(--av-text-sm);line-height:1.4}
+.av-review-stars--left{justify-content:flex-start}
+.av-review-stars--center{justify-content:center;text-align:center}
+.av-review-stars--right{justify-content:flex-end}
+.av-review-stars__link{display:inline-flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2);color:inherit;text-decoration:none}
+.av-review-stars__link:hover .av-review-stars__text{text-decoration:underline}
+.av-review-stars__number{font-weight:600}
+.av-review-stars__logo{height:1.5em;width:auto;max-width:120px;object-fit:contain}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Review platform stars",
+  "tag": null,
+  "settings": [
+    { "type": "image_picker", "id": "logo", "label": "Platform logo", "info": "Upload a logo you are entitled to use. Anvil ships no third-party logos." },
+    { "type": "text", "id": "text", "label": "Text", "default": "Example: rated by our customers on — replace with your real wording" },
+    { "type": "range", "id": "rating", "label": "Rating", "min": 0, "max": 5, "step": 0.1, "default": 5 },
+    { "type": "url", "id": "source_url", "label": "Source link", "info": "The page where shoppers can verify this rating. Stars and the number show only when this link is set." },
+    { "type": "checkbox", "id": "show_stars", "label": "Show stars", "default": true },
+    { "type": "checkbox", "id": "show_number", "label": "Show the number", "default": true },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" }
+  ],
+  "presets": [ { "name": "Review platform stars" } ]
+}
+{% endschema %}

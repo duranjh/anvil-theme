@@ -1,0 +1,58 @@
+/* anvil-marquee.css — <anvil-marquee> strip. The JS clones [data-marquee-track] into [data-marquee-clone] siblings
+   and sets --av-marquee-duration / --av-marquee-direction. Only transform animates; reduced motion and
+   html[data-animations="off"] show one static wrapping row. */
+
+anvil-marquee {
+  --av-marquee-gap: var(--av-space-6);
+  display: flex;
+  gap: var(--av-marquee-gap);
+  width: 100%;
+  overflow: hidden;
+}
+
+anvil-marquee > [data-marquee-track],
+anvil-marquee > [data-marquee-clone] {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--av-marquee-gap);
+  min-width: max-content;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  anvil-marquee:not(.is-static) > [data-marquee-track],
+  anvil-marquee:not(.is-static) > [data-marquee-clone] {
+    animation: av-marquee var(--av-marquee-duration, 30s) linear infinite var(--av-marquee-direction, normal);
+  }
+}
+
+@keyframes av-marquee {
+  to {
+    transform: translateX(calc(-100% - var(--av-marquee-gap)));
+  }
+}
+
+anvil-marquee.av-marquee--hover:hover > *,
+anvil-marquee:focus-within > *,
+anvil-marquee.is-paused > * {
+  animation-play-state: paused;
+}
+
+anvil-marquee.is-static,
+html[data-animations="off"] anvil-marquee {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+anvil-marquee.is-static > [data-marquee-track],
+html[data-animations="off"] anvil-marquee > [data-marquee-track] {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-width: 0;
+  animation: none;
+}
+
+html[data-animations="off"] anvil-marquee > [data-marquee-clone] {
+  display: none;
+}

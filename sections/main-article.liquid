@@ -1,0 +1,218 @@
+{%- liquid
+  assign s = section.settings
+  assign comment_count = article.comments_count
+  assign comment_form_id = 'anvil-comment-form'
+-%}
+{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
+{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-article' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <article class="av-article">
+      <header class="av-article__header">
+        {%- if s.show_date or s.show_author -%}
+          <p class="av-article__meta">
+            {%- if s.show_date -%}{{ article.published_at | time_tag: '%B %-d, %Y' }}{%- endif -%}
+            {%- if s.show_date and s.show_author %} &middot; {% endif -%}
+            {%- if s.show_author -%}{{ article.author | escape }}{%- endif -%}
+          </p>
+        {%- endif -%}
+        <h1 class="av-article__title">{{ article.title | escape }}</h1>
+      </header>
+      {%- if s.show_image and article.image -%}
+        <div class="av-article__media">
+          {% render 'anvil-media', image: article.image, ratio: 'adapt', widths: '600, 900, 1100, 1600', sizes: '(min-width: 990px) 900px, 100vw', loading: 'eager', priority: true, alt: article.title, class: 'av-article__img' %}
+        </div>
+      {%- endif -%}
+      <div class="av-article__content av-prose">{{ article.content }}</div>
+      <footer class="av-article__footer">
+        <a class="av-article__back" href="{{ blog.url }}">&larr; {{ blog.title | escape }}</a>
+      </footer>
+    </article>
+
+    {%- if blog.comments_enabled? -%}
+      <section class="av-article__comments" id="comments" aria-labelledby="anvil-comments-title">
+        <h2 class="av-article__comments-title" id="anvil-comments-title">
+          {{ comment_count }} {% if comment_count == 1 %}comment{% else %}comments{% endif %}
+        </h2>
+        {%- if comment_count > 0 -%}
+          {%- paginate article.comments by 20 -%}
+            <ol class="av-article__comment-list av-list-reset">
+              {%- for comment in article.comments -%}
+                <li class="av-article__comment" id="{{ comment.id }}">
+                  <p class="av-article__comment-meta">
+                    <strong>{{ comment.author | escape }}</strong>
+                    &middot; {{ comment.created_at | time_tag: '%B %-d, %Y' }}
+                  </p>
+                  <div class="av-article__comment-body av-rte">{{ comment.content }}</div>
+                </li>
+              {%- endfor -%}
+            </ol>
+            {% render 'anvil-pagination', paginate: paginate %}
+          {%- endpaginate -%}
+        {%- endif -%}
+
+        {%- form 'new_comment', article, id: comment_form_id, class: 'av-article__form' -%}
+          <h3 class="av-article__form-title">Leave a comment</h3>
+          {%- if form.posted_successfully? -%}
+            <p class="av-article__notice av-form-message av-form-message--success" role="status" tabindex="-1" autofocus>
+              {%- if blog.moderated? -%}
+                Thanks. Your comment will appear once it has been approved.
+              {%- else -%}
+                Thanks. Your comment has been posted.
+              {%- endif -%}
+            </p>
+          {%- elsif form.errors -%}
+            <div class="av-article__notice av-form-message av-form-message--error" role="alert">{{ form.errors | default_errors }}</div>
+          {%- endif -%}
+          <div class="av-article__fields">
+            <div class="av-article__field av-field">
+              <label class="av-article__label av-field__label" for="{{ comment_form_id }}-author">Name <span aria-hidden="true">*</span></label>
+              <input class="av-article__input av-field__input" id="{{ comment_form_id }}-author" type="text" name="comment[author]" value="{{ form.author }}" autocomplete="name" required aria-required="true">
+            </div>
+            <div class="av-article__field av-field">
+              <label class="av-article__label av-field__label" for="{{ comment_form_id }}-email">Email <span aria-hidden="true">*</span></label>
+              <input class="av-article__input av-field__input" id="{{ comment_form_id }}-email" type="email" name="comment[email]" value="{{ form.email }}" autocomplete="email" required aria-required="true">
+            </div>
+            <div class="av-article__field av-article__field--full av-field">
+              <label class="av-article__label av-field__label" for="{{ comment_form_id }}-body">Comment <span aria-hidden="true">*</span></label>
+              <textarea class="av-article__input av-field__input" id="{{ comment_form_id }}-body" name="comment[body]" rows="5" required aria-required="true">{{ form.body }}</textarea>
+            </div>
+          </div>
+          {%- if blog.moderated? -%}
+            <p class="av-article__hint">Comments are checked before they appear.</p>
+          {%- endif -%}
+          {% render 'anvil-button', label: 'Post comment', style: 'primary', size: 'md', type: 'submit' %}
+        {%- endform -%}
+      </section>
+    {%- endif -%}
+  </div>
+</div>
+{% stylesheet %}
+  .av-article {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .av-article__header {
+    margin-bottom: var(--av-space-5);
+  }
+  .av-article__meta {
+    margin: 0 0 var(--av-space-2);
+    font-size: var(--av-text-sm);
+    color: var(--av-fg-muted);
+  }
+  .av-article__title {
+    margin: 0;
+    font-size: var(--av-text-3xl);
+  }
+  .av-article__media {
+    margin-bottom: var(--av-space-5);
+    border-radius: var(--av-radius-media);
+    overflow: hidden;
+  }
+  .av-article__img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .av-article__content {
+    max-width: 72ch;
+  }
+  .av-article__footer {
+    margin-top: var(--av-space-6);
+    padding-top: var(--av-space-4);
+    border-top: 1px solid var(--av-border);
+  }
+  .av-article__back {
+    color: inherit;
+    text-underline-offset: 0.2em;
+  }
+  .av-article__comments {
+    max-width: 900px;
+    margin: var(--av-space-8) auto 0;
+  }
+  .av-article__comments-title {
+    margin: 0 0 var(--av-space-4);
+    font-size: var(--av-text-xl);
+  }
+  .av-article__comment-list {
+    list-style: none;
+    margin: 0 0 var(--av-space-6);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-4);
+  }
+  .av-article__comment {
+    padding: var(--av-space-4);
+    border: var(--av-border-w-card) solid var(--av-border);
+    border-radius: var(--av-radius-card);
+  }
+  .av-article__comment-meta {
+    margin: 0 0 var(--av-space-2);
+    font-size: var(--av-text-sm);
+    color: var(--av-fg-muted);
+  }
+  .av-article__comment-body p:last-child {
+    margin-bottom: 0;
+  }
+  .av-article__form-title {
+    margin: 0 0 var(--av-space-3);
+    font-size: var(--av-text-lg);
+  }
+  .av-article__fields {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-3);
+    margin-bottom: var(--av-space-3);
+  }
+  
+  
+  
+  
+  .av-article__hint {
+    margin: 0 0 var(--av-space-3);
+    font-size: var(--av-text-xs);
+    color: var(--av-fg-muted);
+  }
+  @media (min-width: 750px) {
+    .av-article__fields {
+      grid-template-columns: 1fr 1fr;
+    }
+    .av-article__field--full {
+      grid-column: 1 / -1;
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Article",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Article" },
+    {
+      "type": "checkbox",
+      "id": "show_image",
+      "label": "Show featured image",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_date",
+      "label": "Show date",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_author",
+      "label": "Show author",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

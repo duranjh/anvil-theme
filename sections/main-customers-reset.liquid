@@ -1,0 +1,74 @@
+{%- liquid
+  assign s = section.settings
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-customers-reset' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-customers-reset">
+      <h1 class="av-customers-reset__title">{{ s.heading | escape }}</h1>
+      <p class="av-customers-reset__hint">Enter a new password for your account.</p>
+      {%- form 'reset_customer_password', id: 'anvil-reset-form', class: 'av-customers-reset__form' -%}
+        {%- if form.errors -%}
+          <div class="av-customers-reset__notice av-form-message av-form-message--error" role="alert">{{ form.errors | default_errors }}</div>
+        {%- endif -%}
+        <div class="av-customers-reset__field av-field">
+          <label class="av-customers-reset__label av-field__label" for="anvil-reset-password">New password</label>
+          <input class="av-customers-reset__input av-field__input" id="anvil-reset-password" type="password" name="customer[password]" autocomplete="new-password" required aria-required="true">
+        </div>
+        <div class="av-customers-reset__field av-field">
+          <label class="av-customers-reset__label av-field__label" for="anvil-reset-confirm">Confirm new password</label>
+          <input class="av-customers-reset__input av-field__input" id="anvil-reset-confirm" type="password" name="customer[password_confirmation]" autocomplete="new-password" required aria-required="true">
+        </div>
+        <div class="av-customers-reset__actions">
+          {% render 'anvil-button', label: 'Reset password', style: 'primary', size: 'lg', full: true, type: 'submit' %}
+        </div>
+      {%- endform -%}
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-customers-reset {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .av-customers-reset__title {
+    margin: 0 0 var(--av-space-2);
+    font-size: var(--av-text-2xl);
+  }
+  .av-customers-reset__hint {
+    margin: 0 0 var(--av-space-4);
+    color: var(--av-fg-muted);
+  }
+  .av-customers-reset__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-3);
+  }
+  
+  
+  
+  
+  .av-customers-reset__actions {
+    margin-top: var(--av-space-2);
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Reset password",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Reset password" },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Reset your password"
+    }
+  ]
+}
+{% endschema %}

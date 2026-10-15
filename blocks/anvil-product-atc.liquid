@@ -1,0 +1,70 @@
+{%- liquid
+  assign s = block.settings
+  assign p = s.product | default: closest.product
+  assign form_id = 'av-atc-' | append: block.id
+-%}
+<div class="av-atc av-atc--{{ s.align }}" {{ block.shopify_attributes }}>
+  {%- if p != blank -%}
+    {%- liquid
+      assign v = p.selected_or_first_available_variant
+      assign single_variant = false
+      if p.has_only_default_variant or p.variants.size == 1
+        assign single_variant = true
+      endif
+    -%}
+    {%- if single_variant -%}
+      {%- if s.show_price -%}
+        {%- render 'anvil-price', variant: v, size: 'md', class: 'av-atc__price' -%}
+      {%- endif -%}
+      <anvil-product-form>
+        {%- form 'product', p, id: form_id, class: 'av-atc__form' -%}
+          <input type="hidden" name="id" value="{{ v.id }}">
+          <input type="hidden" name="quantity" value="1">
+          {%- if v.available -%}
+            {%- render 'anvil-button', label: s.label, type: 'submit', style: s.style, size: s.size, full: s.full, attrs: 'name="add"' -%}
+          {%- else -%}
+            {%- render 'anvil-button', label: s.sold_out_label, type: 'submit', style: 'secondary', size: s.size, full: s.full, disabled: true -%}
+          {%- endif -%}
+          <p class="av-atc__status" role="status" aria-live="polite" data-anvil-form-status></p>
+        {%- endform -%}
+      </anvil-product-form>
+    {%- else -%}
+      {%- if s.show_price -%}
+        {%- render 'anvil-price', product: p, size: 'md', class: 'av-atc__price' -%}
+      {%- endif -%}
+      {%- render 'anvil-button', label: s.options_label, url: p.url, style: s.style, size: s.size, full: s.full -%}
+    {%- endif -%}
+  {%- elsif request.design_mode -%}
+    <p class="av-atc__note">Pick a product, or place this block where a product is in context.</p>
+  {%- endif -%}
+</div>
+{% stylesheet %}
+.av-atc{display:flex;flex-direction:column;gap:var(--av-space-3)}
+.av-atc--left{align-items:flex-start}
+.av-atc--center{align-items:center}
+.av-atc--right{align-items:flex-end}
+.av-atc__form{display:flex;flex-direction:column;gap:var(--av-space-2);width:100%}
+.av-atc--center .av-atc__form{align-items:center}
+.av-atc--right .av-atc__form{align-items:flex-end}
+.av-atc__status{margin:0;font-size:var(--av-text-sm);color:var(--av-error,var(--av-fg))}
+.av-atc__status:empty{display:none}
+.av-atc__note{margin:0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Add to cart",
+  "tag": null,
+  "settings": [
+    { "type": "product", "id": "product", "label": "Product", "info": "Leave empty to use the product in context (for example on a product page)" },
+    { "type": "checkbox", "id": "show_price", "label": "Show price", "default": true },
+    { "type": "text", "id": "label", "label": "Button label", "default": "Add to cart" },
+    { "type": "text", "id": "sold_out_label", "label": "Sold-out label", "default": "Sold out" },
+    { "type": "text", "id": "options_label", "label": "Label when the product has options", "default": "Choose options", "info": "Products with several variants link to the product page so the shopper picks a variant." },
+    { "type": "select", "id": "style", "label": "Style", "options": [ { "value": "primary", "label": "Primary" }, { "value": "secondary", "label": "Secondary" } ], "default": "primary" },
+    { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" }, { "value": "lg", "label": "Large" } ], "default": "md" },
+    { "type": "checkbox", "id": "full", "label": "Full width", "default": true },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" }
+  ],
+  "presets": [ { "name": "Add to cart" } ]
+}
+{% endschema %}

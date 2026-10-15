@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SHOPIFY_CLI_NO_ANALYTICS: "1"
+  SHOPIFY_FLAG_NO_COLOR: "1"
+
+jobs:
+  theme:
+    name: Theme check and lints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Shopify CLI
+        run: npm i -g @shopify/cli
+
+      - name: Theme check (fail on warnings)
+        run: shopify theme check --fail-level warning
+
+      - name: Clean-room lint (forbidden tokens, file prefixes, sizes)
+        run: bash scripts/cleanroom-lint.sh
+
+      - name: Asset audit (no rasters, no brand SVGs, no base64)
+        run: python3 scripts/asset-audit.py
+
+      - name: Chassis lint (skeleton, chassis settings, blocks, hygiene)
+        run: python3 scripts/chassis-lint.py
+
+      - name: Platform limits (sizes, locale keys, JSON validity)
+        run: bash scripts/check-limits.sh
+
+  similarity:
+    name: Independence check against public reference themes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The reference clones live only in this job's home directory and are
+      # discarded with the runner. scripts/similarity.py is the one place they
+      # are ever touched.
+      - name: Shared-window scan
+        run: python3 scripts/similarity.py --cache "$HOME/.cache/anvil-similarity"

@@ -1,0 +1,305 @@
+{%- liquid
+  assign s = section.settings
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-customers-order' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-customers-order">
+      <div class="av-customers-order__head">
+        <div>
+          <h1 class="av-customers-order__title">{{ s.heading_prefix | escape }} {{ order.name }}</h1>
+          <p class="av-customers-order__meta">
+            Placed {{ order.created_at | time_tag: '%B %-d, %Y' }}
+            {%- if order.cancelled %} &middot; Cancelled {{ order.cancelled_at | time_tag: '%B %-d, %Y' }}{% if order.cancel_reason_label != blank %} ({{ order.cancel_reason_label }}){% endif %}{% endif -%}
+          </p>
+        </div>
+        <div class="av-customers-order__links">
+          {%- if order.order_status_url != blank -%}
+            <a class="av-customers-order__link" href="{{ order.order_status_url }}">Track order</a>
+          {%- endif -%}
+          <a class="av-customers-order__link" href="{{ routes.account_url }}">&larr; Back to account</a>
+        </div>
+      </div>
+
+      <div class="av-customers-order__layout">
+        <div class="av-customers-order__items">
+          <table class="av-customers-order__table">
+            <caption class="av-visually-hidden">Items in {{ order.name }}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Product</th>
+                <th scope="col">SKU</th>
+                <th scope="col">Price</th>
+                <th scope="col">Quantity</th>
+                <th scope="col" class="av-customers-order__num">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {%- for line_item in order.line_items -%}
+                <tr>
+                  <td data-label="Product">
+                    {%- if line_item.product.url != blank -%}
+                      <a class="av-customers-order__link" href="{{ line_item.product.url }}">{{ line_item.title | escape }}</a>
+                    {%- else -%}
+                      {{ line_item.title | escape }}
+                    {%- endif -%}
+                    {%- for property in line_item.properties -%}
+                      {%- assign prop_first = property.first | slice: 0 -%}
+                      {%- if property.last != blank and prop_first != '_' -%}
+                        <p class="av-customers-order__small">{{ property.first | escape }}: {{ property.last | escape }}</p>
+                      {%- endif -%}
+                    {%- endfor -%}
+                    {%- if line_item.fulfillment -%}
+                      <p class="av-customers-order__small">
+                        Shipped
+                        {%- if line_item.fulfillment.tracking_number != blank %} &middot; {{ line_item.fulfillment.tracking_company }}
+                          {%- if line_item.fulfillment.tracking_url != blank %} <a class="av-customers-order__link" href="{{ line_item.fulfillment.tracking_url }}">{{ line_item.fulfillment.tracking_number }}</a>{% else %} {{ line_item.fulfillment.tracking_number }}{% endif -%}
+                        {%- endif -%}
+                      </p>
+                    {%- endif -%}
+                  </td>
+                  <td data-label="SKU">{{ line_item.sku }}</td>
+                  <td data-label="Price">
+                    {%- if line_item.original_price != line_item.final_price -%}<s>{{ line_item.original_price | money }}</s> {% endif -%}
+                    {{ line_item.final_price | money }}
+                  </td>
+                  <td data-label="Quantity">{{ line_item.quantity }}</td>
+                  <td data-label="Total" class="av-customers-order__num">{{ line_item.final_line_price | money }}</td>
+                </tr>
+              {%- endfor -%}
+            </tbody>
+          </table>
+
+          <dl class="av-customers-order__totals">
+            <div class="av-customers-order__total-row">
+              <dt>Subtotal</dt>
+              <dd>{{ order.line_items_subtotal_price | money }}</dd>
+            </div>
+            {%- if order.total_discounts > 0 -%}
+              <div class="av-customers-order__total-row">
+                <dt>Discounts</dt>
+                <dd>&minus;{{ order.total_discounts | money }}</dd>
+              </div>
+            {%- endif -%}
+            {%- for shipping_method in order.shipping_methods -%}
+              <div class="av-customers-order__total-row">
+                <dt>Shipping ({{ shipping_method.title | escape }})</dt>
+                <dd>{{ shipping_method.price | money }}</dd>
+              </div>
+            {%- endfor -%}
+            {%- for tax_line in order.tax_lines -%}
+              <div class="av-customers-order__total-row">
+                <dt>{{ tax_line.title | escape }} ({{ tax_line.rate_percentage }}%)</dt>
+                <dd>{{ tax_line.price | money }}</dd>
+              </div>
+            {%- endfor -%}
+            {%- if order.total_duties > 0 -%}
+              <div class="av-customers-order__total-row">
+                <dt>Duties</dt>
+                <dd>{{ order.total_duties | money }}</dd>
+              </div>
+            {%- endif -%}
+            <div class="av-customers-order__total-row av-customers-order__total-row--grand">
+              <dt>Total</dt>
+              <dd>{{ order.total_price | money_with_currency }}</dd>
+            </div>
+            {%- if order.total_refunded_amount > 0 -%}
+              <div class="av-customers-order__total-row">
+                <dt>Refunded</dt>
+                <dd>&minus;{{ order.total_refunded_amount | money }}</dd>
+              </div>
+            {%- endif -%}
+          </dl>
+        </div>
+
+        <aside class="av-customers-order__aside">
+          <section class="av-customers-order__block" aria-labelledby="anvil-order-payment">
+            <h2 class="av-customers-order__subtitle" id="anvil-order-payment">Payment</h2>
+            <p class="av-customers-order__status">{{ order.financial_status_label }}</p>
+            {%- if order.billing_address -%}
+              <address class="av-customers-order__address">{{ order.billing_address | format_address }}</address>
+            {%- endif -%}
+          </section>
+          <section class="av-customers-order__block" aria-labelledby="anvil-order-shipping">
+            <h2 class="av-customers-order__subtitle" id="anvil-order-shipping">Shipping</h2>
+            <p class="av-customers-order__status">{{ order.fulfillment_status_label }}</p>
+            {%- if order.shipping_address -%}
+              <address class="av-customers-order__address">{{ order.shipping_address | format_address }}</address>
+            {%- endif -%}
+          </section>
+          {%- if order.note != blank -%}
+            <section class="av-customers-order__block" aria-labelledby="anvil-order-note">
+              <h2 class="av-customers-order__subtitle" id="anvil-order-note">Order note</h2>
+              <p class="av-customers-order__status">{{ order.note | escape }}</p>
+            </section>
+          {%- endif -%}
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-customers-order__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--av-space-3);
+    margin-bottom: var(--av-space-6);
+  }
+  .av-customers-order__title {
+    margin: 0;
+    font-size: var(--av-text-2xl);
+  }
+  .av-customers-order__meta {
+    margin: var(--av-space-1) 0 0;
+    font-size: var(--av-text-sm);
+    color: var(--av-fg-muted);
+  }
+  .av-customers-order__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--av-space-4);
+  }
+  .av-customers-order__link {
+    color: inherit;
+    text-underline-offset: 0.2em;
+  }
+  .av-customers-order__layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-6);
+  }
+  .av-customers-order__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--av-text-sm);
+  }
+  .av-customers-order__table thead {
+    display: none;
+  }
+  .av-customers-order__table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--av-space-1) var(--av-space-3);
+    padding: var(--av-space-3) 0;
+    border-bottom: 1px solid var(--av-border);
+  }
+  .av-customers-order__table td {
+    padding: 0;
+  }
+  .av-customers-order__table td:first-child {
+    grid-column: 1 / -1;
+  }
+  .av-customers-order__table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--av-text-xs);
+    color: var(--av-fg-muted);
+  }
+  .av-customers-order__small {
+    margin: var(--av-space-1) 0 0;
+    font-size: var(--av-text-xs);
+    color: var(--av-fg-muted);
+  }
+  .av-customers-order__totals {
+    margin: var(--av-space-4) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-2);
+    font-size: var(--av-text-sm);
+  }
+  .av-customers-order__total-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--av-space-3);
+  }
+  .av-customers-order__total-row dt,
+  .av-customers-order__total-row dd {
+    margin: 0;
+  }
+  .av-customers-order__total-row--grand {
+    font-size: var(--av-text-md);
+    font-weight: 700;
+    padding-top: var(--av-space-2);
+    border-top: 1px solid var(--av-border);
+  }
+  .av-customers-order__aside {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-4);
+  }
+  .av-customers-order__block {
+    padding: var(--av-space-4);
+    border: var(--av-border-w-card) solid var(--av-border);
+    border-radius: var(--av-radius-card);
+  }
+  .av-customers-order__subtitle {
+    margin: 0 0 var(--av-space-2);
+    font-size: var(--av-text-md);
+  }
+  .av-customers-order__status {
+    margin: 0 0 var(--av-space-2);
+  }
+  .av-customers-order__address {
+    font-style: normal;
+    font-size: var(--av-text-sm);
+    color: var(--av-fg-muted);
+  }
+  @media (min-width: 750px) {
+    .av-customers-order__table thead {
+      display: table-header-group;
+    }
+    .av-customers-order__table th {
+      text-align: left;
+      font-size: var(--av-text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--av-fg-muted);
+      padding: 0 var(--av-space-3) var(--av-space-2) 0;
+      border-bottom: 1px solid var(--av-border);
+    }
+    .av-customers-order__table tr {
+      display: table-row;
+    }
+    .av-customers-order__table td {
+      padding: var(--av-space-3) var(--av-space-3) var(--av-space-3) 0;
+      border-bottom: 1px solid var(--av-border);
+      vertical-align: top;
+    }
+    .av-customers-order__table td::before {
+      display: none;
+    }
+    .av-customers-order__num {
+      text-align: right;
+      padding-right: 0;
+    }
+  }
+  @media (min-width: 990px) {
+    .av-customers-order__layout {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Customer order",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Customer order" },
+    {
+      "type": "text",
+      "id": "heading_prefix",
+      "label": "Heading prefix",
+      "info": "Shown before the order number.",
+      "default": "Order"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,28 @@
+{%- liquid
+  assign s = block.settings
+-%}
+<div class="av-rte av-text-block av-text--{{ s.size }} av-text-block--{{ s.align }} av-text-block--{{ s.width }}{% if s.muted %} av-muted{% endif %}" {{ block.shopify_attributes }}>{{ s.text }}</div>
+{% stylesheet %}
+.av-text-block{overflow-wrap:break-word}
+.av-text-block>:first-child{margin-top:0}
+.av-text-block>:last-child{margin-bottom:0}
+.av-text-block--left{text-align:left}
+.av-text-block--center{text-align:center;margin-inline:auto}
+.av-text-block--right{text-align:right;margin-inline-start:auto}
+.av-text-block--narrow{max-width:60ch}
+.av-text-block--medium{max-width:80ch}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Text",
+  "tag": null,
+  "settings": [
+    { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Example paragraph — replace it with your own words. Only state things that are true for your store.</p>" },
+    { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" }, { "value": "lg", "label": "Large" } ], "default": "md" },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" },
+    { "type": "select", "id": "width", "label": "Maximum width", "options": [ { "value": "full", "label": "Container" }, { "value": "medium", "label": "Medium (80 characters)" }, { "value": "narrow", "label": "Narrow (60 characters)" } ], "default": "full" },
+    { "type": "checkbox", "id": "muted", "label": "Muted colour", "default": false }
+  ],
+  "presets": [ { "name": "Text" } ]
+}
+{% endschema %}

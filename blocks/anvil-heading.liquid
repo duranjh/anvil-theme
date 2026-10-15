@@ -1,0 +1,38 @@
+{%- liquid
+  assign s = block.settings
+  assign head_tag = s.tag | default: 'h2'
+  case s.size
+    when 'xs'
+      assign size_class = 'av-text--lg'
+    when 'sm'
+      assign size_class = 'av-text--xl'
+    when 'lg'
+      assign size_class = 'av-text--3xl'
+    when 'xl'
+      assign size_class = 'av-text--4xl'
+    else
+      assign size_class = 'av-text--2xl'
+  endcase
+  assign accent_open = '<span class="av-accent av-accent--' | append: s.accent_style | append: '">'
+-%}
+<{{ head_tag }} class="av-heading av-heading-block av-heading-block--{{ s.align }} {{ size_class }}" {{ block.shopify_attributes }}>{{ s.heading | replace: '<strong>', accent_open | replace: '</strong>', '</span>' }}</{{ head_tag }}>
+{% stylesheet %}
+.av-heading-block{margin:0;line-height:1.15;overflow-wrap:break-word}
+.av-heading-block--left{text-align:left}
+.av-heading-block--center{text-align:center}
+.av-heading-block--right{text-align:right}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Heading",
+  "tag": null,
+  "settings": [
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "default": "Example heading — replace me", "info": "Bold a word to colour it with the accent" },
+    { "type": "select", "id": "tag", "label": "Heading level", "options": [ { "value": "h1", "label": "H1 (once per page)" }, { "value": "h2", "label": "H2" }, { "value": "h3", "label": "H3" }, { "value": "h4", "label": "H4" }, { "value": "p", "label": "Paragraph (no heading level)" } ], "default": "h2", "info": "Screen readers navigate by heading level. Keep one H1 per page." },
+    { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "xs", "label": "Extra small" }, { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" }, { "value": "lg", "label": "Large" }, { "value": "xl", "label": "Extra large" } ], "default": "md" },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ { "value": "color", "label": "Accent colour" }, { "value": "underline", "label": "Underline" }, { "value": "highlight", "label": "Highlight" }, { "value": "gradient", "label": "Gradient" } ], "default": "color" }
+  ],
+  "presets": [ { "name": "Heading" } ]
+}
+{% endschema %}

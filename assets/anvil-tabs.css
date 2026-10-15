@@ -1,0 +1,93 @@
+/* anvil-tabs.css — <anvil-tabs> strip and panels, keyed on the ARIA roles of the contract. Default style is an
+   underline; add .av-tabs--pills for pills, .av-tabs--center to centre the strip.
+   Tokens only; the indicator animates with transform under prefers-reduced-motion: no-preference. */
+
+anvil-tabs {
+  display: block;
+}
+
+anvil-tabs [role="tablist"] {
+  display: flex;
+  gap: var(--av-space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: var(--av-border-w-card) solid var(--av-border);
+}
+
+anvil-tabs [role="tablist"]::-webkit-scrollbar {
+  display: none;
+}
+
+.av-tabs--center anvil-tabs [role="tablist"] {
+  justify-content: center;
+}
+
+anvil-tabs [role="tab"] {
+  position: relative;
+  flex: none;
+  min-height: 44px;
+  padding: var(--av-space-3) var(--av-space-4);
+  border: 0;
+  background: none;
+  color: var(--av-fg-muted);
+  font: inherit;
+  font-size: var(--av-text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+anvil-tabs [role="tab"][aria-selected="true"] {
+  color: var(--av-fg);
+}
+
+anvil-tabs [role="tab"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: calc(-1 * var(--av-border-w-card));
+  height: 2px;
+  background: var(--av-accent);
+  transform: scaleX(0);
+}
+
+anvil-tabs [role="tab"][aria-selected="true"]::after {
+  transform: scaleX(1);
+}
+
+.av-tabs--pills anvil-tabs [role="tablist"] {
+  gap: var(--av-space-2);
+  border-bottom: 0;
+}
+
+.av-tabs--pills anvil-tabs [role="tab"] {
+  border: var(--av-border-w-button) solid var(--av-border);
+  border-radius: var(--av-radius-pill);
+}
+
+.av-tabs--pills anvil-tabs [role="tab"][aria-selected="true"] {
+  border-color: var(--av-btn-border);
+  background: var(--av-btn-bg);
+  color: var(--av-btn-fg);
+}
+
+.av-tabs--pills anvil-tabs [role="tab"]::after {
+  display: none;
+}
+
+anvil-tabs [role="tabpanel"] {
+  padding-top: var(--av-space-6);
+}
+
+html.no-js anvil-tabs [role="tabpanel"][hidden] {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  anvil-tabs [role="tab"]::after {
+    transition: transform var(--av-dur) var(--av-ease);
+  }
+}
+
+html[data-animations="off"] anvil-tabs [role="tab"]::after {
+  transition: none;
+}

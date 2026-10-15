@@ -1,0 +1,571 @@
+{%- liquid
+  assign s = section.settings
+  assign menu = s.menu
+  assign logo = s.logo | default: settings.logo
+  assign logo_width = s.logo_width
+  assign logo_width_2x = logo_width | times: 2
+  if customer
+    assign account_url = routes.account_url
+  else
+    assign account_url = routes.account_login_url
+  endif
+  assign show_country = false
+  if s.show_country and localization.available_countries.size > 1
+    assign show_country = true
+  endif
+  assign show_language = false
+  if s.show_language and localization.available_languages.size > 1
+    assign show_language = true
+  endif
+  assign menu_label = 'anvil.a11y.menu' | t
+  assign close_label = 'anvil.a11y.close' | t
+-%}
+{%- if s.sticky != 'never' -%}
+  {% style %}
+    #shopify-section-{{ section.id }} {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    #shopify-section-{{ section.id }}:has(.av-header.is-hidden) {
+      transform: translateY(-100%);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      html:not([data-animations="off"]) #shopify-section-{{ section.id }} {
+        transition: transform var(--av-dur) var(--av-ease);
+      }
+    }
+  {% endstyle %}
+{%- endif -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-header' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <anvil-header class="av-header av-header--logo-{{ s.logo_position }}" data-anvil-sticky="{{ s.sticky }}">
+      <header class="av-header__bar">
+        <anvil-drawer id="anvil-menu-drawer" class="av-header__drawer" side="left">
+          <details class="av-header__details">
+            <summary class="av-header__icon av-header__burger">
+              <span class="av-visually-hidden">{{ menu_label }}</span>
+              {% render 'anvil-icon', name: 'menu', size: 24 %}
+            </summary>
+            <div class="av-header__panel" data-anvil-panel aria-label="{{ menu_label }}">
+              <div class="av-header__panel-head">
+                <span class="av-header__panel-title">{{ menu_label }}</span>
+                <button type="button" class="av-header__icon av-js-only" data-anvil-close aria-label="{{ close_label }}">
+                  {% render 'anvil-icon', name: 'x', size: 24 %}
+                </button>
+              </div>
+              <nav class="av-header__mobile-nav" aria-label="{{ menu_label }}">
+                <ul class="av-header__mobile-list av-list-reset">
+                  {%- for link in menu.links -%}
+                    <li class="av-header__mobile-item">
+                      {%- if link.links.size > 0 -%}
+                        <details class="av-header__mobile-sub"{% if link.child_active %} open{% endif %}>
+                          <summary class="av-header__mobile-link">
+                            <span>{{ link.title | escape }}</span>
+                            {% render 'anvil-icon', name: 'chevron-down', size: 16, class: 'av-header__chevron' %}
+                          </summary>
+                          <ul class="av-header__mobile-sublist av-list-reset">
+                            <li><a class="av-header__mobile-sublink" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title | escape }}</a></li>
+                            {%- for child in link.links -%}
+                              <li><a class="av-header__mobile-sublink" href="{{ child.url }}"{% if child.current %} aria-current="page"{% endif %}>{{ child.title | escape }}</a></li>
+                            {%- endfor -%}
+                          </ul>
+                        </details>
+                      {%- else -%}
+                        <a class="av-header__mobile-link" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title | escape }}</a>
+                      {%- endif -%}
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              </nav>
+              <div class="av-header__panel-foot">
+                {%- if shop.customer_accounts_enabled -%}
+                  <a class="av-header__mobile-link av-header__mobile-link--account" href="{{ account_url }}">
+                    {% render 'anvil-icon', name: 'user', size: 20 %}
+                    <span>{{ 'anvil.a11y.account' | t }}</span>
+                  </a>
+                {%- endif -%}
+                {%- if show_country -%}
+                  {%- form 'localization', id: 'anvil-header-country', class: 'av-header__loc av-field' -%}
+                    <label class="av-field__label" for="anvil-header-country-select">Country/region</label>
+                    <div class="av-header__loc-row">
+                      <div class="av-field__select av-header__loc-select">
+                        <select class="av-field__input" id="anvil-header-country-select" name="country_code" data-anvil-localization>
+                          {%- for country in localization.available_countries -%}
+                            <option value="{{ country.iso_code }}"{% if country.iso_code == localization.country.iso_code %} selected{% endif %}>{{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})</option>
+                          {%- endfor -%}
+                        </select>
+                      </div>
+                      <button type="submit" class="av-btn av-btn--secondary av-btn--md av-no-js-only">Update</button>
+                    </div>
+                  {%- endform -%}
+                {%- endif -%}
+                {%- if show_language -%}
+                  {%- form 'localization', id: 'anvil-header-language', class: 'av-header__loc av-field' -%}
+                    <label class="av-field__label" for="anvil-header-language-select">Language</label>
+                    <div class="av-header__loc-row">
+                      <div class="av-field__select av-header__loc-select">
+                        <select class="av-field__input" id="anvil-header-language-select" name="language_code" data-anvil-localization>
+                          {%- for language in localization.available_languages -%}
+                            <option value="{{ language.iso_code }}" lang="{{ language.iso_code }}"{% if language.iso_code == localization.language.iso_code %} selected{% endif %}>{{ language.endonym_name }}</option>
+                          {%- endfor -%}
+                        </select>
+                      </div>
+                      <button type="submit" class="av-btn av-btn--secondary av-btn--md av-no-js-only">Update</button>
+                    </div>
+                  {%- endform -%}
+                {%- endif -%}
+              </div>
+            </div>
+          </details>
+        </anvil-drawer>
+
+        <a class="av-header__logo" href="{{ routes.root_url }}">
+          {%- if logo != blank -%}
+            {%- assign logo_height = logo_width | divided_by: logo.aspect_ratio | round -%}
+            {%- assign logo_sizes = logo_width | append: 'px' -%}
+            {%- assign logo_widths = logo_width | append: ', ' | append: logo_width_2x -%}
+            {{ logo | image_url: width: logo_width_2x | image_tag: widths: logo_widths, sizes: logo_sizes, width: logo_width, height: logo_height, loading: 'eager', class: 'av-header__logo-img', alt: shop.name }}
+          {%- else -%}
+            <span class="av-header__logo-text">{{ shop.name }}</span>
+          {%- endif -%}
+        </a>
+
+        <nav class="av-header__nav" aria-label="{{ menu_label }}">
+          <ul class="av-header__list av-list-reset">
+            {%- for link in menu.links -%}
+              <li class="av-header__item">
+                {%- if link.links.size > 0 -%}
+                  <details class="av-header__dropdown">
+                    <summary class="av-header__link{% if link.child_active %} av-header__link--active{% endif %}">
+                      <span>{{ link.title | escape }}</span>
+                      {% render 'anvil-icon', name: 'chevron-down', size: 16, class: 'av-header__chevron' %}
+                    </summary>
+                    <ul class="av-header__sub av-list-reset">
+                      <li><a class="av-header__sublink" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title | escape }}</a></li>
+                      {%- for child in link.links -%}
+                        <li><a class="av-header__sublink" href="{{ child.url }}"{% if child.current %} aria-current="page"{% endif %}>{{ child.title | escape }}</a></li>
+                      {%- endfor -%}
+                    </ul>
+                  </details>
+                {%- else -%}
+                  <a class="av-header__link{% if link.active %} av-header__link--active{% endif %}" href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title | escape }}</a>
+                {%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+        </nav>
+
+        <div class="av-header__actions">
+          {%- if s.show_search -%}
+            <a class="av-header__icon" href="{{ routes.search_url }}"{% if s.search_mode == 'modal' %} data-anvil-open="anvil-search-dialog"{% endif %} aria-label="{{ 'anvil.a11y.search' | t }}">
+              {% render 'anvil-icon', name: 'search', size: 24 %}
+            </a>
+          {%- endif -%}
+          {%- if shop.customer_accounts_enabled and s.show_account -%}
+            <a class="av-header__icon" href="{{ account_url }}" aria-label="{{ 'anvil.a11y.account' | t }}">
+              {% render 'anvil-icon', name: 'user', size: 24 %}
+            </a>
+          {%- endif -%}
+          <a class="av-header__icon av-header__cart" href="{{ routes.cart_url }}" data-anvil-cart-link data-anvil-open="anvil-cart-drawer" aria-label="{{ 'anvil.a11y.cart' | t }}">
+            {% render 'anvil-icon', name: 'shopping-bag', size: 24 %}
+            <anvil-cart-bubble class="av-cart-bubble" data-anvil-section="anvil-cart-bubble"{% if cart.item_count == 0 %} hidden{% endif %}>
+              <span class="av-cart-bubble__count" data-anvil-count="{{ cart.item_count }}" aria-hidden="true">{{ cart.item_count }}</span>
+              <span class="av-visually-hidden">{{ 'anvil.cart.item_count' | t: count: cart.item_count }}</span>
+            </anvil-cart-bubble>
+          </a>
+        </div>
+      </header>
+
+      {%- if s.show_search and s.search_mode == 'modal' -%}
+        <anvil-dialog id="anvil-search-dialog" class="av-header__search-dialog">
+          <dialog class="av-header__search-modal av-scheme av-scheme--{{ s.color_scheme.id }}" aria-label="{{ 'anvil.a11y.search' | t }}">
+            <form class="av-header__search-form" action="{{ routes.search_url }}" method="get" role="search">
+              <label class="av-visually-hidden" for="anvil-header-search-q">{{ 'anvil.search.placeholder' | t }}</label>
+              <input class="av-field__input" id="anvil-header-search-q" type="search" name="q" placeholder="{{ 'anvil.search.placeholder' | t }}" autocomplete="off">
+              <input type="hidden" name="options[prefix]" value="last">
+              <button type="submit" class="av-header__icon" aria-label="{{ 'anvil.search.submit' | t }}">
+                {% render 'anvil-icon', name: 'search', size: 24 %}
+              </button>
+              <button type="button" class="av-header__icon" data-anvil-close aria-label="{{ close_label }}">
+                {% render 'anvil-icon', name: 'x', size: 24 %}
+              </button>
+            </form>
+          </dialog>
+        </anvil-dialog>
+      {%- endif -%}
+    </anvil-header>
+  </div>
+</div>
+{% stylesheet %}
+  .av-header {
+    display: block;
+  }
+  .av-header__bar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--av-space-3);
+    min-height: 56px;
+  }
+  .av-header__logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    grid-column: 2;
+    justify-self: center;
+    color: inherit;
+    text-decoration: none;
+  }
+  .av-header__logo-img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+  }
+  .av-header__logo-text {
+    font-family: var(--av-font-heading);
+    font-weight: var(--av-heading-weight);
+    font-size: var(--av-text-lg);
+    letter-spacing: var(--av-heading-spacing);
+    text-transform: var(--av-heading-case);
+  }
+  .av-header__nav {
+    display: none;
+  }
+  .av-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--av-space-1);
+    grid-column: 3;
+  }
+  .av-header__icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    color: inherit;
+    background: none;
+    border: 0;
+    border-radius: var(--av-radius-button);
+    cursor: pointer;
+    text-decoration: none;
+    list-style: none;
+  }
+  .av-header__icon::-webkit-details-marker {
+    display: none;
+  }
+  .av-header .av-cart-bubble__count {
+    position: absolute;
+    top: 4px;
+    right: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: var(--av-text-xs);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--av-on-accent);
+    background: var(--av-accent);
+    border-radius: var(--av-radius-pill);
+  }
+  .av-header__drawer {
+    display: block;
+    grid-column: 1;
+  }
+  .av-header__details[open]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgb(var(--av-fg-rgb) / 0.45);
+    z-index: 60;
+  }
+  .av-header__drawer .av-drawer__overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 61;
+  }
+  .av-header__drawer[open] .av-drawer__overlay {
+    display: block;
+  }
+  .av-header__panel {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(100%, 360px);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: var(--av-space-4);
+    background: var(--av-bg);
+    color: var(--av-fg);
+    box-shadow: var(--av-shadow-drawer);
+    z-index: 70;
+  }
+  .av-header__panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--av-space-4);
+  }
+  .av-header__panel-title {
+    font-weight: 700;
+  }
+  .av-header__mobile-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--av-space-2);
+    padding: var(--av-space-3) 0;
+    color: inherit;
+    text-decoration: none;
+    font-size: var(--av-text-md);
+    border-bottom: 1px solid var(--av-border);
+    cursor: pointer;
+    list-style: none;
+  }
+  .av-header__mobile-link::-webkit-details-marker {
+    display: none;
+  }
+  .av-header__mobile-link--account {
+    justify-content: flex-start;
+  }
+  .av-header__mobile-sub[open] .av-header__chevron,
+  .av-header__dropdown[open] .av-header__chevron {
+    transform: rotate(180deg);
+  }
+  .av-header__mobile-sublink {
+    display: block;
+    padding: var(--av-space-2) var(--av-space-4);
+    color: var(--av-fg-muted);
+    text-decoration: none;
+  }
+  .av-header__panel-foot {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-3);
+    margin-top: auto;
+    padding-top: var(--av-space-4);
+  }
+  .av-header__loc-row {
+    display: flex;
+    gap: var(--av-space-2);
+  }
+  .av-header__loc-select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .av-header__search-modal {
+    width: min(100%, 640px);
+    padding: var(--av-space-4);
+    border: 0;
+    border-radius: var(--av-radius-popup);
+    box-shadow: var(--av-shadow-popup);
+  }
+  .av-header__search-modal::backdrop {
+    background: rgb(0 0 0 / 0.5);
+  }
+  .av-header__search-form {
+    display: flex;
+    align-items: center;
+    gap: var(--av-space-2);
+  }
+  .av-header__search-form .av-field__input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+  @media (min-width: 990px) {
+    .av-header__drawer {
+      display: none;
+    }
+    .av-header__logo {
+      grid-column: 1;
+      justify-self: start;
+    }
+    .av-header--logo-center .av-header__logo {
+      grid-column: 2;
+      justify-self: center;
+    }
+    .av-header__nav {
+      display: block;
+      grid-column: 2;
+      justify-self: center;
+    }
+    .av-header--logo-center .av-header__nav {
+      grid-column: 1;
+      justify-self: start;
+    }
+    .av-header__list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--av-space-1);
+    }
+    .av-header__item {
+      position: relative;
+    }
+    .av-header__link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--av-space-1);
+      padding: var(--av-space-2) var(--av-space-3);
+      color: inherit;
+      text-decoration: none;
+      border-radius: var(--av-radius-button);
+      cursor: pointer;
+      list-style: none;
+    }
+    .av-header__link::-webkit-details-marker {
+      display: none;
+    }
+    .av-header__link:hover,
+    .av-header__link--active {
+      text-decoration: underline;
+      text-underline-offset: 0.3em;
+    }
+    .av-header__sub {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 220px;
+      padding: var(--av-space-2);
+      background: var(--av-bg);
+      color: var(--av-fg);
+      border: 1px solid var(--av-border);
+      border-radius: var(--av-radius-popup);
+      box-shadow: var(--av-shadow-md);
+      z-index: 50;
+    }
+    .av-header__sublink {
+      display: block;
+      padding: var(--av-space-2) var(--av-space-3);
+      color: inherit;
+      text-decoration: none;
+      border-radius: var(--av-radius-button);
+    }
+    .av-header__sublink:hover {
+      background: rgb(var(--av-fg-rgb) / 0.06);
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Header",
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Header" },
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo",
+      "info": "Leave empty to use the logo from Theme settings, or the store name when there is none."
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "label": "Logo width",
+      "min": 60,
+      "max": 300,
+      "step": 10,
+      "unit": "px",
+      "default": 140
+    },
+    {
+      "type": "select",
+      "id": "logo_position",
+      "label": "Logo position on desktop",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Centre" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Menu",
+      "default": "main-menu"
+    },
+    {
+      "type": "select",
+      "id": "sticky",
+      "label": "Sticky header",
+      "options": [
+        { "value": "always", "label": "Always" },
+        { "value": "scroll-up", "label": "When scrolling up" },
+        { "value": "never", "label": "Never" }
+      ],
+      "default": "scroll-up"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_search",
+      "label": "Show search",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "search_mode",
+      "label": "Search opens",
+      "options": [
+        { "value": "link", "label": "The search page" },
+        { "value": "modal", "label": "A search dialog" }
+      ],
+      "default": "modal"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_account",
+      "label": "Show account link",
+      "info": "Only shows when customer accounts are enabled in your admin.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_country",
+      "label": "Country/region selector in menu",
+      "info": "Shows when more than one country is enabled in Markets.",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_language",
+      "label": "Language selector in menu",
+      "info": "Shows when more than one language is published.",
+      "default": false
+    }
+  ],
+  "enabled_on": {
+    "groups": ["header"]
+  },
+  "presets": [
+    {
+      "name": "Header",
+      "settings": {
+        "pad_top": 12,
+        "pad_bottom": 12
+      }
+    }
+  ]
+}
+{% endschema %}

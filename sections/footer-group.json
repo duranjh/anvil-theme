@@ -1,0 +1,40 @@
+{
+  "type": "footer",
+  "name": "Footer",
+  "sections": {
+    "footer": {
+      "type": "anvil-footer",
+      "blocks": {
+        "brand": {
+          "type": "brand",
+          "settings": {
+            "show_logo": true,
+            "text": "<p>Example brand description — replace this with a sentence about your store.</p>",
+            "show_socials": true
+          }
+        },
+        "menu": {
+          "type": "link_list",
+          "settings": {
+            "heading": "Quick links",
+            "menu": "footer"
+          }
+        },
+        "newsletter": {
+          "type": "newsletter",
+          "settings": {
+            "heading": "Stay in the loop",
+            "text": "<p>Example newsletter text — tell people what they will receive.</p>"
+          }
+        }
+      },
+      "block_order": ["brand", "menu", "newsletter"],
+      "settings": {
+        "pad_top": 48,
+        "pad_bottom": 24,
+        "color_scheme": "scheme-2"
+      }
+    }
+  },
+  "order": ["footer"]
+}

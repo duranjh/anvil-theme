@@ -1,0 +1,51 @@
+name: Lighthouse
+
+# Manual run of Shopify's Lighthouse CI action against a store that has this
+# repository's theme pushed. Thresholds follow docs/CONVENTIONS.md §11:
+# performance >= 0.80, accessibility >= 0.95 (mobile).
+#
+# Repository secrets to create (Settings > Secrets and variables > Actions):
+#   SHOP_CLIENT_ID        client id of a Dev Dashboard app with read_products + write_themes
+#   SHOP_CLIENT_SECRET    that app's client secret
+#   SHOP_STORE            my-store.myshopify.com
+#   SHOP_PASSWORD         storefront password, only when the store is password-protected
+#   LHCI_GITHUB_APP_TOKEN optional; token from the Lighthouse CI GitHub app for status checks
+#
+# The action uploads the checked-out theme to a temporary theme on the store,
+# runs Lighthouse on the home page, a product page and a collection page, then
+# deletes the temporary theme. Use a development store, never the live shop.
+
+on:
+  workflow_dispatch:
+    inputs:
+      product_handle:
+        description: "Product handle to audit (first product when empty)"
+        required: false
+        default: ""
+      collection_handle:
+        description: "Collection handle to audit (first collection when empty)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  lhci:
+    name: Lighthouse (mobile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lighthouse CI
+        uses: Shopify/lighthouse-ci-action@v1
+        with:
+          client_id: ${{ secrets.SHOP_CLIENT_ID }}
+          client_secret: ${{ secrets.SHOP_CLIENT_SECRET }}
+          store: ${{ secrets.SHOP_STORE }}
+          password: ${{ secrets.SHOP_PASSWORD }}
+          product_handle: ${{ inputs.product_handle }}
+          collection_handle: ${{ inputs.collection_handle }}
+          lhci_min_score_performance: 0.8
+          lhci_min_score_accessibility: 0.95
+          lhci_github_app_token: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}

@@ -1,0 +1,312 @@
+{%- liquid
+  assign s = section.settings
+  assign search_terms = search.terms | escape
+  assign sort_by = search.sort_by | default: search.default_sort_by
+  assign submit_label = 'anvil.search.submit' | t
+  assign show_filters = false
+  if s.show_filters and search.filters.size > 0
+    assign show_filters = true
+  endif
+-%}
+{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
+{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-search' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-search">
+      <h1 class="av-search__title">
+        {%- if search.performed -%}
+          {{ 'anvil.search.results_count' | t: count: search.results_count }} &middot; &ldquo;{{ search_terms }}&rdquo;
+        {%- else -%}
+          {{ 'anvil.search.label' | t }}
+        {%- endif -%}
+      </h1>
+      <form class="av-search__form av-field--inline" action="{{ routes.search_url }}" method="get" role="search">
+        <label class="av-visually-hidden" for="anvil-search-q-{{ section.id }}">{{ 'anvil.search.placeholder' | t }}</label>
+        <input class="av-field__input" id="anvil-search-q-{{ section.id }}" type="search" name="q" value="{{ search_terms }}" placeholder="{{ 'anvil.search.placeholder' | t }}" autocomplete="off">
+        <input type="hidden" name="options[prefix]" value="last">
+        {% render 'anvil-button', label: submit_label, style: 'primary', size: 'md', type: 'submit' %}
+      </form>
+
+      {%- if search.performed -%}
+        {%- paginate search.results by s.per_page -%}
+          <div class="av-search__layout{% if show_filters %} av-search__layout--has-filters{% endif %}">
+            {%- if show_filters or s.show_sort -%}
+              <form class="av-search__facets" method="get" action="{{ routes.search_url }}" data-anvil-facets>
+                <input type="hidden" name="q" value="{{ search_terms }}">
+                <input type="hidden" name="options[prefix]" value="last">
+                {%- if s.show_sort -%}
+                  <div class="av-search__sort av-field">
+                    <label class="av-field__label" for="anvil-search-sort-{{ section.id }}">Sort by</label>
+                    <div class="av-field__select">
+                      <select class="av-field__input" id="anvil-search-sort-{{ section.id }}" name="sort_by">
+                        {%- for option in search.sort_options -%}
+                          <option value="{{ option.value | escape }}"{% if option.value == sort_by %} selected{% endif %}>{{ option.name | escape }}</option>
+                        {%- endfor -%}
+                      </select>
+                    </div>
+                  </div>
+                {%- endif -%}
+                {%- if show_filters -%}
+                  <div class="av-search__filters">
+                    {%- for filter in search.filters -%}
+                      {%- for value in filter.active_values -%}
+                        <a class="av-search__active" href="{{ value.url_to_remove }}">{{ filter.label | escape }}: {{ value.label | escape }} <span aria-hidden="true">&times;</span><span class="av-visually-hidden">(remove)</span></a>
+                      {%- endfor -%}
+                    {%- endfor -%}
+                    {%- for filter in search.filters -%}
+                      <details class="av-search__filter"{% if filter.active_values.size > 0 %} open{% endif %}>
+                        <summary class="av-search__filter-summary">{{ filter.label | escape }}</summary>
+                        <div class="av-search__filter-body">
+                          {%- case filter.type -%}
+                            {%- when 'list' -%}
+                              <ul class="av-search__values av-list-reset">
+                                {%- for value in filter.values -%}
+                                  <li>
+                                    <label class="av-check">
+                                      <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value | escape }}"{% if value.active %} checked{% endif %}{% if value.count == 0 and value.active == false %} disabled{% endif %}>
+                                      <span>{{ value.label | escape }} <span class="av-search__count av-muted">({{ value.count }})</span></span>
+                                    </label>
+                                  </li>
+                                {%- endfor -%}
+                              </ul>
+                            {%- when 'price_range' -%}
+                              {%- assign range_max = filter.range_max | money_without_currency | replace: ',', '' -%}
+                              <div class="av-search__price">
+                                <label class="av-field">
+                                  <span class="av-field__label">From</span>
+                                  <input class="av-field__input" type="number" name="{{ filter.min_value.param_name }}" {% if filter.min_value.value %}value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="0">
+                                </label>
+                                <label class="av-field">
+                                  <span class="av-field__label">To</span>
+                                  <input class="av-field__input" type="number" name="{{ filter.max_value.param_name }}" {% if filter.max_value.value %}value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="{{ range_max }}">
+                                </label>
+                              </div>
+                            {%- when 'boolean' -%}
+                              <ul class="av-search__values av-list-reset">
+                                <li>
+                                  <label class="av-check">
+                                    <input type="checkbox" name="{{ filter.true_value.param_name }}" value="{{ filter.true_value.value | escape }}"{% if filter.true_value.active %} checked{% endif %}>
+                                    <span>{{ filter.true_value.label | escape }}</span>
+                                  </label>
+                                </li>
+                                <li>
+                                  <label class="av-check">
+                                    <input type="checkbox" name="{{ filter.false_value.param_name }}" value="{{ filter.false_value.value | escape }}"{% if filter.false_value.active %} checked{% endif %}>
+                                    <span>{{ filter.false_value.label | escape }}</span>
+                                  </label>
+                                </li>
+                              </ul>
+                          {%- endcase -%}
+                        </div>
+                      </details>
+                    {%- endfor -%}
+                  </div>
+                {%- endif -%}
+                <div class="av-search__apply av-no-js-only">
+                  {% render 'anvil-button', label: 'Apply', style: 'secondary', size: 'sm', type: 'submit' %}
+                </div>
+              </form>
+            {%- endif -%}
+
+            <div class="av-search__results">
+              {%- if search.results_count == 0 -%}
+                <p class="av-search__empty">{{ 'anvil.search.no_results' | t: terms: search_terms }}</p>
+              {%- else -%}
+                <ul class="av-search__grid av-list-reset">
+                  {%- for item in search.results -%}
+                    {%- if item.object_type == 'product' -%}
+                      <li class="av-search__cell">
+                        {% render 'anvil-product-card', product: item, show_vendor: s.show_vendor, show_rating: false, quick_add: false, image_ratio: '1:1', sizes: '(min-width: 990px) 25vw, 50vw' %}
+                      </li>
+                    {%- else -%}
+                      <li class="av-search__cell av-search__cell--text">
+                        <article class="av-search__card">
+                          {%- if item.object_type == 'article' and item.image -%}
+                            <a class="av-search__card-media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+                              {% render 'anvil-media', image: item.image, ratio: '16:9', widths: '300, 600, 900', sizes: '(min-width: 990px) 25vw, 50vw', loading: 'lazy', alt: item.title, class: 'av-search__card-img' %}
+                            </a>
+                          {%- endif -%}
+                          <p class="av-search__type av-muted">{% if item.object_type == 'article' %}{{ 'anvil.search.articles' | t }}{% else %}{{ 'anvil.search.pages' | t }}{% endif %}</p>
+                          <h2 class="av-search__card-title"><a class="av-search__card-link" href="{{ item.url }}">{{ item.title | escape }}</a></h2>
+                          <p class="av-search__excerpt av-muted">
+                            {%- if item.object_type == 'article' -%}
+                              {{ item.excerpt_or_content | strip_html | truncatewords: 30 }}
+                            {%- else -%}
+                              {{ item.content | strip_html | truncatewords: 30 }}
+                            {%- endif -%}
+                          </p>
+                        </article>
+                      </li>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+              {% render 'anvil-pagination', paginate: paginate %}
+            </div>
+          </div>
+        {%- endpaginate -%}
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-search__title {
+    margin: 0 0 var(--av-space-4);
+    font-size: var(--av-text-2xl);
+  }
+  .av-search__form {
+    max-width: 640px;
+    margin-bottom: var(--av-space-6);
+  }
+  .av-search__layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-5);
+  }
+  .av-search__facets {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-3);
+  }
+  .av-search__filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-2);
+  }
+  .av-search__active {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: var(--av-space-1);
+    min-height: 28px;
+    padding: 0 var(--av-space-3);
+    font-size: var(--av-text-xs);
+    color: inherit;
+    text-decoration: none;
+    border: 1px solid var(--av-border);
+    border-radius: var(--av-radius-pill);
+  }
+  .av-search__filter {
+    border-top: 1px solid var(--av-border);
+  }
+  .av-search__filter-summary {
+    padding: var(--av-space-3) 0;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .av-search__filter-body {
+    padding-bottom: var(--av-space-3);
+  }
+  .av-search__values {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-2);
+  }
+  .av-search__count {
+    font-size: var(--av-text-xs);
+  }
+  .av-search__price {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--av-space-2);
+  }
+  .av-search__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--av-grid-gap, var(--av-space-4));
+  }
+  .av-search__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-2);
+    height: 100%;
+    padding: var(--av-space-4);
+    border: var(--av-border-w-card) solid var(--av-border);
+    border-radius: var(--av-radius-card);
+  }
+  .av-search__card-media {
+    display: block;
+  }
+  .av-search__type {
+    margin: 0;
+    font-size: var(--av-text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .av-search__card-title {
+    margin: 0;
+    font-size: var(--av-text-md);
+  }
+  .av-search__card-link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .av-search__card-link:hover {
+    text-decoration: underline;
+  }
+  .av-search__excerpt {
+    margin: 0;
+    font-size: var(--av-text-sm);
+  }
+  .av-search__empty {
+    padding: var(--av-space-8) 0;
+    text-align: center;
+  }
+  @media (min-width: 750px) {
+    .av-search__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 990px) {
+    .av-search__layout--has-filters {
+      grid-template-columns: 260px minmax(0, 1fr);
+      align-items: start;
+    }
+    .av-search__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Search",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Search" },
+    {
+      "type": "range",
+      "id": "per_page",
+      "label": "Results per page",
+      "min": 8,
+      "max": 48,
+      "step": 4,
+      "default": 24
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sort",
+      "label": "Show sort menu",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filters",
+      "label": "Show filters",
+      "info": "Filters are set up in the Search & Discovery app.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor on product cards",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

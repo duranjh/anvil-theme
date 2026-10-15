@@ -1,0 +1,94 @@
+{%- liquid
+  assign s = block.settings
+  assign ends_at = s.ends_at | strip
+  assign has_date = false
+  assign remaining = 0
+  if ends_at != blank
+    assign end_s = ends_at | date: '%s' | plus: 0
+    assign now_s = 'now' | date: '%s' | plus: 0
+    if end_s > 0
+      assign has_date = true
+      assign remaining = end_s | minus: now_s
+      if remaining < 0
+        assign remaining = 0
+      endif
+    endif
+  endif
+  assign cd_days = remaining | divided_by: 86400
+  if cd_days < 10
+    assign cd_days = cd_days | prepend: '0'
+  endif
+  assign cd_hours = remaining | modulo: 86400 | divided_by: 3600 | prepend: '0' | slice: -2, 2
+  assign cd_minutes = remaining | modulo: 3600 | divided_by: 60 | prepend: '0' | slice: -2, 2
+  assign cd_seconds = remaining | modulo: 60 | prepend: '0' | slice: -2, 2
+  assign is_expired = false
+  if has_date and remaining == 0
+    assign is_expired = true
+  endif
+  assign hide_root = false
+  unless request.design_mode
+    if has_date == false
+      assign hide_root = true
+    elsif is_expired and s.expired == 'hide'
+      assign hide_root = true
+    endif
+  endunless
+-%}
+<anvil-countdown class="av-countdown av-countdown--{{ s.size }} av-countdown--{{ s.align }}{% if is_expired %} is-expired{% endif %}" ends-at="{{ ends_at | escape }}"{% if s.timezone != blank %} timezone="{{ s.timezone | strip | escape }}"{% endif %} expired="{{ s.expired }}"{% if hide_root %} hidden{% endif %} {{ block.shopify_attributes }}>
+  {%- if has_date -%}
+    {%- if s.label != blank -%}
+      <p class="av-countdown__label">{{ s.label }}</p>
+    {%- endif -%}
+    <div class="av-countdown__units" data-anvil-running{% if is_expired %} hidden{% endif %}>
+      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="days">{{ cd_days }}</span><span class="av-countdown__name">{{ s.unit_days }}</span></div>
+      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="hours">{{ cd_hours }}</span><span class="av-countdown__name">{{ s.unit_hours }}</span></div>
+      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="minutes">{{ cd_minutes }}</span><span class="av-countdown__name">{{ s.unit_minutes }}</span></div>
+      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="seconds">{{ cd_seconds }}</span><span class="av-countdown__name">{{ s.unit_seconds }}</span></div>
+    </div>
+    {%- if s.expired == 'text' -%}
+      <p class="av-countdown__expired" data-anvil-expired{% unless is_expired %} hidden{% endunless %}>{{ s.expired_text }}</p>
+    {%- elsif is_expired and request.design_mode -%}
+      <p class="av-countdown__note">This countdown has ended and is hidden from shoppers.</p>
+    {%- endif -%}
+    <script type="module" src="{{ 'anvil-countdown.js' | asset_url }}"></script>
+  {%- elsif request.design_mode -%}
+    <p class="av-countdown__note">{{ 'anvil.editor.no_date_set' | t }}</p>
+  {%- endif -%}
+</anvil-countdown>
+{% stylesheet %}
+.av-countdown{display:flex;flex-direction:column;gap:var(--av-space-2);font-family:var(--av-font-body)}
+.av-countdown--left{align-items:flex-start;text-align:left}
+.av-countdown--center{align-items:center;text-align:center}
+.av-countdown--right{align-items:flex-end;text-align:right}
+.av-countdown__label{margin:0;font-size:var(--av-text-sm);color:var(--av-fg-muted)}
+.av-countdown__units{display:flex;gap:var(--av-space-3)}
+.av-countdown__unit{display:flex;flex-direction:column;align-items:center;min-width:3ch;padding:var(--av-space-2) var(--av-space-3);border-radius:var(--av-radius-card);background:rgb(var(--av-fg-rgb) / 0.06)}
+.av-countdown__value{font-family:var(--av-font-heading);font-weight:var(--av-heading-weight);font-variant-numeric:tabular-nums;line-height:1.1;font-size:var(--av-text-xl)}
+.av-countdown--sm .av-countdown__value{font-size:var(--av-text-lg)}
+.av-countdown--lg .av-countdown__value{font-size:var(--av-text-3xl)}
+.av-countdown__name{font-size:var(--av-text-xs);color:var(--av-fg-muted);text-transform:uppercase;letter-spacing:.06em}
+.av-countdown__expired{margin:0;font-weight:600}
+.av-countdown__note{margin:0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Countdown",
+  "tag": null,
+  "settings": [
+    { "type": "text", "id": "ends_at", "label": "Ends at", "placeholder": "2026-12-31T23:59", "info": "Real end date and time only, written as YYYY-MM-DDTHH:MM. Anvil has no evergreen or per-visitor mode: a timer that restarts for each shopper is a fake deadline." },
+    { "type": "text", "id": "timezone", "label": "Time zone", "placeholder": "America/New_York", "info": "IANA time zone name for the end time. Leave empty to use the shopper's time zone." },
+    { "type": "text", "id": "label", "label": "Label", "default": "Offer ends in" },
+    { "type": "select", "id": "expired", "label": "When it ends", "options": [ { "value": "hide", "label": "Hide the block" }, { "value": "text", "label": "Show a message" } ], "default": "hide" },
+    { "type": "text", "id": "expired_text", "label": "Message when ended", "default": "This offer has ended" },
+    { "type": "header", "content": "Unit labels" },
+    { "type": "text", "id": "unit_days", "label": "Days", "default": "Days" },
+    { "type": "text", "id": "unit_hours", "label": "Hours", "default": "Hours" },
+    { "type": "text", "id": "unit_minutes", "label": "Minutes", "default": "Minutes" },
+    { "type": "text", "id": "unit_seconds", "label": "Seconds", "default": "Seconds" },
+    { "type": "header", "content": "Layout" },
+    { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" }, { "value": "lg", "label": "Large" } ], "default": "md" },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" }
+  ],
+  "presets": [ { "name": "Countdown" } ]
+}
+{% endschema %}

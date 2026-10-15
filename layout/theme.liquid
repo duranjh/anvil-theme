@@ -1,0 +1,105 @@
+<!doctype html>
+<html
+  class="no-js av-scrollbar--{{ settings.scrollbar_style }}{% if settings.block_right_click and request.design_mode == false %} av-no-select{% endif %}"
+  lang="{{ request.locale.iso_code }}"
+  data-animations="{% if settings.animations_enabled %}on{% else %}off{% endif %}"
+>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="{{ settings.body_color_scheme.settings.background }}">
+    {%- render 'anvil-meta' -%}
+    {%- render 'anvil-css-tokens', part: 'preload' -%}
+    <style>{% render 'anvil-css-tokens' %}</style>
+    {{ 'anvil-base.css' | asset_url | stylesheet_tag: preload: true }}
+    {{ content_for_header }}
+    <script>
+      document.documentElement.classList.replace('no-js', 'js');
+      window.Anvil = {
+        routes: {
+          root: {{ routes.root_url | json }},
+          cart: {{ routes.cart_url | json }},
+          cartAdd: {{ routes.cart_add_url | json }},
+          cartChange: {{ routes.cart_change_url | json }},
+          cartUpdate: {{ routes.cart_update_url | json }},
+          cartClear: {{ routes.cart_clear_url | json }},
+          predictiveSearch: {{ routes.predictive_search_url | json }},
+          search: {{ routes.search_url | json }},
+          productRecommendations: {{ routes.product_recommendations_url | json }},
+          collections: {{ routes.collections_url | json }},
+          allProducts: {{ routes.all_products_collection_url | json }},
+          account: {{ routes.account_url | json }},
+          login: {{ routes.account_login_url | json }}
+        },
+        moneyFormat: {{ shop.money_format | json }},
+        moneyWithCurrencyFormat: {{ shop.money_with_currency_format | json }},
+        currency: {{ cart.currency.iso_code | json }},
+        locale: {{ request.locale.iso_code | json }},
+        designMode: {{ request.design_mode | json }},
+        strings: {
+          addToCart: {{ 'anvil.product.add_to_cart' | t | json }},
+          adding: {{ 'anvil.product.adding' | t | json }},
+          added: {{ 'anvil.cart.added' | t | json }},
+          soldOut: {{ 'anvil.product.sold_out' | t | json }},
+          unavailable: {{ 'anvil.product.unavailable' | t | json }},
+          chooseOptions: {{ 'anvil.product.choose_options' | t | json }},
+          viewCart: {{ 'anvil.cart.view_cart' | t | json }},
+          checkout: {{ 'anvil.cart.checkout' | t | json }},
+          remove: {{ 'anvil.cart.remove' | t | json }},
+          quantity: {{ 'anvil.cart.quantity' | t | json }},
+          cartEmpty: {{ 'anvil.cart.empty' | t | json }},
+          cartCountOne: {{ 'anvil.cart.item_count.one' | t: count: '[count]' | json }},
+          cartCount: {{ 'anvil.cart.item_count.other' | t: count: '[count]' | json }},
+          cartError: {{ 'anvil.cart.error' | t | json }},
+          cartUpdating: {{ 'anvil.cart.updating' | t | json }},
+          free: {{ 'anvil.cart.free' | t | json }},
+          codeInvalid: {{ 'anvil.cart.code_invalid' | t | json }},
+          codeApplied: {{ 'anvil.cart.code_applied' | t | json }},
+          close: {{ 'anvil.a11y.close' | t | json }},
+          previous: {{ 'anvil.a11y.previous' | t | json }},
+          next: {{ 'anvil.a11y.next' | t | json }},
+          slideOf: {{ 'anvil.a11y.slide_of' | t: index: '[index]', total: '[total]' | json }},
+          carousel: {{ 'anvil.a11y.carousel' | t | json }},
+          goToSlide: {{ 'anvil.a11y.go_to_slide' | t: index: '[index]' | json }},
+          play: {{ 'anvil.a11y.play' | t | json }},
+          pause: {{ 'anvil.a11y.pause' | t | json }},
+          loading: {{ 'anvil.a11y.loading' | t | json }},
+          error: {{ 'anvil.a11y.error' | t | json }},
+          copied: {{ 'anvil.product.copied' | t | json }},
+          shipBarBefore: {{ 'anvil.cart.ship_bar_before_html' | t: remaining: '[remaining]' | json }},
+          shipBarAfter: {{ 'anvil.cart.ship_bar_after' | t | json }},
+          youSave: {{ 'anvil.cart.you_save_html' | t: amount: '[amount]' | json }}
+        },
+        settings: {
+          cartType: {{ settings.cart_type | json }},
+          openCartOnAdd: {{ settings.cart_open_on_add | json }},
+          showCurrencyCode: {{ settings.show_currency_code | json }},
+          animations: {{ settings.animations_enabled | json }},
+          revealStyle: {{ settings.animations_reveal | json }},
+          predictiveSearch: {{ settings.predictive_search_enabled | json }},
+          predictiveSearchShowPrice: {{ settings.predictive_search_show_price | json }}
+        }
+      };
+    </script>
+    <script type="module" src="{{ 'anvil-core.js' | asset_url }}"></script>
+    {%- if request.design_mode -%}
+      <script type="module" src="{{ 'anvil-editor.js' | asset_url }}"></script>
+    {%- endif -%}
+  </head>
+  <body
+    class="av-body av-scheme av-scheme--{{ settings.body_color_scheme.id }} av-tpl--{{ template.name | handleize }} av-btn-hover--{{ settings.button_hover }} av-cards--{{ settings.card_style }} av-qty--{{ settings.qty_style }} av-pills--{{ settings.pill_selected_style }} av-arrows--{{ settings.slider_arrow_style }} av-dots--{{ settings.slider_dot_style }} av-badges--{{ settings.badge_position }}{% if settings.animations_hover_lift %} av-hover-lift{% endif %}{% if request.design_mode %} av-design-mode{% endif %}"
+  >
+    <a class="av-skip-link" href="#main">{{ 'anvil.a11y.skip_to_content' | t }}</a>
+    {% sections 'header-group' %}
+    <main id="main" class="av-main" tabindex="-1">
+      {{ content_for_layout }}
+    </main>
+    {% sections 'footer-group' %}
+    {% sections 'overlay-group' %}
+    {%- if settings.cart_type == 'drawer' -%}
+      {% section 'anvil-cart-drawer' %}
+    {%- endif -%}
+    {%- render 'anvil-json-ld' -%}
+    {%- render 'anvil-security' -%}
+  </body>
+</html>

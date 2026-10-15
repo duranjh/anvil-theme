@@ -1,0 +1,46 @@
+{% doc %}
+  Accessible pagination for a paginate block: previous/next, numbered links, the current page and gaps.
+  Renders nothing when there is a single page. Styles live in assets/anvil-card.css.
+
+  @param {object} paginate - The paginate object from a {% paginate %} block
+
+  @example
+  {% paginate collection.products by 24 %}
+    ...
+    {% render 'anvil-pagination', paginate: paginate %}
+  {% endpaginate %}
+{% enddoc %}
+{%- if paginate.pages > 1 -%}
+  {%- assign current_str = paginate.current_page | append: '' -%}
+  <nav class="av-pagination" aria-label="{{ 'anvil.pagination.label' | t }}">
+    <ul class="av-pagination__list">
+      {%- if paginate.previous -%}
+        <li class="av-pagination__item">
+          <a class="av-pagination__link av-pagination__link--prev" href="{{ paginate.previous.url }}" rel="prev">
+            {%- render 'anvil-icon', name: 'chevron-left', size: 18 -%}
+            <span class="av-visually-hidden">{{ 'anvil.pagination.previous' | t }}</span>
+          </a>
+        </li>
+      {%- endif -%}
+      {%- for part in paginate.parts -%}
+        <li class="av-pagination__item">
+          {%- if part.is_link -%}
+            <a class="av-pagination__link" href="{{ part.url }}"><span class="av-visually-hidden">{{ 'anvil.pagination.page' | t }} </span>{{ part.title }}</a>
+          {%- elsif part.title == current_str -%}
+            <span class="av-pagination__current" aria-current="page"><span class="av-visually-hidden">{{ 'anvil.pagination.current' | t }} </span>{{ part.title }}</span>
+          {%- else -%}
+            <span class="av-pagination__gap" aria-hidden="true">{{ part.title }}</span>
+          {%- endif -%}
+        </li>
+      {%- endfor -%}
+      {%- if paginate.next -%}
+        <li class="av-pagination__item">
+          <a class="av-pagination__link av-pagination__link--next" href="{{ paginate.next.url }}" rel="next">
+            <span class="av-visually-hidden">{{ 'anvil.pagination.next' | t }}</span>
+            {%- render 'anvil-icon', name: 'chevron-right', size: 18 -%}
+          </a>
+        </li>
+      {%- endif -%}
+    </ul>
+  </nav>
+{%- endif -%}

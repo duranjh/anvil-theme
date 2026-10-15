@@ -1,0 +1,317 @@
+{%- liquid
+  assign s = section.settings
+  assign sort_by = collection.sort_by | default: collection.default_sort_by
+  assign show_filters = false
+  if s.show_filters and collection.filters.size > 0
+    assign show_filters = true
+  endif
+  assign card_sizes = '(min-width: 990px) 25vw, 50vw'
+  if s.columns_desktop == '3'
+    assign card_sizes = '(min-width: 990px) 33vw, 50vw'
+  elsif s.columns_desktop == '2'
+    assign card_sizes = '(min-width: 990px) 50vw, 50vw'
+  endif
+-%}
+{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
+{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-collection' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- paginate collection.products by s.per_page -%}
+      <div class="av-collection{% if show_filters %} av-collection--has-filters{% endif %}">
+        {%- if show_filters or s.show_sort -%}
+          <form class="av-collection__facets" method="get" action="{{ collection.url }}" id="anvil-facets-{{ section.id }}" data-anvil-facets>
+            {%- if s.show_sort -%}
+              <div class="av-collection__sort av-field">
+                <label class="av-field__label" for="anvil-sort-{{ section.id }}">Sort by</label>
+                <div class="av-field__select">
+                  <select class="av-field__input" id="anvil-sort-{{ section.id }}" name="sort_by">
+                    {%- for option in collection.sort_options -%}
+                      <option value="{{ option.value | escape }}"{% if option.value == sort_by %} selected{% endif %}>{{ option.name | escape }}</option>
+                    {%- endfor -%}
+                  </select>
+                </div>
+              </div>
+            {%- elsif collection.sort_by != blank -%}
+              <input type="hidden" name="sort_by" value="{{ collection.sort_by | escape }}">
+            {%- endif -%}
+
+            {%- if show_filters -%}
+              <div class="av-collection__filters">
+                {%- assign active_count = 0 -%}
+                {%- for filter in collection.filters -%}
+                  {%- assign active_count = active_count | plus: filter.active_values.size -%}
+                  {%- if filter.type == 'price_range' -%}
+                    {%- if filter.min_value.value != nil or filter.max_value.value != nil -%}
+                      {%- assign active_count = active_count | plus: 1 -%}
+                    {%- endif -%}
+                  {%- endif -%}
+                {%- endfor -%}
+                {%- if active_count > 0 -%}
+                  <ul class="av-collection__active-list av-list-reset" aria-label="Active filters">
+                    {%- for filter in collection.filters -%}
+                      {%- for value in filter.active_values -%}
+                        <li><a class="av-collection__active" href="{{ value.url_to_remove }}">{{ filter.label | escape }}: {{ value.label | escape }} <span aria-hidden="true">&times;</span><span class="av-visually-hidden">(remove)</span></a></li>
+                      {%- endfor -%}
+                      {%- if filter.type == 'price_range' -%}
+                        {%- if filter.min_value.value != nil or filter.max_value.value != nil -%}
+                          <li><a class="av-collection__active" href="{{ filter.url_to_remove }}">{{ filter.label | escape }}: {{ filter.min_value.value | default: 0 | money }} &ndash; {{ filter.max_value.value | default: filter.range_max | money }} <span aria-hidden="true">&times;</span><span class="av-visually-hidden">(remove)</span></a></li>
+                        {%- endif -%}
+                      {%- endif -%}
+                    {%- endfor -%}
+                    <li><a class="av-collection__clear av-link" href="{{ collection.url }}{% if collection.sort_by != blank %}?sort_by={{ collection.sort_by | escape }}{% endif %}">Clear all</a></li>
+                  </ul>
+                {%- endif -%}
+
+                {%- for filter in collection.filters -%}
+                  <details class="av-collection__filter"{% if filter.active_values.size > 0 or filter.min_value.value != nil or filter.max_value.value != nil %} open{% endif %}>
+                    <summary class="av-collection__filter-summary">{{ filter.label | escape }}</summary>
+                    <div class="av-collection__filter-body">
+                      {%- case filter.type -%}
+                        {%- when 'list' -%}
+                          <ul class="av-collection__values av-list-reset">
+                            {%- for value in filter.values -%}
+                              <li>
+                                <label class="av-check">
+                                  <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value | escape }}"{% if value.active %} checked{% endif %}{% if value.count == 0 and value.active == false %} disabled{% endif %}>
+                                  <span>{{ value.label | escape }} <span class="av-collection__count av-muted">({{ value.count }})</span></span>
+                                </label>
+                              </li>
+                            {%- endfor -%}
+                          </ul>
+                        {%- when 'price_range' -%}
+                          {%- assign range_max = filter.range_max | money_without_currency | replace: ',', '' -%}
+                          <div class="av-collection__price">
+                            <label class="av-field">
+                              <span class="av-field__label">From</span>
+                              <input class="av-field__input" type="number" name="{{ filter.min_value.param_name }}" {% if filter.min_value.value %}value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="0">
+                            </label>
+                            <label class="av-field">
+                              <span class="av-field__label">To</span>
+                              <input class="av-field__input" type="number" name="{{ filter.max_value.param_name }}" {% if filter.max_value.value %}value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}"{% endif %} min="0" max="{{ range_max }}" step="0.01" placeholder="{{ range_max }}">
+                            </label>
+                          </div>
+                        {%- when 'boolean' -%}
+                          <ul class="av-collection__values av-list-reset">
+                            <li>
+                              <label class="av-check">
+                                <input type="checkbox" name="{{ filter.true_value.param_name }}" value="{{ filter.true_value.value | escape }}"{% if filter.true_value.active %} checked{% endif %}>
+                                <span>{{ filter.true_value.label | escape }} <span class="av-collection__count av-muted">({{ filter.true_value.count }})</span></span>
+                              </label>
+                            </li>
+                            <li>
+                              <label class="av-check">
+                                <input type="checkbox" name="{{ filter.false_value.param_name }}" value="{{ filter.false_value.value | escape }}"{% if filter.false_value.active %} checked{% endif %}>
+                                <span>{{ filter.false_value.label | escape }} <span class="av-collection__count av-muted">({{ filter.false_value.count }})</span></span>
+                              </label>
+                            </li>
+                          </ul>
+                      {%- endcase -%}
+                    </div>
+                  </details>
+                {%- endfor -%}
+              </div>
+            {%- endif -%}
+            <div class="av-collection__apply av-no-js-only">
+              {% render 'anvil-button', label: 'Apply', style: 'secondary', size: 'sm', type: 'submit' %}
+            </div>
+          </form>
+        {%- endif -%}
+
+        <div class="av-collection__results">
+          <p class="av-collection__summary av-muted" role="status">
+            {{ paginate.items }} {% if paginate.items == 1 %}product{% else %}products{% endif %}
+          </p>
+          {%- if collection.products.size > 0 -%}
+            <ul class="av-collection__grid av-collection__grid--{{ s.columns_desktop }} av-list-reset">
+              {%- for product in collection.products -%}
+                <li class="av-collection__cell">
+                  {% render 'anvil-product-card', product: product, show_vendor: s.show_vendor, show_rating: s.show_rating, quick_add: s.quick_add, image_ratio: s.image_ratio, sizes: card_sizes %}
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- else -%}
+            <div class="av-collection__empty">
+              <p>No products match these filters.</p>
+              <a class="av-link" href="{{ collection.url }}">Clear all</a>
+            </div>
+          {%- endif -%}
+          {% render 'anvil-pagination', paginate: paginate %}
+        </div>
+      </div>
+    {%- endpaginate -%}
+  </div>
+</div>
+{% stylesheet %}
+  .av-collection {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-5);
+  }
+  .av-collection__facets {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-3);
+  }
+  .av-collection__filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-2);
+  }
+  .av-collection__active-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--av-space-2);
+    margin-bottom: var(--av-space-2);
+  }
+  .av-collection__active {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--av-space-1);
+    min-height: 28px;
+    padding: 0 var(--av-space-3);
+    font-size: var(--av-text-xs);
+    color: inherit;
+    text-decoration: none;
+    border: 1px solid var(--av-border);
+    border-radius: var(--av-radius-pill);
+  }
+  .av-collection__clear {
+    font-size: var(--av-text-xs);
+  }
+  .av-collection__filter {
+    border-top: 1px solid var(--av-border);
+  }
+  .av-collection__filter-summary {
+    padding: var(--av-space-3) 0;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .av-collection__filter-body {
+    padding-bottom: var(--av-space-3);
+  }
+  .av-collection__values {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-2);
+  }
+  .av-collection__count {
+    font-size: var(--av-text-xs);
+  }
+  .av-collection__price {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--av-space-2);
+  }
+  .av-collection__summary {
+    margin: 0 0 var(--av-space-3);
+    font-size: var(--av-text-sm);
+  }
+  .av-collection__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--av-grid-gap, var(--av-space-4));
+  }
+  .av-collection__empty {
+    padding: var(--av-space-8) 0;
+    text-align: center;
+  }
+  @media (min-width: 750px) {
+    .av-collection__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 990px) {
+    .av-collection--has-filters {
+      grid-template-columns: 260px minmax(0, 1fr);
+      align-items: start;
+    }
+    .av-collection__grid--2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .av-collection__grid--3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .av-collection__grid--4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Collection",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Collection" },
+    {
+      "type": "range",
+      "id": "per_page",
+      "label": "Products per page",
+      "min": 8,
+      "max": 48,
+      "step": 4,
+      "default": 24
+    },
+    {
+      "type": "select",
+      "id": "columns_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "4"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Card image ratio",
+      "options": [
+        { "value": "adapt", "label": "Adapt to image" },
+        { "value": "1:1", "label": "Square" },
+        { "value": "4:5", "label": "Portrait" },
+        { "value": "3:4", "label": "Tall" }
+      ],
+      "default": "1:1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sort",
+      "label": "Show sort menu",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filters",
+      "label": "Show filters",
+      "info": "Filters are set up in the Search & Discovery app.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor on cards",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "Show rating on cards",
+      "info": "Ratings come from the product rating metafields written by review apps.",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "quick_add",
+      "label": "Quick add button on cards",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

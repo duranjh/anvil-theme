@@ -1,0 +1,121 @@
+/* anvil-hotspots.css — <anvil-hotspots> spots and popovers. Spot positions come from --av-spot-x / --av-spot-y set
+   inline by Liquid on .av-hotspots__spot-wrap. Tokens only; the pulse animates transform/opacity under
+   prefers-reduced-motion: no-preference and stops under html[data-animations="off"]. */
+
+anvil-hotspots {
+  position: relative;
+  display: block;
+}
+
+.av-hotspots__media > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--av-radius-media);
+}
+
+.av-hotspots__spot-wrap {
+  position: absolute;
+  top: var(--av-spot-y, 50%);
+  left: var(--av-spot-x, 50%);
+  translate: -50% -50%;
+}
+
+anvil-hotspots [data-spot] {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--av-on-accent);
+  cursor: pointer;
+}
+
+anvil-hotspots [data-spot]::before,
+anvil-hotspots [data-spot]::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: var(--av-radius-pill);
+}
+
+anvil-hotspots [data-spot]::before {
+  background: var(--av-accent);
+  box-shadow: var(--av-shadow-sm);
+}
+
+anvil-hotspots [data-spot]::after {
+  border: 2px solid var(--av-accent);
+  opacity: 0;
+}
+
+.av-hotspots__num {
+  position: relative;
+  font-size: var(--av-text-xs);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.av-hotspots__pop {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + var(--av-space-1));
+  left: 50%;
+  width: min(280px, calc(100vw - 2 * var(--av-gutter)));
+  padding: var(--av-space-4);
+  border: var(--av-border-w-card) solid var(--av-border);
+  border-radius: var(--av-radius-popup);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  box-shadow: var(--av-shadow-md);
+  text-align: start;
+  translate: -50% 0;
+}
+
+.av-hotspots__pop.is-flip-y {
+  top: auto;
+  bottom: calc(100% + var(--av-space-1));
+}
+
+.av-hotspots__pop.is-left {
+  left: 0;
+  translate: 0 0;
+}
+
+.av-hotspots__pop.is-right {
+  left: auto;
+  right: 0;
+  translate: 0 0;
+}
+
+.av-hotspots__pop-title {
+  margin: 0 0 var(--av-space-2);
+  font-family: var(--av-font-heading);
+  font-size: var(--av-text-md);
+  font-weight: var(--av-heading-weight);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  anvil-hotspots [data-spot]:not(.is-open)::after {
+    animation: av-hotspot-pulse 2.4s var(--av-ease) infinite;
+  }
+}
+
+@keyframes av-hotspot-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+html[data-animations="off"] anvil-hotspots [data-spot]::after {
+  animation: none;
+}

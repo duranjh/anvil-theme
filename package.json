@@ -1,0 +1,24 @@
+{
+  "name": "anvil-theme",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Anvil — a from-scratch, MIT-licensed Shopify Online Store 2.0 theme. This package only drives the build harness; the theme itself has no npm dependencies.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "shopify theme check --fail-level warning",
+    "lint": "bash scripts/cleanroom-lint.sh && python3 scripts/asset-audit.py && python3 scripts/chassis-lint.py && bash scripts/check-limits.sh",
+    "gate": "bash scripts/gate.sh",
+    "package": "bash scripts/package.sh",
+    "a11y": "bash scripts/a11y.sh",
+    "spec-cards": "python3 scripts/spec-cards.py",
+    "prompt": "python3 scripts/agent-prompt.py",
+    "similarity": "python3 scripts/similarity.py"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "playwright": "^1.50.0"
+  }
+}

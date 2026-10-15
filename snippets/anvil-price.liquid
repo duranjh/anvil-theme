@@ -1,0 +1,111 @@
+{% doc %}
+  Price for a product or a variant: current price, compare-at strike-through, savings badge and unit price.
+  Savings come only from compare_at_price (docs/HONEST.md). Honours settings.show_currency_code and settings.badge_sale_format.
+  Styles live in assets/anvil-card.css. Data hooks: data-anvil-price, -current, -compare, -badge, -unit.
+
+  @param {object} [product] - Product; uses selected_or_first_available_variant and shows "From" when prices vary
+  @param {object} [variant] - Variant; wins over product
+  @param {boolean} [show_compare] - Show the compare-at price (default true)
+  @param {boolean} [show_badge] - Show the savings badge inline (default true)
+  @param {boolean} [badge_only] - Render only the savings badge, for card corners
+  @param {string} [size] - sm | md | lg (default md)
+  @param {string} [class] - Extra classes
+
+  @example
+  {% render 'anvil-price', product: product, size: 'lg' %}
+  {% render 'anvil-price', variant: current_variant, show_badge: false %}
+{% enddoc %}
+{%- liquid
+  assign target = variant
+  if target == blank and product != blank
+    assign target = product.selected_or_first_available_variant
+  endif
+-%}
+{%- if target != blank -%}
+  {%- liquid
+    assign price_size = size | default: 'md'
+    assign price = target.price
+    assign compare = target.compare_at_price
+    assign from_mode = false
+    if variant == blank and product.price_varies
+      assign from_mode = true
+      assign price = product.price_min
+    endif
+
+    assign on_sale = false
+    if compare != blank
+      if compare > price
+        if from_mode == false or target.price == price
+          assign on_sale = true
+        endif
+      endif
+    endif
+
+    assign show_compare_flag = true
+    if show_compare == false
+      assign show_compare_flag = false
+    endif
+    assign show_badge_flag = true
+    if show_badge == false
+      assign show_badge_flag = false
+    endif
+
+    assign badge_text = ''
+    if on_sale
+      assign saved = compare | minus: price
+      assign badge_format = settings.badge_sale_format | default: 'percent'
+      case badge_format
+        when 'text'
+          assign badge_text = 'anvil.price.sale' | t
+        when 'amount'
+          if settings.show_currency_code
+            assign saved_money = saved | money_with_currency
+          else
+            assign saved_money = saved | money
+          endif
+          assign badge_text = 'anvil.price.save_amount' | t: amount: saved_money
+        else
+          assign saved_pct = saved | times: 100.0 | divided_by: compare | round
+          assign badge_text = 'anvil.price.save_percent' | t: percent: saved_pct
+      endcase
+    endif
+
+    assign sold_out = false
+    if target.available == false
+      assign sold_out = true
+    endif
+    assign unit = target.unit_price_measurement
+  -%}
+  {%- if badge_only -%}
+    {%- if badge_text != blank -%}
+      <span class="av-badge av-badge--sale{% if class != blank %} {{ class }}{% endif %}">{{ badge_text }}</span>
+    {%- endif -%}
+  {%- else -%}
+    <div class="av-price av-price--{{ price_size }}{% if on_sale %} av-price--sale{% endif %}{% if sold_out %} av-price--sold-out{% endif %}{% if class != blank %} {{ class }}{% endif %}" data-anvil-price>
+      {%- if from_mode -%}
+        <span class="av-price__from">{{ 'anvil.price.from' | t }}</span>
+      {%- endif -%}
+      <span class="av-price__current" data-anvil-price-current>
+        <span class="av-visually-hidden">{% if on_sale %}{{ 'anvil.price.sale_price' | t }}{% else %}{{ 'anvil.price.price' | t }}{% endif %}</span>
+        {% if settings.show_currency_code %}{{ price | money_with_currency }}{% else %}{{ price | money }}{% endif %}
+      </span>
+      {%- if on_sale and show_compare_flag -%}
+        <s class="av-price__compare" data-anvil-price-compare>
+          <span class="av-visually-hidden">{{ 'anvil.price.regular_price' | t }}</span>
+          {% if settings.show_currency_code %}{{ compare | money_with_currency }}{% else %}{{ compare | money }}{% endif %}
+        </s>
+      {%- endif -%}
+      {%- if badge_text != blank and show_badge_flag -%}
+        <span class="av-badge av-badge--sale av-price__badge" data-anvil-price-badge>{{ badge_text }}</span>
+      {%- endif -%}
+      {%- if unit != blank and target.unit_price != blank -%}
+        <span class="av-price__unit" data-anvil-price-unit>
+          <span class="av-visually-hidden">{{ 'anvil.price.unit_price' | t }}</span>
+          {% if settings.show_currency_code %}{{ target.unit_price | money_with_currency }}{% else %}{{ target.unit_price | money }}{% endif %}
+          <span aria-hidden="true">/</span><span class="av-visually-hidden">{{ 'anvil.price.per' | t }}</span>
+          {% if unit.reference_value != 1 %}{{ unit.reference_value }}{% endif %}{{ unit.reference_unit }}
+        </span>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+{%- endif -%}

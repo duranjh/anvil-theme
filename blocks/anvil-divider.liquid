@@ -1,0 +1,28 @@
+{%- liquid
+  assign s = block.settings
+-%}
+<hr class="av-divider av-divider-block av-divider-block--{{ s.style }} av-divider-block--{{ s.align }} av-divider-block--{{ s.color }}" style="--av-divider-width: {{ s.width }}%; --av-divider-thickness: {{ s.thickness }}px; --av-divider-space: {{ s.space }}px;" {{ block.shopify_attributes }}>
+{% stylesheet %}
+.av-divider-block{box-sizing:border-box;width:var(--av-divider-width,100%);max-width:100%;height:0;margin:var(--av-divider-space,16px) 0;border-top-width:var(--av-divider-thickness,1px)}
+.av-divider-block--dashed{border-top-style:dashed}
+.av-divider-block--dotted{border-top-style:dotted}
+.av-divider-block--text{border-top-color:var(--av-fg)}
+.av-divider-block--accent{border-top-color:var(--av-accent)}
+.av-divider-block--center{margin-inline:auto}
+.av-divider-block--right{margin-inline-start:auto}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Divider",
+  "tag": null,
+  "settings": [
+    { "type": "select", "id": "style", "label": "Style", "options": [ { "value": "solid", "label": "Solid" }, { "value": "dashed", "label": "Dashed" }, { "value": "dotted", "label": "Dotted" } ], "default": "solid" },
+    { "type": "select", "id": "color", "label": "Colour", "options": [ { "value": "border", "label": "Border colour" }, { "value": "text", "label": "Text colour" }, { "value": "accent", "label": "Accent" } ], "default": "border" },
+    { "type": "range", "id": "thickness", "label": "Thickness", "min": 1, "max": 8, "step": 1, "unit": "px", "default": 1 },
+    { "type": "range", "id": "width", "label": "Width", "min": 10, "max": 100, "step": 10, "unit": "%", "default": 100 },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "center" },
+    { "type": "range", "id": "space", "label": "Space above and below", "min": 0, "max": 64, "step": 4, "unit": "px", "default": 16 }
+  ],
+  "presets": [ { "name": "Divider" } ]
+}
+{% endschema %}

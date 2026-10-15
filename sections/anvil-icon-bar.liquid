@@ -1,0 +1,380 @@
+{%- liquid
+  assign s = section.settings
+
+  assign layout = s.layout | default: 'stacked'
+  assign cols_mobile = s.cols_mobile | default: '2' | plus: 0
+  if s.cols_desktop == blank or s.cols_desktop == 'auto'
+    assign cols_desktop = section.blocks.size | at_least: 1 | at_most: 6
+  else
+    assign cols_desktop = s.cols_desktop | plus: 0
+  endif
+  assign cols_tablet = cols_desktop | at_most: 3
+
+  assign icon_px = s.icon_size | default: 32
+  assign icon_img_px = icon_px | times: 2
+  assign icon_img_widths = icon_px | append: ', ' | append: icon_img_px
+  assign icon_img_sizes = icon_px | append: 'px'
+
+  assign bar_class = 'av-icon-bar av-icon-bar--' | append: layout
+  assign bar_class = bar_class | append: ' av-icon-bar--m' | append: cols_mobile
+  assign bar_class = bar_class | append: ' av-icon-bar--t' | append: cols_tablet
+  assign bar_class = bar_class | append: ' av-icon-bar--d' | append: cols_desktop
+  if s.icon_style == 'circle'
+    assign bar_class = bar_class | append: ' av-icon-bar--circle'
+  endif
+  if s.icon_color == 'text'
+    assign bar_class = bar_class | append: ' av-icon-bar--icon-text'
+  endif
+  if s.dividers
+    assign bar_class = bar_class | append: ' av-icon-bar--divided'
+  endif
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-icon-bar' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if section.blocks.size > 0 -%}
+      <ul class="{{ bar_class }}" style="--av-icon-bar-icon: {{ icon_px }}px;">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign b = block.settings
+
+            assign has_text = false
+            if b.label != blank or b.caption != blank
+              assign has_text = true
+            endif
+
+            assign has_icon = false
+            if b.icon_image != blank
+              assign has_icon = true
+            elsif b.icon != blank and b.icon != 'none'
+              assign has_icon = true
+            endif
+
+            comment
+              The icon is decorative next to the label. It only speaks for itself
+              when the item has no text at all, and then it uses the image's own alt.
+            endcomment
+            assign img_alt = ''
+            unless has_text
+              assign img_alt = b.icon_image.alt | default: ''
+            endunless
+
+            comment
+              A link needs a name, so the item only becomes a link when it has text.
+            endcomment
+            assign body_tag = 'div'
+            if b.link != blank and has_text
+              assign body_tag = 'a'
+            endif
+          -%}
+          <li class="av-icon-bar__item" {{ block.shopify_attributes }}>
+            {%- if has_text or has_icon -%}
+              <{{ body_tag }} class="av-icon-bar__body"{% if body_tag == 'a' %} href="{{ b.link }}"{% endif %}>
+                {%- if has_icon -%}
+                  <span class="av-icon-bar__icon">
+                    {%- if b.icon_image != blank -%}
+                      {{ b.icon_image | image_url: width: icon_img_px | image_tag: widths: icon_img_widths, sizes: icon_img_sizes, loading: 'lazy', alt: img_alt }}
+                    {%- else -%}
+                      {%- render 'anvil-icon', name: b.icon, size: icon_px -%}
+                    {%- endif -%}
+                  </span>
+                {%- endif -%}
+                {%- if has_text -%}
+                  <span class="av-icon-bar__text">
+                    {%- if b.label != blank -%}
+                      <span class="av-icon-bar__label">{{ b.label | escape }}</span>
+                    {%- endif -%}
+                    {%- if b.caption != blank -%}
+                      <span class="av-icon-bar__caption">{{ b.caption | escape }}</span>
+                    {%- endif -%}
+                  </span>
+                {%- endif -%}
+              </{{ body_tag }}>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- elsif request.design_mode -%}
+      <p class="av-icon-bar__empty">{{ 'anvil.icon_bar.empty_editor_note' | t }}</p>
+    {%- endif -%}
+  </div>
+</div>
+{% stylesheet %}
+.av-icon-bar{--av-icon-bar-cols:2;display:grid;grid-template-columns:repeat(var(--av-icon-bar-cols),minmax(0,1fr));gap:var(--av-space-5) var(--av-space-4);margin:0;padding:0;list-style:none}
+.av-icon-bar--m1{--av-icon-bar-cols:1}
+.av-icon-bar--m2{--av-icon-bar-cols:2}
+.av-icon-bar--m3{--av-icon-bar-cols:3}
+.av-icon-bar__item{min-width:0;margin:0}
+.av-icon-bar__body{display:flex;flex-direction:column;align-items:center;gap:var(--av-space-3);height:100%;text-align:center;color:inherit;text-decoration:none}
+.av-icon-bar--inline .av-icon-bar__body{flex-direction:row;align-items:center;text-align:start}
+.av-icon-bar__icon{flex:none;display:inline-flex;align-items:center;justify-content:center;width:var(--av-icon-bar-icon,32px);height:var(--av-icon-bar-icon,32px);color:var(--av-accent)}
+.av-icon-bar__icon > svg,.av-icon-bar__icon > img{display:block;width:var(--av-icon-bar-icon,32px);height:var(--av-icon-bar-icon,32px);object-fit:contain}
+.av-icon-bar--icon-text .av-icon-bar__icon{color:inherit}
+.av-icon-bar--circle .av-icon-bar__icon{width:calc(var(--av-icon-bar-icon,32px) * 1.75);height:calc(var(--av-icon-bar-icon,32px) * 1.75);border-radius:var(--av-radius-pill);background:rgb(var(--av-accent-rgb) / 0.12)}
+.av-icon-bar--circle.av-icon-bar--icon-text .av-icon-bar__icon{background:rgb(var(--av-fg-rgb) / 0.08)}
+.av-icon-bar__text{display:flex;flex-direction:column;gap:var(--av-space-1);min-width:0}
+.av-icon-bar__label{font-weight:600;font-size:var(--av-text-md);line-height:1.3;overflow-wrap:anywhere}
+.av-icon-bar__caption{font-size:var(--av-text-sm);line-height:1.45;color:var(--av-fg-muted)}
+.av-icon-bar__body[href]:hover .av-icon-bar__label{text-decoration:underline;text-underline-offset:0.15em}
+.av-icon-bar__empty{margin:0;padding:var(--av-space-5);text-align:center;font-size:var(--av-text-sm);color:var(--av-fg-muted);border:1px dashed var(--av-border);border-radius:var(--av-radius-card)}
+/* Dividers: every cell draws a top and a start edge; the first row and the first column hide theirs. */
+.av-icon-bar--divided{gap:0}
+.av-icon-bar--divided .av-icon-bar__item{padding:var(--av-space-4);border-top:1px solid var(--av-border);border-inline-start:1px solid var(--av-border)}
+.av-icon-bar--m1 .av-icon-bar__item:nth-child(n+1),.av-icon-bar--m2 .av-icon-bar__item:nth-child(2n+1),.av-icon-bar--m3 .av-icon-bar__item:nth-child(3n+1){border-inline-start-color:transparent}
+.av-icon-bar--m1 .av-icon-bar__item:nth-child(-n+1),.av-icon-bar--m2 .av-icon-bar__item:nth-child(-n+2),.av-icon-bar--m3 .av-icon-bar__item:nth-child(-n+3){border-top-color:transparent}
+@media (min-width: 750px){
+.av-icon-bar--t1{--av-icon-bar-cols:1}
+.av-icon-bar--t2{--av-icon-bar-cols:2}
+.av-icon-bar--t3{--av-icon-bar-cols:3}
+.av-icon-bar--divided .av-icon-bar__item:nth-child(n){border-top-color:var(--av-border);border-inline-start-color:var(--av-border)}
+.av-icon-bar--t1 .av-icon-bar__item:nth-child(n+1),.av-icon-bar--t2 .av-icon-bar__item:nth-child(2n+1),.av-icon-bar--t3 .av-icon-bar__item:nth-child(3n+1){border-inline-start-color:transparent}
+.av-icon-bar--t1 .av-icon-bar__item:nth-child(-n+1),.av-icon-bar--t2 .av-icon-bar__item:nth-child(-n+2),.av-icon-bar--t3 .av-icon-bar__item:nth-child(-n+3){border-top-color:transparent}
+}
+@media (min-width: 990px){
+.av-icon-bar{gap:var(--av-space-6) var(--av-space-5)}
+.av-icon-bar--divided{gap:0}
+.av-icon-bar--d1{--av-icon-bar-cols:1}
+.av-icon-bar--d2{--av-icon-bar-cols:2}
+.av-icon-bar--d3{--av-icon-bar-cols:3}
+.av-icon-bar--d4{--av-icon-bar-cols:4}
+.av-icon-bar--d5{--av-icon-bar-cols:5}
+.av-icon-bar--d6{--av-icon-bar-cols:6}
+.av-icon-bar--divided .av-icon-bar__item:nth-child(n){border-top-color:var(--av-border);border-inline-start-color:var(--av-border)}
+.av-icon-bar--d1 .av-icon-bar__item:nth-child(n+1),.av-icon-bar--d2 .av-icon-bar__item:nth-child(2n+1),.av-icon-bar--d3 .av-icon-bar__item:nth-child(3n+1),.av-icon-bar--d4 .av-icon-bar__item:nth-child(4n+1),.av-icon-bar--d5 .av-icon-bar__item:nth-child(5n+1),.av-icon-bar--d6 .av-icon-bar__item:nth-child(6n+1){border-inline-start-color:transparent}
+.av-icon-bar--d1 .av-icon-bar__item:nth-child(-n+1),.av-icon-bar--d2 .av-icon-bar__item:nth-child(-n+2),.av-icon-bar--d3 .av-icon-bar__item:nth-child(-n+3),.av-icon-bar--d4 .av-icon-bar__item:nth-child(-n+4),.av-icon-bar--d5 .av-icon-bar__item:nth-child(-n+5),.av-icon-bar--d6 .av-icon-bar__item:nth-child(-n+6){border-top-color:transparent}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Icon bar",
+  "max_blocks": 6,
+  "disabled_on": { "groups": ["custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Icon bar" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Item layout",
+      "options": [
+        { "value": "stacked", "label": "Icon above text" },
+        { "value": "inline", "label": "Icon beside text" }
+      ],
+      "default": "stacked"
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "auto", "label": "One row (match item count)" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5", "label": "5" },
+        { "value": "6", "label": "6" }
+      ],
+      "default": "auto",
+      "info": "Tablets show at most 3 columns."
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon size",
+      "min": 20,
+      "max": 64,
+      "step": 4,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "select",
+      "id": "icon_style",
+      "label": "Icon style",
+      "options": [
+        { "value": "plain", "label": "Plain" },
+        { "value": "circle", "label": "In a tinted circle" }
+      ],
+      "default": "plain"
+    },
+    {
+      "type": "select",
+      "id": "icon_color",
+      "label": "Icon colour",
+      "options": [
+        { "value": "accent", "label": "Accent" },
+        { "value": "text", "label": "Text colour" }
+      ],
+      "default": "accent"
+    },
+    {
+      "type": "checkbox",
+      "id": "dividers",
+      "label": "Show dividers between items",
+      "default": false
+    }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Item",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "check", "label": "Check" },
+            { "value": "check-circle", "label": "Check in circle" },
+            { "value": "badge-check", "label": "Badge check" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "package", "label": "Package" },
+            { "value": "package-check", "label": "Package checked" },
+            { "value": "plane", "label": "Plane" },
+            { "value": "globe", "label": "Globe" },
+            { "value": "map-pin", "label": "Map pin" },
+            { "value": "rotate-ccw", "label": "Return arrow" },
+            { "value": "refresh-cw", "label": "Refresh" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "shield-check", "label": "Shield check" },
+            { "value": "lock", "label": "Lock" },
+            { "value": "key", "label": "Key" },
+            { "value": "credit-card", "label": "Credit card" },
+            { "value": "wallet", "label": "Wallet" },
+            { "value": "banknote", "label": "Banknote" },
+            { "value": "receipt", "label": "Receipt" },
+            { "value": "piggy-bank", "label": "Piggy bank" },
+            { "value": "tag", "label": "Tag" },
+            { "value": "percent", "label": "Percent" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "award", "label": "Award" },
+            { "value": "medal", "label": "Medal" },
+            { "value": "trophy", "label": "Trophy" },
+            { "value": "star", "label": "Star" },
+            { "value": "heart", "label": "Heart" },
+            { "value": "hand-heart", "label": "Hand with heart" },
+            { "value": "thumbs-up", "label": "Thumbs up" },
+            { "value": "users", "label": "People" },
+            { "value": "message-circle", "label": "Chat bubble" },
+            { "value": "headphones", "label": "Headphones" },
+            { "value": "mail", "label": "Mail" },
+            { "value": "phone", "label": "Phone" },
+            { "value": "smartphone", "label": "Phone device" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "timer", "label": "Timer" },
+            { "value": "calendar", "label": "Calendar" },
+            { "value": "hourglass", "label": "Hourglass" },
+            { "value": "zap", "label": "Lightning" },
+            { "value": "sparkles", "label": "Sparkles" },
+            { "value": "lightbulb", "label": "Light bulb" },
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "recycle", "label": "Recycle" },
+            { "value": "trees", "label": "Trees" },
+            { "value": "droplet", "label": "Droplet" },
+            { "value": "sun", "label": "Sun" },
+            { "value": "home", "label": "Home" },
+            { "value": "store", "label": "Store" },
+            { "value": "scale", "label": "Scale" },
+            { "value": "ruler", "label": "Ruler" },
+            { "value": "wrench", "label": "Wrench" },
+            { "value": "info", "label": "Info" }
+          ],
+          "default": "check-circle"
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "Custom icon image",
+          "info": "Replaces the icon. Square images work best. Upload only artwork or logos you are entitled to use."
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Example: free shipping over $50",
+          "info": "State only what your shipping, refund and support policies promise."
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "Caption",
+          "default": "Replace with a promise your policies back up",
+          "info": "Conditions belong here, for example the order value a free-shipping offer needs."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link",
+          "info": "Optional. Linking the policy page that backs the claim lets shoppers check it."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Icon bar",
+      "blocks": [
+        {
+          "type": "item",
+          "settings": {
+            "icon": "truck",
+            "label": "Example: free shipping over $50",
+            "caption": "Replace with the threshold from your shipping rates"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "icon": "rotate-ccw",
+            "label": "Example: 30-day returns",
+            "caption": "Replace with the window in your refund policy"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "icon": "lock",
+            "label": "Example: secure checkout",
+            "caption": "Replace with what protects shoppers, in plain words"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "icon": "message-circle",
+            "label": "Example: fast support",
+            "caption": "Replace with real hours, such as replies within 24 hours"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

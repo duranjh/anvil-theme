@@ -1,0 +1,323 @@
+{%- liquid
+  assign s = section.settings
+  assign untitled_label = 'anvil.faq.untitled_question' | t
+
+  # The icon snippet scans its whole table on every render, so the icons are
+  # captured once here and printed per item instead of rendered 30-60 times.
+  if s.icon_style == 'chevron'
+    capture icon_toggle
+      render 'anvil-icon', name: 'chevron-down', size: 24
+    endcapture
+  else
+    capture icon_open
+      render 'anvil-icon', name: 'plus', size: 24
+    endcapture
+    capture icon_close
+      render 'anvil-icon', name: 'minus', size: 24
+    endcapture
+  endif
+
+  # FAQPage JSON-LD, built as a string here so the only for-loop tag over
+  # section.blocks is the one that renders the blocks (the chassis lint checks
+  # that loop for shopify_attributes). Emitted only when the merchant turns the
+  # setting on and at least one item has both texts. Never put a tag delimiter
+  # inside a comment line of a liquid tag: it would end the tag early.
+  assign faq_entities = ''
+  if s.json_ld
+    for block in section.blocks
+      if block.settings.question != blank and block.settings.answer != blank
+        capture faq_entity
+          echo '{"@type":"Question","name":'
+          echo block.settings.question | strip | json
+          echo ',"acceptedAnswer":{"@type":"Answer","text":'
+          echo block.settings.answer | json
+          echo '}}'
+        endcapture
+        if faq_entities == ''
+          assign faq_entities = faq_entity
+        else
+          assign faq_entities = faq_entities | append: ',' | append: faq_entity
+        endif
+      endif
+    endfor
+  endif
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-faq' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if section.blocks.size > 0 -%}
+      <anvil-collapsible class="av-faq av-faq--{{ s.item_style }} av-faq--icon-{{ s.icon_style }}{% if s.two_columns %} av-faq--two-col{% endif %}"{% if s.single_open %} single{% endif %}>
+        {%- for block in section.blocks -%}
+          {%- liquid
+            # A disclosure without a name fails accessibility, so an item whose
+            # question is blank is skipped on the storefront. In the editor it
+            # stays visible with a placeholder so the merchant can still select it.
+            assign question = block.settings.question | strip
+            if question == blank
+              if request.design_mode
+                assign question = untitled_label
+              else
+                continue
+              endif
+            endif
+          -%}
+          <details class="av-faq__item"{% if forloop.first and s.open_first %} open{% endif %} {{ block.shopify_attributes }}>
+            <summary class="av-faq__summary">
+              <h3 class="av-faq__question">{{ question | escape }}</h3>
+              <span class="av-faq__icon" aria-hidden="true">
+                {%- if s.icon_style == 'chevron' -%}
+                  {{ icon_toggle }}
+                {%- else -%}
+                  <span class="av-faq__icon-open">{{ icon_open }}</span><span class="av-faq__icon-close">{{ icon_close }}</span>
+                {%- endif -%}
+              </span>
+            </summary>
+            <div class="av-faq__answer av-rte">{{ block.settings.answer }}</div>
+          </details>
+        {%- endfor -%}
+      </anvil-collapsible>
+    {%- elsif request.design_mode -%}
+      <p class="av-faq__empty av-example-note">{{ 'anvil.faq.empty_editor_note' | t }}</p>
+    {%- endif -%}
+  </div>
+  {%- if faq_entities != '' -%}
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{{ faq_entities }}]}</script>
+  {%- endif -%}
+</div>
+{% stylesheet %}
+  .av-faq {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: var(--av-space-3);
+  }
+  .av-faq--lines {
+    gap: 0;
+    border-top: 1px solid var(--av-border);
+  }
+  .av-faq--lines .av-faq__item {
+    border-bottom: 1px solid var(--av-border);
+  }
+  .av-faq--cards .av-faq__item {
+    border: var(--av-border-w-card) solid var(--av-border);
+    border-radius: var(--av-radius-card);
+    background: rgb(var(--av-fg-rgb) / 0.03);
+    box-shadow: var(--av-shadow-sm);
+  }
+  .av-faq__summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--av-space-4);
+    padding-block: var(--av-space-4);
+  }
+  .av-faq--cards .av-faq__summary,
+  .av-faq--cards .av-faq__answer {
+    padding-inline: var(--av-space-5);
+  }
+  .av-faq__question {
+    margin: 0;
+    font-family: var(--av-font-body);
+    font-size: var(--av-text-md);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+  .av-faq__summary:hover .av-faq__question {
+    color: var(--av-accent);
+  }
+  .av-faq__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    color: var(--av-fg);
+  }
+  .av-faq__icon svg {
+    width: 100%;
+    height: 100%;
+  }
+  .av-faq__icon-open,
+  .av-faq__icon-close {
+    display: inline-flex;
+    width: 100%;
+    height: 100%;
+  }
+  .av-faq__icon-close {
+    display: none;
+  }
+  .av-faq__item[open]:not(.is-closing) .av-faq__icon-open {
+    display: none;
+  }
+  .av-faq__item[open]:not(.is-closing) .av-faq__icon-close {
+    display: inline-flex;
+  }
+  .av-faq--icon-chevron .av-faq__item[open]:not(.is-closing) .av-faq__icon svg {
+    transform: rotate(180deg);
+  }
+  .av-faq__answer {
+    padding-block: 0 var(--av-space-5);
+  }
+  .av-faq__answer > :first-child {
+    margin-top: 0;
+  }
+  .av-faq__answer > :last-child {
+    margin-bottom: 0;
+  }
+  .av-faq__empty {
+    text-align: center;
+    padding-block: var(--av-space-6);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .av-faq__icon svg {
+      transition: transform var(--av-dur) var(--av-ease);
+    }
+  }
+  @media (min-width: 990px) {
+    .av-faq--two-col {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--av-space-7);
+    }
+    .av-faq--two-col.av-faq--lines {
+      border-top: 0;
+      border-bottom: 1px solid var(--av-border);
+    }
+    .av-faq--two-col.av-faq--lines .av-faq__item {
+      border-top: 1px solid var(--av-border);
+      border-bottom: 0;
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "FAQ",
+  "max_blocks": 30,
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "FAQ" },
+    {
+      "type": "checkbox",
+      "id": "open_first",
+      "label": "Open the first question",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "single_open",
+      "label": "Close other questions when one opens",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "icon_style",
+      "label": "Icon",
+      "options": [
+        { "value": "plus", "label": "Plus and minus" },
+        { "value": "chevron", "label": "Chevron" }
+      ],
+      "default": "plus"
+    },
+    {
+      "type": "select",
+      "id": "item_style",
+      "label": "Item style",
+      "options": [
+        { "value": "lines", "label": "Divider lines" },
+        { "value": "cards", "label": "Cards" }
+      ],
+      "default": "lines"
+    },
+    {
+      "type": "checkbox",
+      "id": "two_columns",
+      "label": "Two columns on desktop",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "json_ld",
+      "label": "Add FAQ structured data",
+      "info": "Outputs schema.org FAQPage data for the questions in this section so search engines can read them. Turn it on for one FAQ section per page, and only for genuine questions whose answers match what shoppers see here.",
+      "default": false
+    }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Question",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Question",
+          "default": "Example question — replace with a real one"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "Answer",
+          "info": "State only what is true for your store. Delivery times, returns and guarantees must match your policies.",
+          "default": "<p>Example answer — replace with a real one.</p>"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "FAQ",
+      "settings": {
+        "heading": "Frequently asked <strong>questions</strong>",
+        "width": "narrow"
+      },
+      "blocks": [
+        {
+          "type": "item",
+          "settings": {
+            "question": "Example question — How long does delivery take?",
+            "answer": "<p>Example answer — replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "question": "Example question — What is your returns policy?",
+            "answer": "<p>Example answer — summarise your actual returns window and conditions here and link to your returns policy page.</p>"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "question": "Example question — How do I track my order?",
+            "answer": "<p>Example answer — explain where the tracking link arrives (for example in the shipping confirmation email) and how long carriers take to show updates.</p>"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "question": "Example question — Can I change or cancel an order?",
+            "answer": "<p>Example answer — say how quickly a shopper must contact you, how to reach you, and what happens once an order has shipped.</p>"
+          }
+        }
+      ]
+    }
+  ],
+  "disabled_on": {
+    "groups": ["*"]
+  }
+}
+{% endschema %}

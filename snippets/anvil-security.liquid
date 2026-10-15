@@ -1,0 +1,69 @@
+{% doc %}
+  The three "security" toggles from Theme settings > Security. All default off.
+  - block_right_click: stops the context menu, copy and image dragging outside
+    form fields (the setting text warns that this breaks accessibility tools).
+  - block_devtools_shortcuts: swallows F12 and the common inspector shortcuts.
+    Cosmetic; the tools still open from the browser menu.
+  - country rule: compares localization.country.iso_code (the shopper's active
+    Shopify Market country, not geo-IP) with the merchant's list and, on a
+    match, covers the page with the merchant's message.
+  Nothing runs in the theme editor; the country rule shows a note instead so
+  the merchant can keep editing.
+{% enddoc %}
+{%- liquid
+  assign blocked = false
+  if settings.country_block_enabled and settings.country_block_list != blank
+    assign listed_codes = settings.country_block_list | upcase | remove: ' ' | split: ','
+    assign shopper_code = localization.country.iso_code | upcase
+    assign listed = false
+    if listed_codes contains shopper_code
+      assign listed = true
+    endif
+    if settings.country_block_mode == 'allow'
+      if listed == false
+        assign blocked = true
+      endif
+    elsif listed
+      assign blocked = true
+    endif
+  endif
+-%}
+{%- if blocked -%}
+  {%- if request.design_mode -%}
+    <div class="av-editor-note" role="status">
+      {{- 'anvil.security.country_rule_editor_note' | t: country: localization.country.name -}}
+    </div>
+  {%- else -%}
+    <div class="av-country-block av-scheme" role="alertdialog" aria-modal="true" aria-labelledby="av-country-block-title">
+      <div class="av-country-block__card">
+        {%- if settings.logo != blank -%}
+          {{ settings.logo | image_url: width: 300 | image_tag: widths: '150, 300', sizes: '150px', class: 'av-country-block__logo', loading: 'eager', alt: shop.name }}
+        {%- endif -%}
+        <p id="av-country-block-title" class="av-country-block__title">{{ shop.name }}</p>
+        <div class="av-prose">{{ settings.country_block_message }}</div>
+      </div>
+    </div>
+    <script type="module">document.documentElement.classList.add('av-is-blocked');</script>
+  {%- endif -%}
+{%- endif -%}
+{%- if request.design_mode == false -%}
+  {%- if settings.block_right_click or settings.block_devtools_shortcuts -%}
+    <script type="module">
+      {%- if settings.block_right_click -%}
+        const inField = (target) => target instanceof Element && target.closest('input, textarea, select, [contenteditable]');
+        document.addEventListener('contextmenu', (event) => { if (!inField(event.target)) event.preventDefault(); });
+        document.addEventListener('copy', (event) => { if (!inField(event.target)) event.preventDefault(); });
+        document.addEventListener('dragstart', (event) => { if (event.target instanceof HTMLImageElement) event.preventDefault(); });
+      {%- endif -%}
+      {%- if settings.block_devtools_shortcuts -%}
+        document.addEventListener('keydown', (event) => {
+          const key = (event.key || '').toUpperCase();
+          const mod = event.ctrlKey || event.metaKey;
+          const inspector = mod && event.shiftKey && ['I', 'J', 'C', 'K'].includes(key);
+          const source = mod && !event.shiftKey && ['U', 'S'].includes(key);
+          if (key === 'F12' || inspector || source) event.preventDefault();
+        });
+      {%- endif -%}
+    </script>
+  {%- endif -%}
+{%- endif -%}

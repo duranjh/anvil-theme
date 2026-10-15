@@ -1,0 +1,130 @@
+{%- liquid
+  assign s = section.settings
+-%}
+{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
+{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-list-collections' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- paginate collections by s.per_page -%}
+      <div class="av-list-collections">
+        <h1 class="av-list-collections__title">{{ s.title | escape }}</h1>
+        {%- if collections.size > 0 -%}
+          <ul class="av-list-collections__grid av-list-collections__grid--{{ s.columns_desktop }} av-list-reset">
+            {%- for collection in collections -%}
+              {%- assign ph_index = forloop.index0 | modulo: 6 | plus: 1 -%}
+              {%- assign ph_name = 'collection-' | append: ph_index -%}
+              <li class="av-list-collections__cell">
+                <a class="av-list-collections__card" href="{{ collection.url }}">
+                  <div class="av-list-collections__media">
+                    {% render 'anvil-media', image: collection.featured_image, ratio: s.image_ratio, widths: '300, 600, 900', sizes: '(min-width: 990px) 33vw, 50vw', loading: 'lazy', placeholder: ph_name, alt: collection.title, class: 'av-list-collections__img' %}
+                  </div>
+                  <h2 class="av-list-collections__name">{{ collection.title | escape }}</h2>
+                </a>
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- else -%}
+          <p class="av-list-collections__empty">No collections yet.</p>
+        {%- endif -%}
+        {% render 'anvil-pagination', paginate: paginate %}
+      </div>
+    {%- endpaginate -%}
+  </div>
+</div>
+{% stylesheet %}
+  .av-list-collections__title {
+    margin: 0 0 var(--av-space-5);
+    font-size: var(--av-text-3xl);
+  }
+  .av-list-collections__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--av-grid-gap, var(--av-space-4));
+  }
+  .av-list-collections__card {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+  .av-list-collections__media {
+    border-radius: var(--av-radius-media);
+    overflow: hidden;
+    background: rgb(var(--av-fg-rgb) / 0.04);
+  }
+  .av-list-collections__img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .av-list-collections__name {
+    margin: var(--av-space-2) 0 0;
+    font-size: var(--av-text-md);
+  }
+  .av-list-collections__card:hover .av-list-collections__name {
+    text-decoration: underline;
+  }
+  @media (min-width: 990px) {
+    .av-list-collections__grid--3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .av-list-collections__grid--4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Collections list",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Collections list" },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Page title",
+      "default": "Collections"
+    },
+    {
+      "type": "range",
+      "id": "per_page",
+      "label": "Collections per page",
+      "min": 6,
+      "max": 48,
+      "step": 6,
+      "default": 24
+    },
+    {
+      "type": "select",
+      "id": "columns_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "3"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image ratio",
+      "options": [
+        { "value": "adapt", "label": "Adapt to image" },
+        { "value": "1:1", "label": "Square" },
+        { "value": "4:5", "label": "Portrait" },
+        { "value": "16:9", "label": "Wide" }
+      ],
+      "default": "1:1"
+    }
+  ]
+}
+{% endschema %}

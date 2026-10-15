@@ -1,0 +1,178 @@
+{%- liquid
+  assign s = section.settings
+-%}
+{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-customers-account' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-customers-account">
+      <div class="av-customers-account__head">
+        <h1 class="av-customers-account__title">{{ s.heading | escape }}</h1>
+        <a class="av-customers-account__logout" href="{{ routes.account_logout_url }}">Log out</a>
+      </div>
+      <div class="av-customers-account__layout">
+        <section class="av-customers-account__orders" aria-labelledby="anvil-orders-title">
+          <h2 class="av-customers-account__subtitle" id="anvil-orders-title">Order history</h2>
+          {%- paginate customer.orders by 20 -%}
+            {%- if customer.orders.size > 0 -%}
+              <table class="av-customers-account__table">
+                <caption class="av-visually-hidden">Order history</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Order</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Payment</th>
+                    <th scope="col">Fulfilment</th>
+                    <th scope="col" class="av-customers-account__num">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {%- for order in customer.orders -%}
+                    <tr>
+                      <td data-label="Order"><a class="av-customers-account__link" href="{{ order.customer_url }}">{{ order.name }}</a></td>
+                      <td data-label="Date">{{ order.created_at | time_tag: '%b %-d, %Y' }}</td>
+                      <td data-label="Payment">{{ order.financial_status_label }}</td>
+                      <td data-label="Fulfilment">{{ order.fulfillment_status_label }}</td>
+                      <td data-label="Total" class="av-customers-account__num">{{ order.total_price | money }}</td>
+                    </tr>
+                  {%- endfor -%}
+                </tbody>
+              </table>
+              {% render 'anvil-pagination', paginate: paginate %}
+            {%- else -%}
+              <p class="av-customers-account__empty">You have not placed any orders yet.</p>
+            {%- endif -%}
+          {%- endpaginate -%}
+        </section>
+        <aside class="av-customers-account__details" aria-labelledby="anvil-details-title">
+          <h2 class="av-customers-account__subtitle" id="anvil-details-title">Account details</h2>
+          <p class="av-customers-account__name">{{ customer.name | escape }}</p>
+          <p class="av-customers-account__email">{{ customer.email }}</p>
+          {%- if customer.default_address -%}
+            <address class="av-customers-account__address">{{ customer.default_address | format_address }}</address>
+          {%- endif -%}
+          <a class="av-customers-account__link" href="{{ routes.account_addresses_url }}">
+            {%- if customer.addresses_count == 1 -%}View address{%- else -%}View addresses ({{ customer.addresses_count }}){%- endif -%}
+          </a>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-customers-account__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--av-space-3);
+    margin-bottom: var(--av-space-6);
+  }
+  .av-customers-account__title {
+    margin: 0;
+    font-size: var(--av-text-3xl);
+  }
+  .av-customers-account__logout,
+  .av-customers-account__link {
+    color: inherit;
+    text-underline-offset: 0.2em;
+  }
+  .av-customers-account__layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-6);
+  }
+  .av-customers-account__subtitle {
+    margin: 0 0 var(--av-space-3);
+    font-size: var(--av-text-lg);
+  }
+  .av-customers-account__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--av-text-sm);
+  }
+  .av-customers-account__table thead {
+    display: none;
+  }
+  .av-customers-account__table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--av-space-1) var(--av-space-3);
+    padding: var(--av-space-3) 0;
+    border-bottom: 1px solid var(--av-border);
+  }
+  .av-customers-account__table td {
+    padding: 0;
+  }
+  .av-customers-account__table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--av-text-xs);
+    color: var(--av-fg-muted);
+  }
+  .av-customers-account__empty {
+    color: var(--av-fg-muted);
+  }
+  .av-customers-account__name,
+  .av-customers-account__email {
+    margin: 0 0 var(--av-space-1);
+  }
+  .av-customers-account__address {
+    font-style: normal;
+    margin: var(--av-space-3) 0;
+    color: var(--av-fg-muted);
+  }
+  @media (min-width: 750px) {
+    .av-customers-account__table thead {
+      display: table-header-group;
+    }
+    .av-customers-account__table th {
+      text-align: left;
+      font-size: var(--av-text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--av-fg-muted);
+      padding: 0 var(--av-space-3) var(--av-space-2) 0;
+      border-bottom: 1px solid var(--av-border);
+    }
+    .av-customers-account__table tr {
+      display: table-row;
+    }
+    .av-customers-account__table td {
+      padding: var(--av-space-3) var(--av-space-3) var(--av-space-3) 0;
+      border-bottom: 1px solid var(--av-border);
+    }
+    .av-customers-account__table td::before {
+      display: none;
+    }
+    .av-customers-account__num {
+      text-align: right;
+      padding-right: 0;
+    }
+  }
+  @media (min-width: 990px) {
+    .av-customers-account__layout {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Customer account",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Customer account" },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "My account"
+    }
+  ]
+}
+{% endschema %}

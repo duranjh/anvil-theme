@@ -1,0 +1,55 @@
+{% doc %}
+  Button or link styled as a button. Renders <a> when url is set, otherwise <button>.
+  Renders nothing when both label and aria_label are blank.
+
+  @param {string} [label] - Visible text (inline HTML allowed)
+  @param {string} [url] - Destination; when set an <a> is rendered
+  @param {string} [style] - primary | secondary | ghost | link (default primary)
+  @param {string} [size] - sm | md | lg (default md)
+  @param {boolean} [full] - Stretch to the container width
+  @param {string} [icon] - Icon name from anvil-icon, drawn after the label
+  @param {boolean} [icon_first] - Draw the icon before the label instead
+  @param {string} [attrs] - Extra attributes, written verbatim
+  @param {string} [aria_label] - Accessible name when the label is not descriptive
+  @param {string} [type] - button | submit (default button; <button> only)
+  @param {boolean} [external] - Open the link in a new tab
+  @param {boolean} [disabled] - Disable the <button>
+  @param {string} [class] - Extra classes
+
+  @example
+  {% render 'anvil-button', label: 'Shop now', url: product.url, style: 'primary', size: 'lg' %}
+  {% render 'anvil-button', label: 'Add to cart', type: 'submit', full: true %}
+{% enddoc %}
+{%- liquid
+  assign btn_style = style | default: 'primary'
+  assign btn_size = size | default: 'md'
+  assign btn_type = type | default: 'button'
+  assign classes = 'av-btn av-btn--' | append: btn_style | append: ' av-btn--' | append: btn_size
+  if full
+    assign classes = classes | append: ' av-btn--full'
+  endif
+  if icon != blank
+    assign classes = classes | append: ' av-btn--has-icon'
+  endif
+  if class != blank
+    assign classes = classes | append: ' ' | append: class
+  endif
+  assign icon_size = 18
+  if btn_size == 'sm'
+    assign icon_size = 16
+  elsif btn_size == 'lg'
+    assign icon_size = 20
+  endif
+-%}
+{%- if label != blank or aria_label != blank -%}
+  {%- capture btn_inner -%}
+    {%- if icon != blank and icon_first -%}{% render 'anvil-icon', name: icon, size: icon_size, class: 'av-btn__icon' %}{%- endif -%}
+    {%- if label != blank -%}<span class="av-btn__label">{{ label }}</span>{%- endif -%}
+    {%- if icon != blank and icon_first != true -%}{% render 'anvil-icon', name: icon, size: icon_size, class: 'av-btn__icon' %}{%- endif -%}
+  {%- endcapture -%}
+  {%- if url != blank -%}
+    <a class="{{ classes }}" href="{{ url | escape }}"{% if external %} target="_blank" rel="noopener"{% endif %}{% if aria_label != blank %} aria-label="{{ aria_label | escape }}"{% endif %}{% if attrs != blank %} {{ attrs }}{% endif %}>{{ btn_inner }}</a>
+  {%- else -%}
+    <button class="{{ classes }}" type="{{ btn_type }}"{% if disabled %} disabled{% endif %}{% if aria_label != blank %} aria-label="{{ aria_label | escape }}"{% endif %}{% if attrs != blank %} {{ attrs }}{% endif %}>{{ btn_inner }}</button>
+  {%- endif -%}
+{%- endif -%}

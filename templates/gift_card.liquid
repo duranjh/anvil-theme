@@ -1,0 +1,231 @@
+{%- layout none -%}
+{%- liquid
+  assign formatted_initial_value = gift_card.initial_value | money
+  assign formatted_balance = gift_card.balance | money
+  assign page_title = shop.name | append: ' — Gift card'
+-%}
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{{ page_title }}</title>
+    <meta name="description" content="Your {{ shop.name }} gift card worth {{ formatted_initial_value }}">
+    <link rel="canonical" href="{{ canonical_url }}">
+    {%- if settings.favicon != blank -%}
+      <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
+    {%- endif -%}
+    <style>
+      {% render 'anvil-css-tokens' %}
+    </style>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        margin: 0;
+        font-family: var(--av-font-body, system-ui, sans-serif);
+        font-size: var(--av-text-md, 1rem);
+        line-height: 1.5;
+        background: var(--av-bg, Canvas);
+        color: var(--av-fg, CanvasText);
+        -webkit-font-smoothing: antialiased;
+      }
+      .av-gift-card {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: var(--av-space-6, 32px) var(--av-space-4, 16px) var(--av-space-9, 96px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--av-space-5, 24px);
+        text-align: center;
+      }
+      .av-gift-card__shop {
+        margin: 0;
+        font-family: var(--av-font-heading, inherit);
+        font-weight: var(--av-heading-weight, 700);
+        font-size: var(--av-text-xl, 1.5rem);
+      }
+      .av-gift-card__shop a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .av-gift-card__shop img {
+        display: block;
+        width: 180px;
+        height: auto;
+        margin: 0 auto;
+      }
+      .av-gift-card__title {
+        margin: 0;
+        font-size: var(--av-text-2xl, 1.75rem);
+        font-family: var(--av-font-heading, inherit);
+      }
+      .av-gift-card__card {
+        width: 100%;
+        padding: var(--av-space-6, 32px) var(--av-space-5, 24px);
+        border: 1px solid var(--av-border, currentColor);
+        border-radius: var(--av-radius-card, 16px);
+        box-shadow: var(--av-shadow-md, none);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--av-space-3, 12px);
+      }
+      .av-gift-card__value {
+        margin: 0;
+        font-size: var(--av-text-4xl, 3rem);
+        font-weight: 700;
+        line-height: 1;
+      }
+      .av-gift-card__label {
+        margin: 0;
+        font-size: var(--av-text-sm, 0.875rem);
+        color: var(--av-fg-muted, GrayText);
+      }
+      .av-gift-card__code {
+        display: inline-block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: var(--av-text-lg, 1.25rem);
+        letter-spacing: 0.08em;
+        padding: var(--av-space-2, 8px) var(--av-space-4, 16px);
+        border: 1px dashed var(--av-border, currentColor);
+        border-radius: var(--av-radius-input, 8px);
+        user-select: all;
+      }
+      .av-gift-card__qr {
+        display: flex;
+        justify-content: center;
+        min-height: 120px;
+      }
+      .av-gift-card__qr img,
+      .av-gift-card__qr canvas {
+        display: block;
+        width: 120px;
+        height: 120px;
+        border-radius: var(--av-radius-media, 8px);
+        background: Canvas;
+        padding: 4px;
+      }
+      .av-gift-card__status {
+        margin: 0;
+        font-weight: 600;
+      }
+      .av-gift-card__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--av-space-3, 12px);
+      }
+      .av-gift-card__btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 var(--av-space-5, 24px);
+        font: inherit;
+        font-weight: 600;
+        color: var(--av-btn-fg, Canvas);
+        background: var(--av-btn-bg, CanvasText);
+        border: var(--av-border-w-button, 1px) solid var(--av-btn-border, transparent);
+        border-radius: var(--av-radius-button, 8px);
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .av-gift-card__btn--secondary {
+        color: var(--av-fg, CanvasText);
+        background: transparent;
+        border-color: var(--av-border, currentColor);
+      }
+      .av-gift-card__wallet {
+        display: inline-block;
+      }
+      .av-gift-card__wallet img {
+        display: block;
+        width: 120px;
+        height: 40px;
+      }
+      .av-gift-card__message {
+        margin: 0;
+        padding: var(--av-space-4, 16px);
+        border-left: 3px solid var(--av-accent, currentColor);
+        text-align: left;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      @media print {
+        .av-gift-card__actions,
+        .av-gift-card__wallet {
+          display: none;
+        }
+        .av-gift-card__card {
+          box-shadow: none;
+        }
+      }
+      @media (scripting: none) {
+        .av-gift-card__print {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="av-gift-card" id="main">
+      <p class="av-gift-card__shop">
+        <a href="{{ shop.url }}">
+          {%- if settings.logo != blank -%}
+            {%- assign gc_logo_height = 180 | divided_by: settings.logo.aspect_ratio | round -%}
+            {{ settings.logo | image_url: width: 360 | image_tag: widths: '180, 360', sizes: '180px', width: 180, height: gc_logo_height, loading: 'eager', alt: shop.name }}
+          {%- else -%}
+            {{ shop.name }}
+          {%- endif -%}
+        </a>
+      </p>
+      <h1 class="av-gift-card__title">Here is your gift card</h1>
+
+      {%- if gift_card.message != blank -%}
+        <blockquote class="av-gift-card__message">{{ gift_card.message | escape }}</blockquote>
+      {%- endif -%}
+
+      <div class="av-gift-card__card">
+        <p class="av-gift-card__label">Gift card value</p>
+        <p class="av-gift-card__value">{{ formatted_initial_value }}</p>
+        {%- if gift_card.balance != gift_card.initial_value -%}
+          <p class="av-gift-card__label">Remaining balance: {{ formatted_balance }}</p>
+        {%- endif -%}
+        {%- if gift_card.enabled == false or gift_card.expired -%}
+          <p class="av-gift-card__status">This gift card has expired.</p>
+        {%- elsif gift_card.expires_on -%}
+          <p class="av-gift-card__label">Expires on {{ gift_card.expires_on | date: '%B %-d, %Y' }}</p>
+        {%- endif -%}
+        <p class="av-gift-card__label">Use this code at checkout</p>
+        <code class="av-gift-card__code" data-anvil-gift-code>{{ gift_card.code }}</code>
+        <div class="av-gift-card__qr" data-anvil-qr data-anvil-qr-text="{{ gift_card.qr_identifier | escape }}" aria-label="QR code for this gift card" role="img"></div>
+      </div>
+
+      <div class="av-gift-card__actions">
+        <a class="av-gift-card__btn" href="{{ shop.url }}">Start shopping</a>
+        <button type="button" class="av-gift-card__btn av-gift-card__btn--secondary av-gift-card__print" data-anvil-print>Print</button>
+      </div>
+      {%- if gift_card.pass_url -%}
+        <a class="av-gift-card__wallet" href="{{ gift_card.pass_url }}">
+          <img src="{{ 'gift-card/add-to-apple-wallet.svg' | shopify_asset_url }}" width="120" height="40" alt="Add to Apple Wallet" loading="lazy">
+        </a>
+      {%- endif -%}
+    </main>
+    <script src="{{ 'vendor/qrcode.js' | shopify_asset_url }}" defer></script>
+    <script type="module">
+      const qrTarget = document.querySelector('[data-anvil-qr]');
+      if (qrTarget && window.QRCode && qrTarget.dataset.anvilQrText) {
+        new window.QRCode(qrTarget, { text: qrTarget.dataset.anvilQrText, width: 120, height: 120 });
+      }
+      const printButton = document.querySelector('[data-anvil-print]');
+      if (printButton) {
+        printButton.addEventListener('click', () => window.print());
+      }
+    </script>
+  </body>
+</html>

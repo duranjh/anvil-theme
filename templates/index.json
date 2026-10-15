@@ -1,0 +1,17 @@
+{
+  "sections": {
+    "welcome": {
+      "type": "anvil-welcome",
+      "settings": {
+        "heading": "Welcome to your <strong>new store</strong>",
+        "subheading": "<p>Example subheading — replace it with what you sell and who it is for.</p>",
+        "text": "<p>Example welcome text. Add sections from the theme editor to build your homepage.</p>",
+        "button_label": "Shop all products",
+        "button_url": "/collections/all",
+        "pad_top": 96,
+        "pad_bottom": 96
+      }
+    }
+  },
+  "order": ["welcome"]
+}

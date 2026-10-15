@@ -1,0 +1,273 @@
+{%- liquid
+  assign s = section.settings
+  assign continue_label = 'anvil.cart.continue_shopping' | t
+  assign continue_url = settings.cart_empty_link | default: routes.all_products_collection_url
+  assign update_label = 'anvil.cart.update' | t
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-cart-items' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-cart-items">
+      <div class="av-cart-items__head">
+        <h1 class="av-cart-items__title">{{ 'anvil.cart.title' | t }}</h1>
+        {%- unless cart.empty? -%}
+          <a class="av-cart-items__continue av-link" href="{{ continue_url }}">{{ continue_label }}</a>
+        {%- endunless -%}
+      </div>
+      {%- if cart.empty? -%}
+        <div class="av-cart-items__empty">
+          <p class="av-cart-items__empty-text">{{ 'anvil.cart.empty' | t }}</p>
+          {% render 'anvil-button', label: continue_label, url: continue_url, style: 'primary', size: 'lg' %}
+        </div>
+      {%- else -%}
+        <form action="{{ routes.cart_url }}" method="post" id="anvil-cart-form" class="av-cart-items__form" data-anvil-cart-form>
+          <table class="av-cart-items__table">
+            <caption class="av-visually-hidden">{{ 'anvil.cart.title' | t }}</caption>
+            <thead class="av-cart-items__thead">
+              <tr>
+                <th scope="col" colspan="2">Product</th>
+                <th scope="col">{{ 'anvil.cart.quantity' | t }}</th>
+                <th scope="col" class="av-cart-items__th-total">{{ 'anvil.cart.line_total' | t }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {%- for item in cart.items -%}
+                <tr class="av-cart-items__row" data-anvil-line="{{ item.key }}">
+                  <td class="av-cart-items__media">
+                    {%- if item.image -%}
+                      <a href="{{ item.url }}" tabindex="-1" aria-hidden="true" class="av-cart-items__media-link">
+                        {{ item.image | image_url: width: 300 | image_tag: widths: '150, 300', sizes: '100px', loading: 'lazy', class: 'av-cart-items__img' }}
+                      </a>
+                    {%- endif -%}
+                  </td>
+                  <td class="av-cart-items__details">
+                    <a class="av-cart-items__name" href="{{ item.url }}">{{ item.product.title | escape }}</a>
+                    {%- unless item.product.has_only_default_variant -%}
+                      <p class="av-cart-items__meta">{{ item.variant.title | escape }}</p>
+                    {%- endunless -%}
+                    {%- if s.show_vendor and item.vendor != blank -%}
+                      <p class="av-cart-items__meta">{{ item.vendor | escape }}</p>
+                    {%- endif -%}
+                    {%- for property in item.properties -%}
+                      {%- assign prop_first = property.first | slice: 0 -%}
+                      {%- if property.last != blank and prop_first != '_' -%}
+                        <p class="av-cart-items__meta">{{ property.first | escape }}: {{ property.last | escape }}</p>
+                      {%- endif -%}
+                    {%- endfor -%}
+                    {%- if item.selling_plan_allocation -%}
+                      <p class="av-cart-items__meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</p>
+                    {%- endif -%}
+                    <p class="av-cart-items__meta av-cart-items__unit">
+                      {%- if item.original_price != item.final_price -%}
+                        <s>{{ item.original_price | money }}</s>
+                      {%- endif -%}
+                      {{ item.final_price | money }}
+                    </p>
+                    {%- for allocation in item.line_level_discount_allocations -%}
+                      <p class="av-cart-items__meta av-cart-items__meta--discount">{{ allocation.discount_application.title | escape }} (&minus;{{ allocation.amount | money }})</p>
+                    {%- endfor -%}
+                  </td>
+                  <td class="av-cart-items__qty">
+                    <div class="av-qty av-cart-items__stepper">
+                      <button type="button" class="av-qty__btn av-cart-items__step av-js-only" data-anvil-step="-1" data-anvil-focus-key="dec-{{ item.key }}" aria-label="{{ 'anvil.cart.decrease' | t }}">&minus;</button>
+                      <input class="av-qty__input" type="number" name="updates[]" value="{{ item.quantity }}" min="0" inputmode="numeric" aria-label="{{ 'anvil.cart.quantity' | t }}" data-anvil-quantity data-anvil-focus-key="qty-{{ item.key }}">
+                      <button type="button" class="av-qty__btn av-cart-items__step av-js-only" data-anvil-step="1" data-anvil-focus-key="inc-{{ item.key }}" aria-label="{{ 'anvil.cart.increase' | t }}">+</button>
+                    </div>
+                    <a class="av-cart-items__remove" href="{{ item.url_to_remove }}" data-anvil-remove data-anvil-focus-key="rm-{{ item.key }}" aria-label="{{ 'anvil.cart.remove' | t }}: {{ item.product.title | escape }}">{{ 'anvil.cart.remove' | t }}</a>
+                  </td>
+                  <td class="av-cart-items__total">
+                    {%- if item.original_line_price != item.final_line_price -%}
+                      <s class="av-cart-items__was">{{ item.original_line_price | money }}</s>
+                    {%- endif -%}
+                    <span class="av-cart-items__now">
+                      {%- if item.final_line_price == 0 -%}{{ 'anvil.cart.free' | t }}{%- else -%}{{ item.final_line_price | money }}{%- endif -%}
+                    </span>
+                  </td>
+                </tr>
+              {%- endfor -%}
+            </tbody>
+          </table>
+          <div class="av-cart-items__update av-no-js-only">
+            {% render 'anvil-button', label: update_label, style: 'secondary', size: 'md', type: 'submit' %}
+          </div>
+          <div class="av-visually-hidden" role="status" aria-live="polite" data-anvil-live></div>
+        </form>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-cart-items__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--av-space-3);
+    margin-bottom: var(--av-space-5);
+  }
+  .av-cart-items__title {
+    margin: 0;
+    font-size: var(--av-text-3xl);
+  }
+  .av-cart-items__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--av-space-4);
+    padding: var(--av-space-9) 0;
+    text-align: center;
+  }
+  .av-cart-items__empty-text {
+    margin: 0;
+    font-size: var(--av-text-lg);
+  }
+  .av-cart-items__table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .av-cart-items__thead {
+    display: none;
+  }
+  .av-cart-items__row {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    grid-template-areas: "media details" "media qty" "media total";
+    gap: var(--av-space-2) var(--av-space-3);
+    padding: var(--av-space-4) 0;
+    border-bottom: 1px solid var(--av-border);
+  }
+  .av-cart-items__row td {
+    padding: 0;
+    vertical-align: top;
+  }
+  .av-cart-items__media {
+    grid-area: media;
+  }
+  .av-cart-items__details {
+    grid-area: details;
+  }
+  .av-cart-items__qty {
+    grid-area: qty;
+    display: flex;
+    align-items: center;
+    gap: var(--av-space-3);
+  }
+  .av-cart-items__total {
+    grid-area: total;
+    font-weight: 600;
+  }
+  .av-cart-items__media-link {
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: var(--av-radius-media);
+    background: rgb(var(--av-fg-rgb) / 0.05);
+  }
+  .av-cart-items__img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .av-cart-items__name {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .av-cart-items__name:hover {
+    text-decoration: underline;
+  }
+  .av-cart-items__meta {
+    margin: var(--av-space-1) 0 0;
+    font-size: var(--av-text-xs);
+    color: var(--av-fg-muted);
+  }
+  .av-cart-items__meta--discount {
+    color: var(--av-fg);
+  }
+  .av-cart-items__unit s {
+    margin-right: var(--av-space-1);
+  }
+  .av-cart-items__step {
+    font: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .av-cart-items__remove {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    font-size: var(--av-text-xs);
+    color: var(--av-fg-muted);
+    text-underline-offset: 0.15em;
+  }
+  .av-cart-items__was {
+    display: block;
+    font-weight: 400;
+    color: var(--av-fg-muted);
+  }
+  .av-cart-items__update {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--av-space-4);
+  }
+  @media (min-width: 750px) {
+    .av-cart-items__thead {
+      display: table-header-group;
+    }
+    .av-cart-items__thead th {
+      padding: 0 0 var(--av-space-3);
+      text-align: left;
+      font-size: var(--av-text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--av-fg-muted);
+      border-bottom: 1px solid var(--av-border);
+    }
+    .av-cart-items__th-total {
+      text-align: right;
+    }
+    .av-cart-items__row {
+      display: table-row;
+    }
+    .av-cart-items__row td {
+      padding: var(--av-space-4) var(--av-space-3) var(--av-space-4) 0;
+      border-bottom: 1px solid var(--av-border);
+    }
+    .av-cart-items__media {
+      width: 100px;
+    }
+    .av-cart-items__qty {
+      display: table-cell;
+      width: 220px;
+    }
+    .av-cart-items__remove {
+      margin-left: var(--av-space-3);
+    }
+    .av-cart-items__total {
+      padding-right: 0;
+      text-align: right;
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Cart items",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Cart items" },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,47 @@
+{%- liquid
+  assign s = block.settings
+  assign icon_px = 24
+  if s.size == 'sm'
+    assign icon_px = 20
+  elsif s.size == 'lg'
+    assign icon_px = 32
+  endif
+  assign icon_img_px = icon_px | times: 2
+  assign icon_img_widths = icon_px | append: ', ' | append: icon_img_px
+  assign icon_img_sizes = icon_px | append: 'px'
+-%}
+<div class="av-icon-text av-icon-text--{{ s.size }} av-icon-text--{{ s.align }}{% if s.pill %} av-icon-text--pill{% endif %}" style="--av-icon-text-size: {{ icon_px }}px;" {{ block.shopify_attributes }}>
+  {%- if s.icon_image != blank -%}
+    {{ s.icon_image | image_url: width: icon_img_px | image_tag: widths: icon_img_widths, sizes: icon_img_sizes, loading: 'lazy', alt: '', class: 'av-icon-text__img' }}
+  {%- elsif s.icon != 'none' -%}
+    {%- render 'anvil-icon', name: s.icon, size: icon_px, class: 'av-icon-text__icon' -%}
+  {%- endif -%}
+  <span class="av-icon-text__text">{{ s.text }}</span>
+</div>
+{% stylesheet %}
+.av-icon-text{display:flex;align-items:center;gap:var(--av-space-2);font-family:var(--av-font-body);line-height:1.4}
+.av-icon-text--sm{font-size:var(--av-text-sm)}
+.av-icon-text--md{font-size:var(--av-text-md)}
+.av-icon-text--lg{font-size:var(--av-text-lg)}
+.av-icon-text--left{justify-content:flex-start}
+.av-icon-text--center{justify-content:center;text-align:center}
+.av-icon-text--right{justify-content:flex-end;text-align:right}
+.av-icon-text--pill{display:inline-flex;padding:var(--av-space-2) var(--av-space-4);border-radius:var(--av-radius-pill);background:rgb(var(--av-fg-rgb) / 0.06)}
+.av-icon-text__icon,.av-icon-text__img{flex:none;width:var(--av-icon-text-size,24px);height:var(--av-icon-text-size,24px);color:var(--av-accent)}
+.av-icon-text__img{object-fit:contain}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Icon with text",
+  "tag": null,
+  "settings": [
+    { "type": "inline_richtext", "id": "text", "label": "Text", "default": "Example: ships within 2 days — replace with a statement that is true for your store", "info": "Only state what your policies and shipping rates back up." },
+    { "type": "select", "id": "icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check", "label": "Check" }, { "value": "check-circle", "label": "Check in circle" }, { "value": "truck", "label": "Truck" }, { "value": "package", "label": "Package" }, { "value": "package-check", "label": "Package checked" }, { "value": "shield", "label": "Shield" }, { "value": "shield-check", "label": "Shield check" }, { "value": "lock", "label": "Lock" }, { "value": "badge-check", "label": "Badge check" }, { "value": "award", "label": "Award" }, { "value": "gift", "label": "Gift" }, { "value": "tag", "label": "Tag" }, { "value": "percent", "label": "Percent" }, { "value": "heart", "label": "Heart" }, { "value": "star", "label": "Star" }, { "value": "clock", "label": "Clock" }, { "value": "timer", "label": "Timer" }, { "value": "calendar", "label": "Calendar" }, { "value": "zap", "label": "Lightning" }, { "value": "leaf", "label": "Leaf" }, { "value": "recycle", "label": "Recycle" }, { "value": "sparkles", "label": "Sparkles" }, { "value": "thumbs-up", "label": "Thumbs up" }, { "value": "refresh-cw", "label": "Refresh" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "globe", "label": "Globe" }, { "value": "map-pin", "label": "Map pin" }, { "value": "mail", "label": "Mail" }, { "value": "phone", "label": "Phone" }, { "value": "message-circle", "label": "Chat" }, { "value": "credit-card", "label": "Credit card" }, { "value": "wallet", "label": "Wallet" }, { "value": "users", "label": "People" }, { "value": "smartphone", "label": "Phone device" }, { "value": "info", "label": "Info" } ], "default": "check-circle" },
+    { "type": "image_picker", "id": "icon_image", "label": "Custom icon image", "info": "Replaces the icon. Square images work best." },
+    { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" }, { "value": "lg", "label": "Large" } ], "default": "md" },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" },
+    { "type": "checkbox", "id": "pill", "label": "Background pill", "default": false }
+  ],
+  "presets": [ { "name": "Icon with text" } ]
+}
+{% endschema %}

@@ -1,0 +1,114 @@
+{%- liquid
+  assign s = section.settings
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-welcome' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-welcome av-welcome--{{ s.head_align }}">
+      {%- if s.text != blank -%}
+        <div class="av-welcome__text av-rte">{{ s.text }}</div>
+      {%- endif -%}
+      {%- if s.button_label != blank -%}
+        <div class="av-welcome__actions">
+          {% render 'anvil-button', label: s.button_label, url: s.button_url, style: s.button_style, size: 'lg' %}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-welcome {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-5);
+    align-items: center;
+    text-align: center;
+  }
+  .av-welcome--left {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .av-welcome--right {
+    align-items: flex-end;
+    text-align: right;
+  }
+  .av-welcome__text {
+    max-width: 60ch;
+    font-size: var(--av-text-md);
+    line-height: 1.6;
+  }
+  .av-welcome__text p:first-child {
+    margin-top: 0;
+  }
+  .av-welcome__text p:last-child {
+    margin-bottom: 0;
+  }
+  .av-welcome__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--av-space-3);
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Welcome",
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Welcome" },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "Text",
+      "default": "<p>Example welcome text — replace this with a sentence about what you sell.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Shop all products"
+    },
+    {
+      "type": "url",
+      "id": "button_url",
+      "label": "Button link",
+      "default": "/collections/all"
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Primary" },
+        { "value": "secondary", "label": "Secondary" },
+        { "value": "link", "label": "Text link" }
+      ],
+      "default": "primary"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Welcome",
+      "settings": {
+        "heading": "Welcome to your <strong>new store</strong>",
+        "subheading": "<p>Example subheading — replace it with what you sell and who it is for.</p>",
+        "pad_top": 96,
+        "pad_bottom": 96
+      }
+    }
+  ]
+}
+{% endschema %}

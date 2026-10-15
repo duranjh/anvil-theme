@@ -1,10 +1,13 @@
 extends: theme-check:recommended
+# Ignore patterns are anchored with a leading slash on purpose. Theme Check
+# matches unanchored globs against the full path, so a bare `dev/**` also
+# matched a checkout at ~/dev/anvil-theme and the gate inspected 0 files.
 ignore:
-  - node_modules/**
-  - .harness/**
-  - dev/**
-  - docs/**
-  - scripts/**
+  - /node_modules/**
+  - /.harness/**
+  - /dev/**
+  - /docs/**
+  - /scripts/**
 AssetSizeCSS:
   enabled: true
   severity: error

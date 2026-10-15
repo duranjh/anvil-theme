@@ -1,0 +1,75 @@
+{%- liquid
+  assign s = block.settings
+  assign rating_value = ''
+  assign rating_max = 5
+  assign rating_count = ''
+  assign has_source = false
+  assign source_url = ''
+  if s.source == 'product'
+    assign p = s.product | default: closest.product
+    if p.metafields.reviews.rating.value != blank
+      assign rating_value = p.metafields.reviews.rating.value.rating
+      assign rating_max = p.metafields.reviews.rating.value.scale_max
+      assign rating_count = p.metafields.reviews.rating_count.value
+      assign has_source = true
+    endif
+  elsif s.source_url != blank
+    assign rating_value = s.rating
+    assign source_url = s.source_url
+    assign has_source = true
+  endif
+  assign star_px = 18
+  if s.size == 'sm'
+    assign star_px = 14
+  elsif s.size == 'lg'
+    assign star_px = 24
+  endif
+-%}
+<div class="av-stars-block av-stars-block--{{ s.size }} av-stars-block--{{ s.align }}" {{ block.shopify_attributes }}>
+  {%- if has_source -%}
+    {%- capture stars_inner -%}
+      {%- render 'anvil-stars', rating: rating_value, max: rating_max, size: star_px -%}
+      {%- if s.show_number -%}<span class="av-stars-block__number">{{ rating_value | round: 1 }}/{{ rating_max | round }}</span>{%- endif -%}
+      {%- if rating_count != blank -%}<span class="av-stars-block__count">({{ rating_count }})</span>{%- endif -%}
+      {%- if s.text != blank -%}<span class="av-stars-block__text">{{ s.text }}</span>{%- endif -%}
+    {%- endcapture -%}
+    {%- if source_url != blank -%}
+      <a class="av-stars-block__link" href="{{ source_url }}" target="_blank" rel="noopener">{{ stars_inner }}</a>
+    {%- else -%}
+      {{ stars_inner }}
+    {%- endif -%}
+  {%- elsif request.design_mode -%}
+    <p class="av-stars-block__note">Stars appear once a product with a review rating is in context, or when a source link is set.</p>
+  {%- endif -%}
+</div>
+{% stylesheet %}
+.av-stars-block{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2);font-family:var(--av-font-body);line-height:1.4}
+.av-stars-block--sm{font-size:var(--av-text-xs)}
+.av-stars-block--md{font-size:var(--av-text-sm)}
+.av-stars-block--lg{font-size:var(--av-text-md)}
+.av-stars-block--left{justify-content:flex-start}
+.av-stars-block--center{justify-content:center}
+.av-stars-block--right{justify-content:flex-end}
+.av-stars-block__link{display:inline-flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2);color:inherit;text-decoration:none}
+.av-stars-block__link:hover .av-stars-block__text{text-decoration:underline}
+.av-stars-block__number{font-weight:600}
+.av-stars-block__count,.av-stars-block__text{color:var(--av-fg-muted)}
+.av-stars-block__note{margin:0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Rating stars",
+  "tag": null,
+  "settings": [
+    { "type": "select", "id": "source", "label": "Rating source", "options": [ { "value": "product", "label": "Product review rating" }, { "value": "manual", "label": "Typed, with a source link" } ], "default": "product", "info": "Product ratings come from the reviews.rating metafield your review app writes. Typed stars show only with a link shoppers can check." },
+    { "type": "product", "id": "product", "label": "Product", "info": "Leave empty to use the product in context" },
+    { "type": "range", "id": "rating", "label": "Typed rating", "min": 0, "max": 5, "step": 0.5, "default": 5, "info": "Used only with a source link" },
+    { "type": "url", "id": "source_url", "label": "Source link", "info": "Where shoppers can verify the rating. Without it, typed stars are not shown." },
+    { "type": "checkbox", "id": "show_number", "label": "Show the number", "default": true },
+    { "type": "text", "id": "text", "label": "Text after the stars", "info": "For example a review count you can back up with the source link" },
+    { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" }, { "value": "lg", "label": "Large" } ], "default": "md" },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" }
+  ],
+  "presets": [ { "name": "Rating stars" } ]
+}
+{% endschema %}

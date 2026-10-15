@@ -1,0 +1,130 @@
+{%- liquid
+  assign s = section.settings
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-customers-login' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-customers-login">
+      <div class="av-customers-login__panel">
+        <h1 class="av-customers-login__title">{{ s.heading | escape }}</h1>
+        {%- form 'customer_login', id: 'anvil-login-form', class: 'av-customers-login__form' -%}
+          {%- if form.errors -%}
+            <div class="av-customers-login__notice av-form-message av-form-message--error" role="alert">{{ form.errors | default_errors }}</div>
+          {%- endif -%}
+          <div class="av-customers-login__field av-field">
+            <label class="av-customers-login__label av-field__label" for="anvil-login-email">Email</label>
+            <input class="av-customers-login__input av-field__input" id="anvil-login-email" type="email" name="customer[email]" autocomplete="email" autocorrect="off" autocapitalize="off" required aria-required="true">
+          </div>
+          {%- if form.password_needed -%}
+            <div class="av-customers-login__field av-field">
+              <label class="av-customers-login__label av-field__label" for="anvil-login-password">Password</label>
+              <input class="av-customers-login__input av-field__input" id="anvil-login-password" type="password" name="customer[password]" autocomplete="current-password" required aria-required="true">
+            </div>
+            <a class="av-customers-login__link" href="#recover">Forgot your password?</a>
+          {%- endif -%}
+          <div class="av-customers-login__actions">
+            {% render 'anvil-button', label: 'Log in', style: 'primary', size: 'lg', full: true, type: 'submit' %}
+          </div>
+        {%- endform -%}
+        <p class="av-customers-login__alt">New here? <a class="av-customers-login__link" href="{{ routes.account_register_url }}">Create an account</a></p>
+      </div>
+
+      <div class="av-customers-login__panel av-customers-login__panel--recover" id="recover">
+        <h2 class="av-customers-login__subtitle">Reset your password</h2>
+        {%- form 'recover_customer_password', id: 'anvil-recover-form', class: 'av-customers-login__form' -%}
+          {%- if form.posted_successfully? -%}
+            <p class="av-customers-login__notice av-form-message av-form-message--success" role="status" tabindex="-1" autofocus>If that email is registered, we have sent a link to reset your password.</p>
+          {%- elsif form.errors -%}
+            <div class="av-customers-login__notice av-form-message av-form-message--error" role="alert">{{ form.errors | default_errors }}</div>
+          {%- endif -%}
+          <p class="av-customers-login__hint">Enter your email and we will send you a link to reset your password.</p>
+          <div class="av-customers-login__field av-field">
+            <label class="av-customers-login__label av-field__label" for="anvil-recover-email">Email</label>
+            <input class="av-customers-login__input av-field__input" id="anvil-recover-email" type="email" name="email" value="{{ form.email }}" autocomplete="email" autocorrect="off" autocapitalize="off" required aria-required="true">
+          </div>
+          <div class="av-customers-login__actions">
+            {% render 'anvil-button', label: 'Send reset link', style: 'secondary', size: 'md', type: 'submit' %}
+          </div>
+        {%- endform -%}
+      </div>
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-customers-login {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-6);
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .av-customers-login__panel {
+    padding: var(--av-space-5);
+    border: var(--av-border-w-card) solid var(--av-border);
+    border-radius: var(--av-radius-card);
+  }
+  .av-customers-login__title {
+    margin: 0 0 var(--av-space-4);
+    font-size: var(--av-text-2xl);
+  }
+  .av-customers-login__subtitle {
+    margin: 0 0 var(--av-space-3);
+    font-size: var(--av-text-lg);
+  }
+  .av-customers-login__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-3);
+  }
+  
+  
+  
+  .av-customers-login__link {
+    color: inherit;
+    text-underline-offset: 0.2em;
+    font-size: var(--av-text-sm);
+  }
+  .av-customers-login__actions {
+    margin-top: var(--av-space-2);
+  }
+  .av-customers-login__alt {
+    margin: var(--av-space-4) 0 0;
+    font-size: var(--av-text-sm);
+  }
+  .av-customers-login__hint {
+    margin: 0;
+    font-size: var(--av-text-sm);
+    color: var(--av-fg-muted);
+  }
+  
+  .av-customers-login__panel--recover:target {
+    outline: 2px solid var(--av-accent);
+    outline-offset: 4px;
+  }
+  @media (min-width: 990px) {
+    .av-customers-login {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Customer login",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Customer login" },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Log in"
+    }
+  ]
+}
+{% endschema %}

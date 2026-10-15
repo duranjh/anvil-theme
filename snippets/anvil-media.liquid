@@ -1,0 +1,180 @@
+{% doc %}
+  Responsive media in an aspect-ratio box: an image via image_tag, a Shopify video via video_tag,
+  or a click-to-load facade for YouTube/Vimeo (youtube-nocookie, nothing loads before the tap).
+  Falls back to a placeholder illustration. Sections that render it load assets/anvil-media.css once with stylesheet_tag.
+
+  @param {object} [image] - Image object; also used as the poster of an external video
+  @param {object} [video] - Shopify video or external_video media object
+  @param {object} [video_url] - video_url setting value (YouTube or Vimeo)
+  @param {string} [ratio] - adapt | 1:1 | 4:5 | 3:4 | 16:9 | 21:9 (default adapt)
+  @param {string} [widths] - Comma-separated srcset widths; the last one is the base width (default up to 2200)
+  @param {string} [sizes] - sizes attribute (default 100vw)
+  @param {string} [loading] - lazy | eager (default lazy)
+  @param {boolean} [priority] - LCP media: eager, fetchpriority high and preload
+  @param {string} [alt] - Alt text; defaults to the media's own alt
+  @param {string} [fit] - cover | contain (default cover)
+  @param {string} [placeholder] - placeholder_svg_tag name used when nothing is set (default image)
+  @param {string} [class] - Extra classes on the box
+  @param {boolean} [autoplay] - Shopify video: autoplay muted and looping without controls
+  @param {boolean} [loop] - Shopify video: loop (default follows autoplay)
+  @param {boolean} [controls] - Shopify video: show controls (default true unless autoplay)
+
+  @example
+  {% render 'anvil-media', image: s.image, ratio: '16:9', sizes: '(min-width: 990px) 50vw, 100vw' %}
+  {% render 'anvil-media', video: s.video, video_url: s.video_url, image: s.poster, ratio: '16:9' %}
+{% enddoc %}
+{%- liquid
+  assign media_ratio = ratio | default: 'adapt'
+  assign media_fit = fit | default: 'cover'
+  assign media_loading = loading | default: 'lazy'
+  assign media_widths = widths | default: '320, 480, 640, 750, 990, 1200, 1500, 1800, 2200'
+  assign media_sizes = sizes | default: '100vw'
+  assign max_width = media_widths | split: ',' | last | strip | plus: 0
+  assign poster_size = max_width | append: 'x'
+  assign placeholder_name = placeholder | default: 'image'
+
+  assign kind = 'placeholder'
+  assign ext_host = ''
+  assign ext_id = ''
+  assign poster = image
+
+  if video != blank
+    if video.media_type == 'external_video'
+      assign kind = 'external'
+      assign ext_host = video.host
+      assign ext_id = video.external_id
+      if poster == blank
+        assign poster = video.preview_image
+      endif
+    else
+      assign kind = 'video'
+    endif
+  elsif video_url != blank
+    assign kind = 'external'
+    assign ext_host = video_url.type
+    assign ext_id = video_url.id
+  elsif image != blank
+    assign kind = 'image'
+  endif
+
+  case media_ratio
+    when '1:1'
+      assign ratio_value = '1 / 1'
+    when '4:5'
+      assign ratio_value = '4 / 5'
+    when '3:4'
+      assign ratio_value = '3 / 4'
+    when '16:9'
+      assign ratio_value = '16 / 9'
+    when '21:9'
+      assign ratio_value = '21 / 9'
+    else
+      assign ratio_value = ''
+      if kind == 'image'
+        assign ratio_value = image.aspect_ratio
+      elsif kind == 'video'
+        assign ratio_value = video.aspect_ratio
+      elsif kind == 'external' and poster != blank
+        assign ratio_value = poster.aspect_ratio
+      endif
+      if ratio_value == blank
+        if kind == 'placeholder'
+          assign ratio_value = '1 / 1'
+        else
+          assign ratio_value = '16 / 9'
+        endif
+      endif
+  endcase
+  assign ratio_class = media_ratio | replace: ':', '-'
+
+  assign alt_text = alt
+  if alt_text == blank
+    if kind == 'image'
+      assign alt_text = image.alt
+    elsif kind == 'video' or kind == 'external'
+      assign alt_text = video.alt
+    endif
+  endif
+  if alt_text == blank and kind == 'external'
+    assign alt_text = 'anvil.media.video' | t
+  endif
+  assign alt_text = alt_text | default: '' | escape
+
+  assign classes = 'av-media av-media-frame av-media--' | append: media_fit | append: ' av-media--' | append: ratio_class | append: ' av-media--' | append: kind
+  if class != blank
+    assign classes = classes | append: ' ' | append: class
+  endif
+
+  assign video_loop = loop
+  if video_loop == nil
+    assign video_loop = autoplay
+  endif
+  assign video_controls = controls
+  if video_controls == nil
+    if autoplay
+      assign video_controls = false
+    else
+      assign video_controls = true
+    endif
+  endif
+-%}
+<div class="{{ classes }}" style="--av-media-ratio: {{ ratio_value }};">
+  {%- case kind -%}
+    {%- when 'image' -%}
+      {%- if priority -%}
+        {{ image | image_url: width: max_width | image_tag: widths: media_widths, sizes: media_sizes, loading: 'eager', fetchpriority: 'high', preload: true, alt: alt_text, class: 'av-media__img' }}
+      {%- else -%}
+        {{ image | image_url: width: max_width | image_tag: widths: media_widths, sizes: media_sizes, loading: media_loading, alt: alt_text, class: 'av-media__img' }}
+      {%- endif -%}
+    {%- when 'video' -%}
+      {%- if autoplay -%}
+        {{ video | video_tag: image_size: poster_size, autoplay: true, loop: video_loop, muted: true, controls: video_controls, playsinline: true, preload: 'metadata', class: 'av-media__video' }}
+      {%- else -%}
+        {{ video | video_tag: image_size: poster_size, loop: video_loop, controls: video_controls, playsinline: true, preload: 'metadata', class: 'av-media__video' }}
+      {%- endif -%}
+    {%- when 'external' -%}
+      {%- liquid
+        if ext_host == 'youtube'
+          assign embed_url = 'https://www.youtube-nocookie.com/embed/' | append: ext_id | append: '?autoplay=1&amp;rel=0&amp;playsinline=1'
+          assign watch_url = 'https://www.youtube.com/watch?v=' | append: ext_id
+        else
+          assign embed_url = 'https://player.vimeo.com/video/' | append: ext_id | append: '?autoplay=1&amp;dnt=1'
+          assign watch_url = 'https://vimeo.com/' | append: ext_id
+        endif
+      -%}
+      <anvil-video-facade class="av-media__facade" data-anvil-embed="{{ embed_url }}" data-anvil-title="{{ alt_text }}">
+        {%- if poster != blank -%}
+          {{ poster | image_url: width: max_width | image_tag: widths: media_widths, sizes: media_sizes, loading: media_loading, alt: '', class: 'av-media__img av-media__poster' }}
+        {%- else -%}
+          {{ placeholder_name | placeholder_svg_tag: 'av-media__placeholder' }}
+        {%- endif -%}
+        <a class="av-media__play" href="{{ watch_url }}" target="_blank" rel="noopener" data-anvil-play>
+          {%- render 'anvil-icon', name: 'play', size: 28 -%}
+          <span class="av-visually-hidden">{{ 'anvil.media.play' | t }}</span>
+        </a>
+        <script type="module">
+          if (!customElements.get('anvil-video-facade')) {
+            customElements.define('anvil-video-facade', class extends HTMLElement {
+              connectedCallback() { this.addEventListener('click', this.onPlay); }
+              disconnectedCallback() { this.removeEventListener('click', this.onPlay); }
+              onPlay = (event) => {
+                const trigger = event.target.closest('[data-anvil-play]');
+                if (!trigger) return;
+                event.preventDefault();
+                const frame = document.createElement('iframe');
+                frame.src = this.dataset.anvilEmbed;
+                frame.title = this.dataset.anvilTitle || trigger.textContent.trim();
+                frame.className = 'av-media__iframe';
+                frame.allow = 'autoplay; encrypted-media; picture-in-picture';
+                frame.setAttribute('allowfullscreen', '');
+                this.replaceChildren(frame);
+                frame.focus();
+              };
+            });
+          }
+        </script>
+      </anvil-video-facade>
+    {%- else -%}
+      {{ placeholder_name | placeholder_svg_tag: 'av-media__placeholder' }}
+  {%- endcase -%}
+</div>

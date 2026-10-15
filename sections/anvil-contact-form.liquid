@@ -1,0 +1,119 @@
+{%- liquid
+  assign s = section.settings
+  assign form_id = 'anvil-contact-' | append: section.id
+  assign email_label = 'anvil.newsletter.label' | t
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-contact-form' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-contact">
+      {%- form 'contact', id: form_id, class: 'av-contact__form' -%}
+        {%- if form.posted_successfully? -%}
+          <p class="av-contact__notice av-form-message av-form-message--success" role="status" tabindex="-1" autofocus>{{ s.success_text | escape }}</p>
+        {%- elsif form.errors -%}
+          <div class="av-contact__notice av-form-message av-form-message--error" role="alert">{{ form.errors | default_errors }}</div>
+        {%- endif -%}
+        <div class="av-contact__grid">
+          <div class="av-contact__field av-field">
+            <label class="av-contact__label av-field__label" for="{{ form_id }}-name">Name</label>
+            <input class="av-contact__input av-field__input" id="{{ form_id }}-name" type="text" name="contact[name]" autocomplete="name">
+          </div>
+          <div class="av-contact__field av-field">
+            <label class="av-contact__label av-field__label" for="{{ form_id }}-email">{{ email_label }} <span aria-hidden="true">*</span></label>
+            <input class="av-contact__input av-field__input" id="{{ form_id }}-email" type="email" name="contact[email]" value="{{ form.email }}" autocomplete="email" required aria-required="true">
+          </div>
+          {%- if s.show_phone -%}
+            <div class="av-contact__field av-field">
+              <label class="av-contact__label av-field__label" for="{{ form_id }}-phone">Phone</label>
+              <input class="av-contact__input av-field__input" id="{{ form_id }}-phone" type="tel" name="contact[phone]" autocomplete="tel">
+            </div>
+          {%- endif -%}
+          <div class="av-contact__field av-contact__field--full av-field">
+            <label class="av-contact__label av-field__label" for="{{ form_id }}-body">Message <span aria-hidden="true">*</span></label>
+            <textarea class="av-contact__input av-field__input" id="{{ form_id }}-body" name="contact[body]" rows="6" required aria-required="true">{{ form.body }}</textarea>
+          </div>
+        </div>
+        <div class="av-contact__actions">
+          {% render 'anvil-button', label: s.button_label, style: 'primary', size: 'lg', type: 'submit' %}
+        </div>
+      {%- endform -%}
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-contact {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .av-contact__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-4);
+    margin-bottom: var(--av-space-4);
+  }
+  
+  
+  
+  
+  .av-contact__actions {
+    display: flex;
+    justify-content: flex-start;
+  }
+  @media (min-width: 750px) {
+    .av-contact__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .av-contact__field--full {
+      grid-column: 1 / -1;
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Contact form",
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Contact form" },
+    {
+      "type": "checkbox",
+      "id": "show_phone",
+      "label": "Show phone field",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Send message"
+    },
+    {
+      "type": "text",
+      "id": "success_text",
+      "label": "Success message",
+      "default": "Thanks — your message has been sent."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Contact form",
+      "settings": {
+        "heading": "Send us a <strong>message</strong>"
+      }
+    }
+  ]
+}
+{% endschema %}

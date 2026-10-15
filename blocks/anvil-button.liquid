@@ -1,0 +1,33 @@
+{%- liquid
+  assign s = block.settings
+  assign icon_name = s.icon
+  if icon_name == 'none'
+    assign icon_name = ''
+  endif
+-%}
+<div class="av-button-block av-button-block--{{ s.align }}" {{ block.shopify_attributes }}>
+  {%- render 'anvil-button', label: s.label, url: s.url, style: s.style, size: s.size, full: s.full, icon: icon_name, external: s.external -%}
+</div>
+{% stylesheet %}
+.av-button-block{display:flex;flex-wrap:wrap;gap:var(--av-space-3)}
+.av-button-block--left{justify-content:flex-start}
+.av-button-block--center{justify-content:center}
+.av-button-block--right{justify-content:flex-end}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Button",
+  "tag": null,
+  "settings": [
+    { "type": "text", "id": "label", "label": "Label", "default": "Shop now" },
+    { "type": "url", "id": "url", "label": "Link" },
+    { "type": "checkbox", "id": "external", "label": "Open in a new tab", "default": false },
+    { "type": "select", "id": "style", "label": "Style", "options": [ { "value": "primary", "label": "Primary" }, { "value": "secondary", "label": "Secondary" }, { "value": "ghost", "label": "Ghost" }, { "value": "link", "label": "Text link" } ], "default": "primary" },
+    { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" }, { "value": "lg", "label": "Large" } ], "default": "md" },
+    { "type": "checkbox", "id": "full", "label": "Full width", "default": false },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" },
+    { "type": "select", "id": "icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "arrow-right", "label": "Arrow right" }, { "value": "chevron-right", "label": "Chevron right" }, { "value": "shopping-cart", "label": "Cart" }, { "value": "shopping-bag", "label": "Bag" }, { "value": "check", "label": "Check" }, { "value": "gift", "label": "Gift" }, { "value": "zap", "label": "Lightning" }, { "value": "play", "label": "Play" }, { "value": "download", "label": "Download" }, { "value": "external-link", "label": "External link" }, { "value": "mail", "label": "Mail" }, { "value": "phone", "label": "Phone" }, { "value": "message-circle", "label": "Chat" } ], "default": "none" }
+  ],
+  "presets": [ { "name": "Button" } ]
+}
+{% endschema %}

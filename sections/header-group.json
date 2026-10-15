@@ -1,0 +1,41 @@
+{
+  "type": "header",
+  "name": "Header",
+  "sections": {
+    "announcement": {
+      "type": "anvil-announcement-bar",
+      "blocks": {
+        "notice": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Example announcement — replace this with your own message</p>",
+            "link": ""
+          }
+        }
+      },
+      "block_order": [
+        "notice"
+      ],
+      "settings": {
+        "pad_top": 8,
+        "pad_bottom": 8,
+        "width": "full",
+        "color_scheme": "scheme-3"
+      }
+    },
+    "header": {
+      "type": "anvil-header",
+      "settings": {
+        "pad_top": 12,
+        "pad_bottom": 12,
+        "width": "page",
+        "menu": "main-menu",
+        "sticky": "scroll-up"
+      }
+    }
+  },
+  "order": [
+    "announcement",
+    "header"
+  ]
+}

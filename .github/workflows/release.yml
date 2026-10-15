@@ -1,0 +1,73 @@
+name: Release
+
+# Tag a release with `git tag vX.Y.Z && git push --tags`. The tag must equal
+# theme_info.theme_version in config/settings_schema.json and CHANGELOG.md must
+# carry a `## [X.Y.Z]` section; the zip from `shopify theme package` is attached
+# to the GitHub Release with that section as its notes.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  SHOPIFY_CLI_NO_ANALYTICS: "1"
+  SHOPIFY_FLAG_NO_COLOR: "1"
+
+jobs:
+  release:
+    name: Package and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Shopify CLI
+        run: npm i -g @shopify/cli
+
+      - name: Assert theme_version equals the tag
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(python3 - <<'PY'
+          import json, re
+          text = open("config/settings_schema.json", encoding="utf-8").read()
+          text = re.sub(r"^\s*/\*.*?\*/\s*", "", text, flags=re.S)
+          info = next(g for g in json.loads(text) if isinstance(g, dict) and g.get("name") == "theme_info")
+          print(info.get("theme_version", ""))
+          PY
+          )"
+          echo "tag=$tag theme_version=$version"
+          if [ "$tag" != "$version" ]; then
+            echo "::error file=config/settings_schema.json::theme_version ($version) does not match tag ($tag)"
+            exit 1
+          fi
+
+      - name: Extract the CHANGELOG section
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          python3 - "$tag" <<'PY'
+          import re, sys
+          version = sys.argv[1]
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(r"^## \[" + re.escape(version) + r"\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.S | re.M)
+          if not m or not m.group(1).strip():
+              sys.exit(f"CHANGELOG.md has no '## [{version}]' section with content")
+          open("release-notes.md", "w", encoding="utf-8").write(m.group(1).strip() + "\n")
+          PY
+          echo "--- release notes"; cat release-notes.md
+
+      - name: Theme check and package
+        run: bash scripts/package.sh
+
+      - name: Create the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Anvil ${{ github.ref_name }}
+          body_path: release-notes.md
+          files: dist/*.zip
+          fail_on_unmatched_files: true

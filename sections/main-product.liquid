@@ -1,0 +1,194 @@
+{%- liquid
+  assign s = section.settings
+  assign current_variant = product.selected_or_first_available_variant
+  assign form_id = 'anvil-product-form-' | append: section.id
+  assign atc_label = 'anvil.product.add_to_cart' | t
+  assign atc_disabled = false
+  if current_variant.available == false
+    assign atc_label = 'anvil.product.sold_out' | t
+    assign atc_disabled = true
+  endif
+  assign media_sizes = '(min-width: 990px) 50vw, 100vw'
+-%}
+{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
+{{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-product' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-product av-product--gallery-{{ s.gallery_position }}" data-anvil-product data-anvil-product-id="{{ product.id }}">
+      <div class="av-product__gallery" data-anvil-gallery>
+        {%- if product.media.size > 0 -%}
+          <ul class="av-product__media-list av-list-reset">
+            {%- for media in product.media -%}
+              {%- liquid
+                assign media_loading = 'lazy'
+                assign media_priority = false
+                if forloop.first
+                  assign media_loading = 'eager'
+                  assign media_priority = true
+                endif
+              -%}
+              <li class="av-product__media" data-media-id="{{ media.id }}"{% if forloop.first %} data-anvil-media-active{% endif %}>
+                {%- if media.media_type == 'video' or media.media_type == 'external_video' -%}
+                  {% render 'anvil-media', video: media, ratio: 'adapt', loading: media_loading, class: 'av-product__media-el' %}
+                {%- else -%}
+                  {% render 'anvil-media', image: media.preview_image, ratio: 'adapt', widths: '400, 600, 800, 1100', sizes: media_sizes, loading: media_loading, priority: media_priority, alt: media.alt, class: 'av-product__media-el' %}
+                {%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- else -%}
+          <div class="av-product__media av-product__media--placeholder">
+            {% render 'anvil-media', ratio: '1:1', placeholder: 'product-1', class: 'av-product__media-el' %}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div class="av-product__info">
+        {%- if s.show_vendor and product.vendor != blank -%}
+          <p class="av-product__vendor av-muted">{{ product.vendor | escape }}</p>
+        {%- endif -%}
+        <h1 class="av-product__title">{{ product.title | escape }}</h1>
+        <div class="av-product__price">
+          {% render 'anvil-price', variant: current_variant, show_compare: true, show_badge: true, size: 'lg' %}
+        </div>
+
+        <anvil-product-form class="av-product__form-wrap">
+          {%- form 'product', product, id: form_id, class: 'av-product__form', data-anvil-product-form: '' -%}
+            {%- if form.errors -%}
+              <div class="av-form-message av-form-message--error" role="alert">{{ form.errors | default_errors }}</div>
+            {%- endif -%}
+            {%- if product.has_only_default_variant -%}
+              <input type="hidden" name="id" value="{{ current_variant.id }}" data-anvil-variant-id>
+            {%- else -%}
+              <div class="av-field">
+                <label class="av-field__label" for="{{ form_id }}-variant">{{ 'anvil.product.choose_variant' | t }}</label>
+                <div class="av-field__select">
+                  <select class="av-field__input" id="{{ form_id }}-variant" name="id" data-anvil-variant-select>
+                    {%- for variant in product.variants -%}
+                      <option value="{{ variant.id }}"{% if variant.id == current_variant.id %} selected{% endif %}{% unless variant.available %} disabled{% endunless %}>
+                        {{ variant.title | escape }} &mdash; {{ variant.price | money }}
+                        {%- unless variant.available %} ({{ 'anvil.product.sold_out' | t }}){% endunless -%}
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                </div>
+              </div>
+            {%- endif -%}
+            <div class="av-field av-product__qty-field">
+              <label class="av-field__label" for="{{ form_id }}-quantity">{{ 'anvil.product.quantity' | t }}</label>
+              <input class="av-field__input av-product__qty" id="{{ form_id }}-quantity" type="number" name="quantity" value="1" min="1" inputmode="numeric" data-anvil-quantity>
+            </div>
+            <div class="av-product__buy" data-anvil-buy>
+              {% render 'anvil-button', label: atc_label, style: 'primary', size: 'lg', full: true, type: 'submit', disabled: atc_disabled, attrs: 'name="add"' %}
+            </div>
+            <p class="av-product__status" role="status" aria-live="polite" data-anvil-form-status></p>
+          {%- endform -%}
+        </anvil-product-form>
+
+        {%- if product.description != blank -%}
+          <div class="av-product__description av-prose">{{ product.description }}</div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-product {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-6);
+  }
+  .av-product__media-list {
+    display: flex;
+    gap: var(--av-space-3);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .av-product__media-list::-webkit-scrollbar {
+    display: none;
+  }
+  .av-product__media {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+  }
+  .av-product__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-4);
+  }
+  .av-product__vendor {
+    margin: 0;
+    font-size: var(--av-text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .av-product__title {
+    margin: 0;
+    font-size: var(--av-text-2xl);
+  }
+  .av-product__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-3);
+  }
+  .av-product__qty {
+    width: 112px;
+  }
+  .av-product__status {
+    margin: 0;
+    font-size: var(--av-text-sm);
+  }
+  .av-product__status:empty {
+    display: none;
+  }
+  @media (min-width: 990px) {
+    .av-product {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: var(--av-space-8);
+      align-items: start;
+    }
+    .av-product--gallery-right .av-product__gallery {
+      order: 2;
+    }
+    .av-product__media-list {
+      flex-direction: column;
+      overflow: visible;
+    }
+    .av-product__info {
+      position: sticky;
+      top: calc(var(--av-header-offset, 0px) + var(--av-space-6));
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Product",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Product" },
+    {
+      "type": "select",
+      "id": "gallery_position",
+      "label": "Gallery position on desktop",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

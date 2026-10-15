@@ -1,0 +1,156 @@
+{% doc %}
+  Product card: media with a hover second image, sale / sold-out badges, vendor, title, rating stars from the
+  reviews.rating metafield, price and an optional quick-add form that posts the first available variant without
+  JavaScript (products with options link to the product instead). The title link covers the whole card.
+  A blank product renders a placeholder card. Sections load assets/anvil-card.css and assets/anvil-media.css once.
+
+  @param {object} [product] - Product; blank renders a placeholder card
+  @param {boolean} [show_vendor] - Show product.vendor
+  @param {boolean} [show_rating] - Show stars when product.metafields.reviews.rating is set
+  @param {boolean} [quick_add] - Show the add-to-cart form, or a "Choose options" link when options exist
+  @param {string} [image_ratio] - adapt | 1:1 | 4:5 | 3:4 | 16:9 (default settings.card_image_ratio, then 4:5)
+  @param {string} [sizes] - sizes attribute for the card image
+  @param {number} [placeholder_index] - 1 to 6, picks the placeholder illustration (default 1)
+  @param {string} [uid] - Suffix that keeps form ids unique when one product repeats on a page
+  @param {string} [class] - Extra classes
+
+  @example
+  {% for product in collection.products %}
+    {% render 'anvil-product-card', product: product, show_rating: true, quick_add: true, sizes: '(min-width: 990px) 25vw, 50vw' %}
+  {% endfor %}
+{% enddoc %}
+{%- liquid
+  assign card_ratio = image_ratio | default: settings.card_image_ratio | default: '4:5'
+  assign card_sizes = sizes | default: '(min-width: 990px) 25vw, (min-width: 750px) 33vw, 50vw'
+  assign card_style = settings.card_style | default: 'flat'
+  assign card_align = settings.card_text_align | default: 'left'
+  assign badge_pos = settings.badge_position | default: 'top_left'
+  assign show_soldout = true
+  if settings.badge_show_soldout == false
+    assign show_soldout = false
+  endif
+  assign ph_index = placeholder_index | default: 1
+  assign ph_name = 'product-' | append: ph_index
+
+  assign classes = 'av-card av-card--' | append: card_style | append: ' av-card--align-' | append: card_align
+  if settings.card_color_scheme != blank
+    assign classes = classes | append: ' av-scheme av-scheme--' | append: settings.card_color_scheme.id
+  endif
+  if class != blank
+    assign classes = classes | append: ' ' | append: class
+  endif
+
+  assign main_image = ''
+  assign main_alt = ''
+  assign hover_image = ''
+  assign sold_out = false
+  assign single_variant = false
+  assign rating = ''
+  assign rating_count = ''
+  assign form_id = ''
+  if product != blank
+    assign target = product.selected_or_first_available_variant
+    assign main_image = product.featured_media.preview_image | default: product.featured_image
+    assign main_alt = main_image.alt | default: product.title | escape
+    if product.media.size > 1
+      assign hover_image = product.media[1].preview_image
+    endif
+    if product.available == false
+      assign sold_out = true
+    endif
+    if product.has_only_default_variant or product.variants.size == 1
+      assign single_variant = true
+    endif
+    assign rating = product.metafields.reviews.rating.value
+    assign rating_count = product.metafields.reviews.rating_count.value
+    assign form_id = 'av-card-form-' | append: product.id
+    if uid != blank
+      assign form_id = form_id | append: '-' | append: uid
+    endif
+  endif
+  if hover_image != blank
+    assign classes = classes | append: ' av-card--has-hover'
+  endif
+
+  case card_ratio
+    when '1:1'
+      assign ratio_value = '1 / 1'
+    when '3:4'
+      assign ratio_value = '3 / 4'
+    when '16:9'
+      assign ratio_value = '16 / 9'
+    when 'adapt'
+      assign ratio_value = main_image.aspect_ratio | default: '4 / 5'
+    else
+      assign ratio_value = '4 / 5'
+  endcase
+-%}
+<div class="{{ classes }}" data-anvil-product-card="{{ product.id }}">
+  <div class="av-card__media av-media av-media-frame av-media--cover av-badges--{{ badge_pos }}" style="--av-media-ratio: {{ ratio_value }};">
+    {%- if product != blank -%}
+      {%- if main_image != blank -%}
+        {{ main_image | image_url: width: 600 | image_tag: widths: '200, 300, 400, 600', sizes: card_sizes, loading: 'lazy', alt: main_alt, class: 'av-media__img av-card__img' }}
+        {%- if hover_image != blank -%}
+          {{ hover_image | image_url: width: 600 | image_tag: widths: '200, 300, 400, 600', sizes: card_sizes, loading: 'lazy', alt: '', class: 'av-media__img av-card__img av-card__img--hover' }}
+        {%- endif -%}
+      {%- else -%}
+        {{ ph_name | placeholder_svg_tag: 'av-media__placeholder' }}
+      {%- endif -%}
+      {%- capture badge_html -%}
+        {%- if sold_out -%}
+          {%- if show_soldout -%}<span class="av-badge av-badge--soldout">{{ 'anvil.card.sold_out' | t }}</span>{%- endif -%}
+        {%- else -%}
+          {%- render 'anvil-price', product: product, badge_only: true -%}
+        {%- endif -%}
+      {%- endcapture -%}
+      {%- if badge_html != blank -%}
+        <div class="av-badge-slot">{{ badge_html }}</div>
+      {%- endif -%}
+    {%- else -%}
+      {{ ph_name | placeholder_svg_tag: 'av-media__placeholder' }}
+    {%- endif -%}
+  </div>
+  <div class="av-card__body">
+    {%- if show_vendor -%}
+      <p class="av-card__vendor">{% if product != blank %}{{ product.vendor }}{% else %}Example vendor{% endif %}</p>
+    {%- endif -%}
+    <h3 class="av-card__title">
+      {%- if product != blank -%}
+        <a class="av-card__link" href="{{ product.url }}">{{ product.title }}</a>
+      {%- else -%}
+        <span class="av-card__link">Example product</span>
+      {%- endif -%}
+    </h3>
+    {%- if show_rating and rating != blank -%}
+      <div class="av-card__rating">
+        {%- render 'anvil-stars', rating: rating.rating, max: rating.scale_max, size: 14 -%}
+        {%- if rating_count != blank -%}<span class="av-card__rating-count">({{ rating_count }})</span>{%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- if product != blank -%}
+      {%- render 'anvil-price', product: product, show_badge: false, size: 'sm', class: 'av-card__price' -%}
+    {%- else -%}
+      <div class="av-price av-price--sm av-card__price"><span class="av-price__current">{{ 2900 | money }}</span></div>
+    {%- endif -%}
+    {%- if quick_add -%}
+      <div class="av-card__actions">
+        {%- if product == blank -%}
+          <button class="av-btn av-btn--secondary av-btn--sm av-btn--full" type="button" disabled>{{ 'anvil.card.add_to_cart' | t }}</button>
+        {%- elsif sold_out -%}
+          <button class="av-btn av-btn--secondary av-btn--sm av-btn--full" type="button" disabled>{{ 'anvil.card.sold_out' | t }}</button>
+        {%- elsif single_variant -%}
+          <anvil-product-form>
+            {%- form 'product', product, id: form_id, class: 'av-card__form', data-anvil-quick-add: '' -%}
+              <input type="hidden" name="id" value="{{ target.id }}">
+              <input type="hidden" name="quantity" value="1">
+              <button class="av-btn av-btn--primary av-btn--sm av-btn--full" type="submit" name="add">{{ 'anvil.card.add_to_cart' | t }}</button>
+              <p class="av-card__form-status" role="status" aria-live="polite" data-anvil-form-status></p>
+            {%- endform -%}
+          </anvil-product-form>
+        {%- else -%}
+          <a class="av-btn av-btn--secondary av-btn--sm av-btn--full" href="{{ product.url }}">{{ 'anvil.card.choose_options' | t }}</a>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+  </div>
+</div>

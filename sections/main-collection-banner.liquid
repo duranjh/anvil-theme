@@ -1,0 +1,75 @@
+{%- liquid
+  assign s = section.settings
+-%}
+{{ 'anvil-media.css' | asset_url | stylesheet_tag }}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-collection-banner' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-collection-banner{% if s.show_image and collection.image %} av-collection-banner--has-image{% endif %}">
+      {%- if s.show_image and collection.image -%}
+        <div class="av-collection-banner__media">
+          {% render 'anvil-media', image: collection.image, ratio: '21:9', widths: '600, 1100, 1600, 2200', sizes: '100vw', loading: 'eager', priority: true, alt: collection.title, class: 'av-collection-banner__img' %}
+        </div>
+      {%- endif -%}
+      <div class="av-collection-banner__text">
+        <h1 class="av-collection-banner__title">{{ collection.title | escape }}</h1>
+        {%- if s.show_description and collection.description != blank -%}
+          <div class="av-collection-banner__description av-rte">{{ collection.description }}</div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-collection-banner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-4);
+  }
+  .av-collection-banner__media {
+    border-radius: var(--av-radius-media);
+    overflow: hidden;
+  }
+  .av-collection-banner__img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .av-collection-banner__title {
+    margin: 0;
+    font-size: var(--av-text-3xl);
+  }
+  .av-collection-banner__description {
+    max-width: 65ch;
+    color: var(--av-fg-muted);
+  }
+  .av-collection-banner__description p:first-child {
+    margin-top: var(--av-space-2);
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Collection banner",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Collection banner" },
+    {
+      "type": "checkbox",
+      "id": "show_image",
+      "label": "Show collection image",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "Show collection description",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,1588 @@
+/* Anvil base stylesheet
+   Loaded on every page by layout/theme.liquid after the inline token <style>.
+   Contents: fallback tokens, reset, fluid type scale, layout primitives,
+   scheme surface, buttons, fields, badges, utilities, reveal/show helpers,
+   grid, prose, pagination, form messages, country-block overlay.
+   Mobile first. Breakpoints: 480 / 750 / 990 / 1200. No !important. */
+
+/* 1. Fallback tokens --------------------------------------------------------
+   Zero-specificity selector so the inline tokens from anvil-css-tokens always
+   win. These only matter if that snippet failed to render. */
+:where(html) {
+  --av-bg: #ffffff;
+  --av-bg-rgb: 255 255 255;
+  --av-bg-gradient: none;
+  --av-fg: #111111;
+  --av-fg-rgb: 17 17 17;
+  --av-fg-muted: #5c5c5c;
+  --av-border: #e3e3e3;
+  --av-accent: #1d4ed8;
+  --av-accent-rgb: 29 78 216;
+  --av-on-accent: #ffffff;
+  --av-btn-bg: #111111;
+  --av-btn-fg: #ffffff;
+  --av-btn-border: #111111;
+  --av-btn2-fg: #111111;
+  --av-btn2-border: #111111;
+  --av-font-heading: system-ui, sans-serif;
+  --av-font-body: system-ui, sans-serif;
+  --av-heading-weight: 700;
+  --av-heading-style: normal;
+  --av-body-weight: 400;
+  --av-heading-case: none;
+  --av-heading-spacing: 0em;
+  --av-heading-scale: 1;
+  --av-body-scale: 1;
+  --av-page-width: 1400px;
+  --av-narrow-width: 800px;
+  --av-gutter: 16px;
+  --av-section-gap: 0px;
+  --av-grid-gap: 24px;
+  --av-logo-w: 110px;
+  --av-drawer-width: 420px;
+  --av-radius-button: 8px;
+  --av-radius-input: 6px;
+  --av-radius-card: 12px;
+  --av-radius-media: 12px;
+  --av-radius-box: 12px;
+  --av-radius-drawer: 0px;
+  --av-radius-popup: 16px;
+  --av-radius-badge: 4px;
+  --av-radius-pill: 8px;
+  --av-radius-qty: 6px;
+  --av-radius-swatch: 50%;
+  --av-border-w-button: 1px;
+  --av-border-w-input: 1px;
+  --av-border-w-card: 1px;
+  --av-border-w-media: 0px;
+  --av-border-w-box: 1px;
+  --av-border-w-pill: 1px;
+  --av-border-w-swatch: 1px;
+  --av-shadow-rgb: 0 0 0;
+  --av-shadow-a: 0.12;
+  --av-shadow-button: none;
+  --av-shadow-input: none;
+  --av-shadow-card: none;
+  --av-shadow-media: none;
+  --av-shadow-box: none;
+  --av-shadow-drawer: var(--av-shadow-lg);
+  --av-shadow-popup: var(--av-shadow-lg);
+  --av-badge-sale-bg: #1d4ed8;
+  --av-badge-sale-fg: #ffffff;
+  --av-badge-soldout-bg: #5c5c5c;
+  --av-badge-soldout-fg: #ffffff;
+  --av-badge-custom-bg: #111111;
+  --av-badge-custom-fg: #ffffff;
+  --av-success: #1e7f4f;
+  --av-error: #c62828;
+  --av-rating: #f5a623;
+  --av-scrollbar-color: #111111;
+  --av-swatch-size: 28px;
+  --av-slider-arrow: 44px;
+  --av-slider-dot: 8px;
+  --av-btn-case: none;
+  --av-dur: 300ms;
+}
+
+/* 2. Fixed tokens (not merchant-settable) ---------------------------------- */
+:root {
+  --av-space-1: 4px;
+  --av-space-2: 8px;
+  --av-space-3: 12px;
+  --av-space-4: 16px;
+  --av-space-5: 24px;
+  --av-space-6: 32px;
+  --av-space-7: 48px;
+  --av-space-8: 64px;
+  --av-space-9: 96px;
+  --av-space-10: 128px;
+  --av-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --av-shadow-sm: 0 1px 2px rgb(var(--av-shadow-rgb) / var(--av-shadow-a)), 0 1px 3px rgb(var(--av-shadow-rgb) / calc(var(--av-shadow-a) * 0.6));
+  --av-shadow-md: 0 6px 16px -4px rgb(var(--av-shadow-rgb) / var(--av-shadow-a)), 0 2px 4px rgb(var(--av-shadow-rgb) / calc(var(--av-shadow-a) * 0.5));
+  --av-shadow-lg: 0 24px 48px -12px rgb(var(--av-shadow-rgb) / calc(var(--av-shadow-a) * 1.6)), 0 8px 16px -8px rgb(var(--av-shadow-rgb) / var(--av-shadow-a));
+  --av-focus-ring: 0 0 0 2px var(--av-bg), 0 0 0 4px var(--av-accent);
+  --av-control-h: 44px;
+  --av-control-h-sm: 36px;
+  --av-control-h-lg: 52px;
+  /* anvil-core.js writes --av-header-offset on :root from the sticky header's height */
+  --av-header-h: var(--av-header-offset, 0px);
+
+  /* Fluid type scale. xs–lg follow the body scale, xl–4xl the heading scale. */
+  --av-text-xs: calc(clamp(0.75rem, 0.72rem + 0.15vw, 0.8125rem) * var(--av-body-scale));
+  --av-text-sm: calc(clamp(0.875rem, 0.85rem + 0.15vw, 0.9375rem) * var(--av-body-scale));
+  --av-text-md: calc(clamp(1rem, 0.95rem + 0.25vw, 1.125rem) * var(--av-body-scale));
+  --av-text-lg: calc(clamp(1.125rem, 1.05rem + 0.4vw, 1.375rem) * var(--av-body-scale));
+  --av-text-xl: calc(clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem) * var(--av-heading-scale));
+  --av-text-2xl: calc(clamp(1.75rem, 1.4rem + 1.4vw, 2.5rem) * var(--av-heading-scale));
+  --av-text-3xl: calc(clamp(2.125rem, 1.6rem + 2.2vw, 3.25rem) * var(--av-heading-scale));
+  --av-text-4xl: calc(clamp(2.5rem, 1.8rem + 3.2vw, 4.25rem) * var(--av-heading-scale));
+}
+
+/* 3. Reset ------------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: var(--av-header-h);
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--av-font-body);
+  font-weight: var(--av-body-weight);
+  font-size: var(--av-text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-wrap: break-word;
+}
+
+.av-main {
+  flex: 1 0 auto;
+  outline: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ul,
+ol,
+dl,
+dd,
+figure,
+blockquote,
+pre,
+fieldset,
+legend {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding-inline-start: 1.25em;
+}
+
+ul[role="list"],
+ol[role="list"],
+.av-list-reset {
+  list-style: none;
+  padding: 0;
+}
+
+img,
+svg,
+video,
+canvas,
+picture,
+iframe {
+  display: block;
+  max-width: 100%;
+}
+
+img,
+video {
+  height: auto;
+}
+
+svg {
+  fill: currentColor;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 0.15em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  margin: 0;
+}
+
+button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: inherit;
+}
+
+fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+legend {
+  padding: 0;
+}
+
+summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+dialog {
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  max-width: none;
+  max-height: none;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--av-border);
+  margin: var(--av-space-6) 0;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--av-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: rgb(var(--av-accent-rgb) / 0.2);
+}
+
+html [hidden] {
+  display: none;
+}
+
+/* Custom elements that wrap a form before their module defines them */
+anvil-product-form {
+  display: block;
+}
+
+.no-js .av-js-only,
+.js .av-no-js-only {
+  display: none;
+}
+
+/* 4. Typography ------------------------------------------------------------- */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.av-heading {
+  font-family: var(--av-font-heading);
+  font-weight: var(--av-heading-weight);
+  font-style: var(--av-heading-style);
+  text-transform: var(--av-heading-case);
+  letter-spacing: var(--av-heading-spacing);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+h1,
+.av-text--4xl {
+  font-size: var(--av-text-4xl);
+  line-height: 1.05;
+}
+
+h2,
+.av-text--3xl {
+  font-size: var(--av-text-3xl);
+}
+
+h3,
+.av-text--2xl {
+  font-size: var(--av-text-2xl);
+}
+
+h4,
+.av-text--xl {
+  font-size: var(--av-text-xl);
+}
+
+h5,
+.av-text--lg {
+  font-size: var(--av-text-lg);
+  line-height: 1.3;
+}
+
+h6,
+.av-text--md {
+  font-size: var(--av-text-md);
+}
+
+.av-text--sm {
+  font-size: var(--av-text-sm);
+}
+
+.av-text--xs {
+  font-size: var(--av-text-xs);
+}
+
+.av-muted {
+  color: var(--av-fg-muted);
+}
+
+.av-accent {
+  color: var(--av-accent);
+}
+
+.av-link {
+  color: var(--av-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.av-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.av-strong {
+  font-weight: 600;
+}
+
+/* 5. Layout ----------------------------------------------------------------- */
+.av-page-width,
+.av-section__inner {
+  width: 100%;
+  max-width: var(--av-page-width);
+  margin-inline: auto;
+  padding-inline: var(--av-gutter);
+}
+
+.av-page-width--narrow {
+  max-width: var(--av-narrow-width);
+}
+
+.av-section {
+  position: relative;
+  padding-top: calc(var(--av-pad-top, var(--av-space-7)) * var(--av-pad-mobile, 1));
+  padding-bottom: calc(var(--av-pad-bottom, var(--av-space-7)) * var(--av-pad-mobile, 1));
+  scroll-margin-top: var(--av-header-h);
+}
+
+.av-main .shopify-section + .shopify-section .av-section {
+  margin-top: var(--av-section-gap);
+}
+
+.av-width--narrow .av-section__inner {
+  max-width: var(--av-narrow-width);
+}
+
+.av-width--full .av-section__inner {
+  max-width: none;
+}
+
+.av-section__inner--bleed {
+  padding-inline: 0;
+}
+
+/* Scheme surface */
+.av-scheme {
+  background-color: var(--av-bg);
+  background-image: var(--av-bg-gradient);
+  color: var(--av-fg);
+}
+
+/* Content container */
+.av-box {
+  background: rgb(var(--av-bg-rgb));
+  color: var(--av-fg);
+  border: var(--av-border-w-box) solid var(--av-border);
+  border-radius: var(--av-radius-box);
+  box-shadow: var(--av-shadow-box);
+  padding: var(--av-space-5);
+}
+
+/* Media frame */
+.av-media-frame {
+  overflow: hidden;
+  border-radius: var(--av-radius-media);
+  border: var(--av-border-w-media) solid var(--av-border);
+  box-shadow: var(--av-shadow-media);
+}
+
+@media (min-width: 750px) {
+  .av-section {
+    padding-top: var(--av-pad-top, var(--av-space-8));
+    padding-bottom: var(--av-pad-bottom, var(--av-space-8));
+  }
+}
+
+/* 6. Grid helpers ----------------------------------------------------------- */
+.av-grid {
+  display: grid;
+  gap: var(--av-grid-gap);
+  grid-template-columns: repeat(var(--av-cols-mobile, 1), minmax(0, 1fr));
+  container-type: inline-size;
+}
+
+.av-grid--2 {
+  --av-cols: 2;
+}
+
+.av-grid--3 {
+  --av-cols: 3;
+}
+
+.av-grid--4 {
+  --av-cols: 4;
+}
+
+.av-grid--mobile-2 {
+  --av-cols-mobile: 2;
+}
+
+.av-grid--tight {
+  gap: var(--av-space-3);
+}
+
+.av-flex {
+  display: flex;
+  gap: var(--av-space-3);
+  align-items: center;
+}
+
+.av-flex--wrap {
+  flex-wrap: wrap;
+}
+
+.av-flex--between {
+  justify-content: space-between;
+}
+
+.av-flex--center {
+  justify-content: center;
+}
+
+.av-stack > * + * {
+  margin-top: var(--av-stack-gap, var(--av-space-4));
+}
+
+.av-align--left {
+  text-align: left;
+}
+
+.av-align--center {
+  text-align: center;
+}
+
+.av-align--right {
+  text-align: right;
+}
+
+@media (min-width: 750px) {
+  .av-grid {
+    grid-template-columns: repeat(var(--av-cols-tablet, min(var(--av-cols, 2), 2)), minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 990px) {
+  .av-grid {
+    grid-template-columns: repeat(var(--av-cols, 3), minmax(0, 1fr));
+  }
+}
+
+/* 7. Buttons ---------------------------------------------------------------- */
+.av-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--av-space-2);
+  min-height: var(--av-control-h);
+  padding: var(--av-space-2) var(--av-space-5);
+  font-family: var(--av-font-body);
+  font-size: var(--av-text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  text-transform: var(--av-btn-case);
+  letter-spacing: 0.01em;
+  color: var(--av-btn-fg);
+  background: var(--av-btn-bg);
+  border: var(--av-border-w-button) solid var(--av-btn-border);
+  border-radius: var(--av-radius-button);
+  box-shadow: var(--av-shadow-button);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.av-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--av-focus-ring);
+}
+
+.av-btn[disabled],
+.av-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.av-btn--primary {
+  color: var(--av-btn-fg);
+  background: var(--av-btn-bg);
+  border-color: var(--av-btn-border);
+}
+
+.av-btn--secondary {
+  color: var(--av-btn2-fg);
+  background: transparent;
+  border-color: var(--av-btn2-border);
+}
+
+.av-btn--ghost {
+  color: var(--av-fg);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.av-btn--link {
+  min-height: 0;
+  padding: 0;
+  color: var(--av-accent);
+  background: none;
+  border: 0;
+  border-radius: 2px;
+  box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  text-transform: none;
+}
+
+.av-btn--accent {
+  color: var(--av-on-accent);
+  background: var(--av-accent);
+  border-color: var(--av-accent);
+}
+
+.av-btn--sm {
+  min-height: var(--av-control-h-sm);
+  padding: var(--av-space-1) var(--av-space-4);
+  font-size: var(--av-text-xs);
+}
+
+.av-btn--lg {
+  min-height: var(--av-control-h-lg);
+  padding: var(--av-space-3) var(--av-space-6);
+  font-size: var(--av-text-md);
+}
+
+.av-btn--full {
+  width: 100%;
+}
+
+.av-btn--icon {
+  width: var(--av-control-h);
+  padding: 0;
+}
+
+.av-btn--icon.av-btn--sm {
+  width: var(--av-control-h-sm);
+}
+
+.av-btn--md {
+  min-height: var(--av-control-h);
+}
+
+.av-btn__label {
+  display: inline-block;
+}
+
+.av-btn__icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+}
+
+.av-btn--has-icon {
+  padding-inline: var(--av-space-4) var(--av-space-5);
+}
+
+/* Loading state: text goes transparent, a ring spins in its place */
+.av-btn.is-loading,
+.av-btn[aria-busy="true"] {
+  color: transparent;
+  pointer-events: none;
+}
+
+.av-btn.is-loading::after,
+.av-btn[aria-busy="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 1.25em;
+  height: 1.25em;
+  margin: -0.625em 0 0 -0.625em;
+  border: 2px solid var(--av-btn-fg);
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+.av-btn--secondary.is-loading::after,
+.av-btn--secondary[aria-busy="true"]::after,
+.av-btn--ghost.is-loading::after,
+.av-btn--ghost[aria-busy="true"]::after {
+  border-color: var(--av-fg);
+  border-right-color: transparent;
+}
+
+/* Hover styles chosen in Theme settings > Buttons (class on <body>) */
+.av-btn-hover--darken .av-btn:not(.av-btn--link):hover {
+  filter: brightness(0.92);
+}
+
+.av-btn-hover--outline .av-btn:not(.av-btn--secondary, .av-btn--ghost, .av-btn--link):hover {
+  background: transparent;
+  color: var(--av-btn-bg);
+}
+
+.av-btn-hover--outline .av-btn--accent:hover {
+  color: var(--av-accent);
+}
+
+.av-btn-hover--outline .av-btn--secondary:hover {
+  background: var(--av-btn2-fg);
+  color: var(--av-bg);
+}
+
+.av-btn--ghost:hover {
+  background: rgb(var(--av-fg-rgb) / 0.06);
+}
+
+/* 8. Fields ----------------------------------------------------------------- */
+.av-field {
+  display: grid;
+  gap: var(--av-space-2);
+  min-width: 0;
+}
+
+.av-field__label,
+.av-field > label,
+.av-legend {
+  font-size: var(--av-text-sm);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.av-field__required {
+  color: var(--av-error);
+}
+
+.av-field__input,
+.av-field input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+.av-field select,
+.av-field textarea {
+  width: 100%;
+  min-height: var(--av-control-h);
+  padding: var(--av-space-2) var(--av-space-4);
+  font-size: var(--av-text-md);
+  line-height: 1.4;
+  color: var(--av-fg);
+  background: rgb(var(--av-bg-rgb));
+  border: var(--av-border-w-input) solid var(--av-border);
+  border-radius: var(--av-radius-input);
+  box-shadow: var(--av-shadow-input);
+  appearance: none;
+}
+
+.av-field textarea {
+  min-height: calc(var(--av-control-h) * 2.5);
+  resize: vertical;
+}
+
+.av-field__input::placeholder,
+.av-field input::placeholder,
+.av-field textarea::placeholder {
+  color: var(--av-fg-muted);
+  opacity: 1;
+}
+
+.av-field__input:focus-visible,
+.av-field input:focus-visible,
+.av-field select:focus-visible,
+.av-field textarea:focus-visible {
+  outline: none;
+  border-color: var(--av-accent);
+  box-shadow: 0 0 0 1px var(--av-accent);
+}
+
+.av-field__input[aria-invalid="true"],
+.av-field.is-invalid .av-field__input,
+.av-field.is-invalid input,
+.av-field.is-invalid select,
+.av-field.is-invalid textarea {
+  border-color: var(--av-error);
+}
+
+.av-field__hint {
+  font-size: var(--av-text-xs);
+  color: var(--av-fg-muted);
+}
+
+.av-field__error {
+  font-size: var(--av-text-xs);
+  color: var(--av-error);
+}
+
+/* Select: wrapper draws the chevron with borders so no image file is needed */
+.av-field__select {
+  position: relative;
+}
+
+.av-field__select select {
+  padding-inline-end: calc(var(--av-space-4) * 2 + 0.75em);
+}
+
+.av-field__select::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: var(--av-space-4);
+  width: 0.5em;
+  height: 0.5em;
+  margin-top: -0.4em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* Checkbox / radio */
+.av-field--check,
+.av-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--av-space-3);
+  font-size: var(--av-text-sm);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.av-field--check input,
+.av-check input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0.1em 0 0;
+  accent-color: var(--av-accent);
+}
+
+.av-field--check input:focus-visible,
+.av-check input:focus-visible {
+  outline: 2px solid var(--av-accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* Inline input + button pair (newsletter, discount code) */
+.av-field--inline {
+  display: flex;
+  gap: var(--av-space-2);
+}
+
+.av-field--inline .av-field__input,
+.av-field--inline input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Quantity picker shell (component JS lives in another module) */
+.av-qty {
+  display: inline-flex;
+  align-items: stretch;
+  min-height: var(--av-control-h);
+  border: var(--av-border-w-input) solid var(--av-border);
+  border-radius: var(--av-radius-qty);
+  background: rgb(var(--av-bg-rgb));
+}
+
+.av-qty--pill .av-qty {
+  border-radius: 999px;
+}
+
+.av-qty--minimal .av-qty {
+  border-color: transparent;
+  background: transparent;
+}
+
+.av-qty__btn {
+  width: var(--av-control-h);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--av-fg);
+}
+
+.av-qty__input {
+  width: 3ch;
+  min-width: 3ch;
+  text-align: center;
+  border: 0;
+  background: transparent;
+  color: var(--av-fg);
+  font-size: var(--av-text-md);
+  appearance: textfield;
+}
+
+.av-qty__input::-webkit-inner-spin-button,
+.av-qty__input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* 9. Badges ----------------------------------------------------------------- */
+.av-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--av-space-1);
+  padding: 0.2em 0.6em;
+  font-size: var(--av-text-xs);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--av-badge-custom-fg);
+  background: var(--av-badge-custom-bg);
+  border-radius: var(--av-radius-badge);
+}
+
+.av-badge--sale {
+  color: var(--av-badge-sale-fg);
+  background: var(--av-badge-sale-bg);
+}
+
+.av-badge--soldout {
+  color: var(--av-badge-soldout-fg);
+  background: var(--av-badge-soldout-bg);
+}
+
+.av-badge--outline {
+  color: var(--av-fg);
+  background: transparent;
+  border: 1px solid var(--av-border);
+}
+
+.av-badge--accent {
+  color: var(--av-on-accent);
+  background: var(--av-accent);
+}
+
+.av-badge--pill {
+  border-radius: 999px;
+}
+
+/* Badge position on cards (class on <body>, used by card components) */
+.av-badge-slot {
+  position: absolute;
+  inset: var(--av-space-3) var(--av-space-3) auto auto;
+  display: flex;
+  gap: var(--av-space-1);
+  z-index: 1;
+}
+
+.av-badges--top_left .av-badge-slot {
+  inset: var(--av-space-3) auto auto var(--av-space-3);
+}
+
+.av-badges--bottom_left .av-badge-slot {
+  inset: auto auto var(--av-space-3) var(--av-space-3);
+}
+
+.av-badges--bottom_right .av-badge-slot {
+  inset: auto var(--av-space-3) var(--av-space-3) auto;
+}
+
+/* 10. Utilities ------------------------------------------------------------- */
+.av-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.av-skip-link {
+  position: absolute;
+  top: var(--av-space-2);
+  left: var(--av-space-2);
+  z-index: 1000;
+  padding: var(--av-space-3) var(--av-space-4);
+  background: var(--av-btn-bg);
+  color: var(--av-btn-fg);
+  border-radius: var(--av-radius-button);
+  text-decoration: none;
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+
+.av-skip-link:focus-visible {
+  transform: none;
+  outline-offset: 2px;
+}
+
+.av-no-select body {
+  user-select: none;
+}
+
+.av-no-select input,
+.av-no-select textarea,
+.av-no-select select {
+  user-select: text;
+}
+
+/* Scrollbar style chosen in Theme settings (class on <html>) */
+.av-scrollbar--thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--av-scrollbar-color) transparent;
+}
+
+.av-scrollbar--hidden {
+  scrollbar-width: none;
+}
+
+.av-scrollbar--hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Horizontal scroll rows (sliders fall back to this without JS) */
+.av-scroll-row {
+  display: flex;
+  gap: var(--av-grid-gap);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.av-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.av-scroll-row > * {
+  flex: none;
+  scroll-snap-align: start;
+}
+
+/* Aspect-ratio boxes */
+.av-ratio {
+  position: relative;
+  aspect-ratio: var(--av-ratio, 1 / 1);
+  overflow: hidden;
+}
+
+.av-ratio > img,
+.av-ratio > video,
+.av-ratio > iframe,
+.av-ratio > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: var(--av-fit, cover);
+}
+
+.av-ratio--1x1 {
+  --av-ratio: 1 / 1;
+}
+
+.av-ratio--4x5 {
+  --av-ratio: 4 / 5;
+}
+
+.av-ratio--3x4 {
+  --av-ratio: 3 / 4;
+}
+
+.av-ratio--16x9 {
+  --av-ratio: 16 / 9;
+}
+
+.av-ratio--21x9 {
+  --av-ratio: 21 / 9;
+}
+
+.av-ratio--adapt {
+  aspect-ratio: auto;
+}
+
+.av-ratio--adapt > img,
+.av-ratio--adapt > video {
+  position: static;
+  height: auto;
+}
+
+/* Placeholder SVG from placeholder_svg_tag */
+.av-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: rgb(var(--av-fg-rgb) / 0.06);
+  color: rgb(var(--av-fg-rgb) / 0.35);
+}
+
+.av-placeholder svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Live regions, dividers, overlays */
+.av-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.av-divider {
+  border: 0;
+  border-top: 1px solid var(--av-border);
+}
+
+.av-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / var(--av-overlay-a, 0.3));
+  pointer-events: none;
+}
+
+/* 11. Show on phones / desktop ---------------------------------------------- */
+@media (max-width: 749px) {
+  .av-show--desktop {
+    display: none;
+  }
+}
+
+@media (min-width: 750px) {
+  .av-show--mobile {
+    display: none;
+  }
+}
+
+/* In the editor the section stays visible, faded, so it can still be edited */
+@media (max-width: 749px) {
+  .av-design-mode .av-show--desktop {
+    display: block;
+    opacity: 0.45;
+    outline: 2px dashed var(--av-fg-muted);
+    outline-offset: -2px;
+  }
+}
+
+@media (min-width: 750px) {
+  .av-design-mode .av-show--mobile {
+    display: block;
+    opacity: 0.45;
+    outline: 2px dashed var(--av-fg-muted);
+    outline-offset: -2px;
+  }
+}
+
+.av-device-note,
+.av-editor-note {
+  display: inline-block;
+  padding: var(--av-space-1) var(--av-space-3);
+  font-size: var(--av-text-xs);
+  font-weight: 600;
+  color: var(--av-on-accent);
+  background: var(--av-accent);
+  border-radius: var(--av-radius-badge);
+}
+
+.av-editor-note {
+  position: fixed;
+  left: var(--av-space-4);
+  bottom: var(--av-space-4);
+  z-index: 900;
+  max-width: calc(100% - var(--av-space-8));
+  padding: var(--av-space-3) var(--av-space-4);
+  font-weight: 500;
+  box-shadow: var(--av-shadow-lg);
+}
+
+.av-example-note {
+  font-size: var(--av-text-xs);
+  color: var(--av-fg-muted);
+  font-style: italic;
+}
+
+/* 12. Reveal on scroll ------------------------------------------------------
+   Only when the shopper allows motion, the merchant left animations on, and
+   JavaScript is running (anvil-core.js adds .is-in via IntersectionObserver).
+   Without JS nothing is ever hidden. */
+@media (prefers-reduced-motion: no-preference) {
+  html.js:not([data-animations="off"]) .av-reveal:not(.is-in),
+  html.js:not([data-animations="off"]) .av-reveal--fade:not(.is-in),
+  html.js:not([data-animations="off"]) .av-reveal--fade-up:not(.is-in),
+  html.js:not([data-animations="off"]) .av-reveal--zoom:not(.is-in) {
+    opacity: 0;
+  }
+
+  html.js:not([data-animations="off"]) .av-reveal--fade-up:not(.is-in) {
+    transform: translateY(24px);
+  }
+
+  html.js:not([data-animations="off"]) .av-reveal--zoom:not(.is-in) {
+    transform: scale(0.96);
+  }
+
+  html.js:not([data-animations="off"]) .av-reveal,
+  html.js:not([data-animations="off"]) .av-reveal--fade,
+  html.js:not([data-animations="off"]) .av-reveal--fade-up,
+  html.js:not([data-animations="off"]) .av-reveal--zoom {
+    transition:
+      opacity calc(var(--av-dur) * 2) var(--av-ease),
+      transform calc(var(--av-dur) * 2) var(--av-ease);
+    transition-delay: var(--av-reveal-delay, 0ms);
+  }
+
+  html:not([data-animations="off"]) .av-btn,
+  html:not([data-animations="off"]) .av-skip-link {
+    transition:
+      transform var(--av-dur) var(--av-ease),
+      opacity var(--av-dur) var(--av-ease);
+  }
+
+  html:not([data-animations="off"]) .av-btn-hover--lift .av-btn:not(.av-btn--link, [disabled], [aria-disabled="true"]):hover,
+  html:not([data-animations="off"]) .av-hover-lift .av-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  html:not([data-animations="off"]) .av-lift {
+    transition: transform var(--av-dur) var(--av-ease);
+  }
+
+  html:not([data-animations="off"]) .av-btn.is-loading::after,
+  html:not([data-animations="off"]) .av-btn[aria-busy="true"]::after,
+  html:not([data-animations="off"]) .av-spinner {
+    animation: av-spin 0.8s linear infinite;
+  }
+
+  html:not([data-animations="off"]) {
+    scroll-behavior: smooth;
+  }
+}
+
+@keyframes av-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.av-spinner {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+/* 13. Prose (rich text) ----------------------------------------------------- */
+.av-prose {
+  font-size: var(--av-text-md);
+  line-height: 1.6;
+}
+
+.av-prose > * + * {
+  margin-top: 1em;
+}
+
+.av-prose > :is(h1, h2, h3, h4, h5, h6) + * {
+  margin-top: 0.5em;
+}
+
+.av-prose > * + :is(h2, h3, h4) {
+  margin-top: 1.5em;
+}
+
+.av-prose h1 {
+  font-size: var(--av-text-3xl);
+}
+
+.av-prose h2 {
+  font-size: var(--av-text-2xl);
+}
+
+.av-prose h3 {
+  font-size: var(--av-text-xl);
+}
+
+.av-prose h4,
+.av-prose h5,
+.av-prose h6 {
+  font-size: var(--av-text-lg);
+}
+
+.av-prose a {
+  color: var(--av-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.av-prose strong {
+  font-weight: 700;
+}
+
+.av-prose ul,
+.av-prose ol {
+  padding-inline-start: 1.5em;
+}
+
+.av-prose li + li {
+  margin-top: 0.35em;
+}
+
+.av-prose img,
+.av-prose video,
+.av-prose iframe {
+  border-radius: var(--av-radius-media);
+}
+
+.av-prose iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+
+.av-prose blockquote {
+  padding-inline-start: var(--av-space-4);
+  border-inline-start: 3px solid var(--av-accent);
+  font-style: italic;
+  color: var(--av-fg-muted);
+}
+
+.av-prose hr {
+  margin: 2em 0;
+}
+
+.av-prose table {
+  font-size: var(--av-text-sm);
+  display: block;
+  overflow-x: auto;
+}
+
+.av-prose th,
+.av-prose td {
+  padding: var(--av-space-2) var(--av-space-3);
+  border-bottom: 1px solid var(--av-border);
+  text-align: start;
+}
+
+.av-prose th {
+  font-weight: 600;
+}
+
+.av-prose code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  background: rgb(var(--av-fg-rgb) / 0.06);
+  border-radius: 4px;
+}
+
+.av-prose pre {
+  padding: var(--av-space-4);
+  overflow-x: auto;
+  background: rgb(var(--av-fg-rgb) / 0.06);
+  border-radius: var(--av-radius-box);
+}
+
+.av-prose--sm {
+  font-size: var(--av-text-sm);
+}
+
+.av-prose--lg {
+  font-size: var(--av-text-lg);
+}
+
+.av-rte {
+  font-size: var(--av-text-md);
+  line-height: 1.6;
+}
+
+.av-rte > * + * {
+  margin-top: 1em;
+}
+
+.av-rte a {
+  color: var(--av-accent);
+}
+
+/* Accent styling for bold words in headings: anvil-section-head turns
+   <strong> into <span class="av-accent av-accent--<style>"> */
+.av-accent--color {
+  color: var(--av-accent);
+}
+
+.av-accent--underline {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--av-accent);
+  text-decoration-thickness: 0.12em;
+  text-underline-offset: 0.08em;
+}
+
+.av-accent--highlight {
+  color: inherit;
+  background: linear-gradient(transparent 55%, rgb(var(--av-accent-rgb) / 0.3) 55%);
+}
+
+.av-accent--gradient {
+  background: linear-gradient(90deg, var(--av-accent), var(--av-fg));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Section heading block (anvil-section-head) */
+.av-section-head {
+  display: grid;
+  gap: var(--av-space-3);
+  margin-bottom: var(--av-space-6);
+  text-align: center;
+}
+
+.av-section-head--left {
+  text-align: left;
+  justify-items: start;
+}
+
+.av-section-head--right {
+  text-align: right;
+  justify-items: end;
+}
+
+.av-section-head--center {
+  justify-items: center;
+}
+
+.av-section-head__title {
+  font-size: var(--av-text-3xl);
+}
+
+.av-section-head--xs .av-section-head__title {
+  font-size: var(--av-text-lg);
+}
+
+.av-section-head--sm .av-section-head__title {
+  font-size: var(--av-text-xl);
+}
+
+.av-section-head--md .av-section-head__title {
+  font-size: var(--av-text-2xl);
+}
+
+.av-section-head--xl .av-section-head__title {
+  font-size: var(--av-text-4xl);
+}
+
+.av-section-head__sub {
+  max-width: 60ch;
+  color: var(--av-fg-muted);
+}
+
+@media (min-width: 750px) {
+  .av-section-head {
+    margin-bottom: var(--av-space-7);
+  }
+}
+
+/* 14. Pagination (markup from snippets/anvil-pagination) -------------------- */
+.av-pagination {
+  margin-top: var(--av-space-7);
+}
+
+.av-pagination__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--av-space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.av-pagination__link,
+.av-pagination__current,
+.av-pagination__gap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--av-control-h);
+  min-height: var(--av-control-h);
+  padding: 0 var(--av-space-3);
+  color: var(--av-fg);
+  text-decoration: none;
+  font-size: var(--av-text-sm);
+  font-weight: 500;
+  border: 1px solid var(--av-border);
+  border-radius: var(--av-radius-button);
+}
+
+.av-pagination__link:hover {
+  border-color: var(--av-fg);
+}
+
+.av-pagination__current {
+  color: var(--av-btn-fg);
+  background: var(--av-btn-bg);
+  border-color: var(--av-btn-border);
+}
+
+.av-pagination__gap {
+  border-color: transparent;
+  color: var(--av-fg-muted);
+}
+
+/* 15. Form messages --------------------------------------------------------- */
+.av-form-message {
+  display: flex;
+  gap: var(--av-space-3);
+  align-items: flex-start;
+  padding: var(--av-space-3) var(--av-space-4);
+  font-size: var(--av-text-sm);
+  line-height: 1.4;
+  color: var(--av-fg);
+  background: rgb(var(--av-fg-rgb) / 0.05);
+  border: 1px solid var(--av-border);
+  border-radius: var(--av-radius-input);
+}
+
+.av-form-message__icon {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.av-form-message--success {
+  color: var(--av-success);
+  border-color: currentColor;
+  background: transparent;
+}
+
+.av-form-message--error {
+  color: var(--av-error);
+  border-color: currentColor;
+  background: transparent;
+}
+
+.av-form-message ul {
+  margin: var(--av-space-1) 0 0;
+  padding-inline-start: 1.2em;
+}
+
+.av-form-message:empty {
+  display: none;
+}
+
+/* 16. Country rule overlay (snippets/anvil-security) ------------------------ */
+.av-country-block {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: var(--av-gutter);
+  overflow: auto;
+}
+
+.av-country-block__card {
+  width: 100%;
+  max-width: 32rem;
+  text-align: center;
+  display: grid;
+  gap: var(--av-space-4);
+  justify-items: center;
+}
+
+.av-country-block__logo {
+  width: var(--av-logo-w);
+  height: auto;
+}
+
+.av-country-block__title {
+  font-family: var(--av-font-heading);
+  font-weight: var(--av-heading-weight);
+  font-size: var(--av-text-2xl);
+  line-height: 1.1;
+}
+
+.av-is-blocked body > :not(.av-country-block) {
+  display: none;
+}
+
+/* 17. Breakpoint utilities -------------------------------------------------- */
+@media (min-width: 480px) {
+  .av-hide--sm-up {
+    display: none;
+  }
+}
+
+@media (min-width: 990px) {
+  .av-hide--lg-up {
+    display: none;
+  }
+}
+
+@media (max-width: 989px) {
+  .av-hide--lg-down {
+    display: none;
+  }
+}
+
+@media (min-width: 1200px) {
+  .av-hide--xl-up {
+    display: none;
+  }
+}
+
+@media print {
+  .av-skip-link,
+  .av-editor-note,
+  .av-device-note {
+    display: none;
+  }
+}

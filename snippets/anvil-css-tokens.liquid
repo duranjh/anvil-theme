@@ -1,0 +1,102 @@
+{% doc %}
+  Every settings-derived design token, as CSS custom properties.
+
+  Rendered twice by the layouts:
+  - `{% render 'anvil-css-tokens', part: 'preload' %}` in <head> outputs only
+    the <link rel="preload"> tags for the fonts this snippet will declare.
+  - `<style>{% render 'anvil-css-tokens' %}</style>` outputs the @font-face
+    rules, one rule set per colour scheme (.av-scheme--<id>, the body scheme
+    repeated on :root) and the :root type/space/shape/motion tokens.
+
+  Fixed tokens that do not depend on settings (space scale, easing, fluid type
+  formulas) live in assets/anvil-base.css. Output here stays under 6 KB.
+
+  @param {string} [part] - 'preload' for the preload tags; anything else for CSS
+{% enddoc %}
+{%- liquid
+  assign heading_font = settings.font_heading
+  assign body_font = settings.font_body
+  assign heading_weight = heading_font.weight
+  if settings.font_heading_weight != 'default'
+    assign heading_variant = heading_font | font_modify: 'weight', settings.font_heading_weight
+    if heading_variant
+      assign heading_font = heading_variant
+      assign heading_weight = heading_variant.weight
+    endif
+  endif
+  assign body_bold = body_font | font_modify: 'weight', 'bold'
+  if body_bold.family == heading_font.family and body_bold.weight == heading_font.weight
+    assign body_bold = nil
+  endif
+
+  assign custom_heading = false
+  assign custom_body = false
+  if settings.use_custom_fonts
+    if settings.custom_heading_font_url != blank and settings.custom_heading_font_family != blank
+      assign custom_heading = true
+    endif
+    if settings.custom_body_font_url != blank and settings.custom_body_font_family != blank
+      assign custom_body = true
+    endif
+  endif
+  assign custom_heading_family = settings.custom_heading_font_family | remove: '"' | strip
+  assign custom_body_family = settings.custom_body_font_family | remove: '"' | strip
+  assign custom_heading_url = settings.custom_heading_font_url | strip
+  assign custom_body_url = settings.custom_body_font_url | strip
+-%}
+{%- if part == 'preload' -%}
+  {%- if custom_heading -%}
+    {{ custom_heading_url | preload_tag: as: 'font', type: 'font/woff2' }}
+  {%- elsif heading_font.system? == false -%}
+    {{ heading_font | font_url | preload_tag: as: 'font', type: 'font/woff2' }}
+  {%- endif -%}
+  {%- if custom_body -%}
+    {{ custom_body_url | preload_tag: as: 'font', type: 'font/woff2' }}
+  {%- elsif body_font.system? == false -%}
+    {{ body_font | font_url | preload_tag: as: 'font', type: 'font/woff2' }}
+  {%- endif -%}
+{%- else -%}
+  {%- if custom_heading -%}
+    @font-face{font-family:"{{ custom_heading_family }}";src:url("{{ custom_heading_url }}") format("woff2");font-weight:100 900;font-display:swap}
+  {%- else -%}
+    {{ heading_font | font_face: font_display: 'swap' }}
+  {%- endif -%}
+  {%- if custom_body -%}
+    @font-face{font-family:"{{ custom_body_family }}";src:url("{{ custom_body_url }}") format("woff2");font-weight:100 900;font-display:swap}
+  {%- else -%}
+    {{ body_font | font_face: font_display: 'swap' }}
+    {%- if body_bold -%}{{ body_bold | font_face: font_display: 'swap' }}{%- endif -%}
+  {%- endif -%}
+  {%- for scheme in settings.color_schemes -%}
+    {%- assign s = scheme.settings -%}
+    {%- assign brightness = s.background | color_brightness -%}
+    .av-scheme--{{ scheme.id }}{% if scheme.id == settings.body_color_scheme.id %},:root{% endif %}{--av-bg:{{ s.background }};--av-bg-rgb:{{ s.background.rgb }};--av-bg-gradient:{% if s.background_gradient != blank %}{{ s.background_gradient }}{% else %}none{% endif %};--av-fg:{{ s.text }};--av-fg-rgb:{{ s.text.rgb }};--av-fg-muted:{{ s.text_muted }};--av-border:{{ s.border }};--av-accent:{{ s.accent }};--av-accent-rgb:{{ s.accent.rgb }};--av-on-accent:{{ s.on_accent }};--av-btn-bg:{{ s.button }};--av-btn-fg:{{ s.button_text }};--av-btn-border:{{ s.button_border }};--av-btn2-fg:{{ s.text }};--av-btn2-border:{{ s.text }};color-scheme:{% if brightness < 128 %}dark{% else %}light{% endif %}}
+  {%- endfor -%}
+  :root{
+    {%- if custom_heading -%}
+      --av-font-heading:"{{ custom_heading_family }}",{{ heading_font.family }},{{ heading_font.fallback_families }};
+    {%- else -%}
+      --av-font-heading:{{ heading_font.family }},{{ heading_font.fallback_families }};
+    {%- endif -%}
+    {%- if custom_body -%}
+      --av-font-body:"{{ custom_body_family }}",{{ body_font.family }},{{ body_font.fallback_families }};
+    {%- else -%}
+      --av-font-body:{{ body_font.family }},{{ body_font.fallback_families }};
+    {%- endif -%}
+    --av-heading-weight:{{ heading_weight }};--av-heading-style:{{ heading_font.style }};--av-body-weight:{{ body_font.weight }};--av-heading-case:{{ settings.font_heading_case }};--av-heading-spacing:{{ settings.font_heading_letter_spacing | divided_by: 100.0 }}em;--av-heading-scale:{{ settings.font_heading_scale | divided_by: 100.0 }};--av-body-scale:{{ settings.font_body_scale | divided_by: 100.0 }};
+    --av-page-width:{{ settings.page_width }}px;--av-narrow-width:{{ settings.narrow_width }}px;--av-gutter:{{ settings.gutter_mobile }}px;--av-section-gap:{{ settings.section_spacing_mobile }}px;--av-grid-gap:{{ settings.grid_gap }}px;--av-logo-w:{{ settings.logo_width_mobile }}px;--av-drawer-width:{{ settings.drawer_width }}px;
+    --av-radius-button:{{ settings.button_radius }}px;--av-radius-input:{{ settings.input_radius }}px;--av-radius-card:{{ settings.card_radius }}px;--av-radius-media:{{ settings.media_radius }}px;--av-radius-box:{{ settings.container_radius }}px;--av-radius-drawer:{{ settings.drawer_radius }}px;--av-radius-popup:{{ settings.popup_radius }}px;--av-radius-badge:{{ settings.badge_radius }}px;--av-radius-pill:{{ settings.pill_radius }}px;--av-radius-qty:{{ settings.qty_radius }}px;--av-radius-swatch:{% if settings.swatch_shape == 'circle' %}50%{% else %}4px{% endif %};
+    --av-border-w-button:{{ settings.button_border_width }}px;--av-border-w-input:{{ settings.input_border_width }}px;--av-border-w-card:{{ settings.card_border_width }}px;--av-border-w-media:{{ settings.media_border_width }}px;--av-border-w-box:{{ settings.container_border_width }}px;--av-border-w-pill:{{ settings.pill_border_width }}px;--av-border-w-swatch:{{ settings.swatch_border }}px;
+    --av-shadow-rgb:{{ settings.shadow_color.rgb }};--av-shadow-a:{{ settings.shadow_opacity | divided_by: 100.0 }};
+    {%- assign shadow_pairs = 'button:button_shadow,input:input_shadow,card:card_shadow,media:media_shadow,box:container_shadow,drawer:drawer_shadow,popup:popup_shadow' | split: ',' -%}
+    {%- for pair in shadow_pairs -%}
+      {%- assign parts = pair | split: ':' -%}
+      {%- assign level = settings[parts[1]] -%}
+      --av-shadow-{{ parts[0] }}:{% if level == blank or level == 'none' %}none{% else %}var(--av-shadow-{{ level }}){% endif %};
+    {%- endfor -%}
+    --av-badge-sale-bg:{{ settings.badge_sale_bg }};--av-badge-sale-fg:{{ settings.badge_sale_text }};--av-badge-soldout-bg:{{ settings.badge_soldout_bg }};--av-badge-soldout-fg:{{ settings.badge_soldout_text }};--av-badge-custom-bg:{{ settings.badge_custom_bg }};--av-badge-custom-fg:{{ settings.badge_custom_text }};--av-success:{{ settings.color_success }};--av-error:{{ settings.color_error }};--av-rating:{{ settings.color_rating }};--av-scrollbar-color:{{ settings.scrollbar_color }};
+    --av-swatch-size:{{ settings.swatch_size }}px;--av-slider-arrow:{{ settings.slider_arrow_size }}px;--av-slider-dot:{{ settings.slider_dot_size }}px;--av-btn-case:{{ settings.button_text_case }};
+    --av-dur:{% if settings.animations_enabled %}{{ settings.animations_duration }}ms{% else %}0ms{% endif %}
+  }
+  @media (min-width:750px){:root{--av-gutter:{{ settings.gutter_desktop }}px;--av-section-gap:{{ settings.section_spacing_desktop }}px;--av-logo-w:{{ settings.logo_width }}px}}
+{%- endif -%}

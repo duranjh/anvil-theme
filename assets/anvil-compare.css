@@ -1,0 +1,112 @@
+/* anvil-compare.css — <anvil-compare> before/after surfaces. --av-compare-pos (set by the JS from the range) drives
+   the clip and the handle; --av-compare-ratio may be set inline by Liquid. Tokens only; nothing animates. */
+
+anvil-compare {
+  --av-compare-pos: 50%;
+  position: relative;
+  display: block;
+  aspect-ratio: var(--av-compare-ratio, 4 / 3);
+  overflow: hidden;
+  border-radius: var(--av-radius-media);
+  touch-action: pan-y;
+  user-select: none;
+}
+
+anvil-compare[vertical] {
+  touch-action: pan-x;
+}
+
+.av-compare__media {
+  position: absolute;
+  inset: 0;
+}
+
+.av-compare__media > img,
+.av-compare__media > video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.av-compare__media--after {
+  clip-path: inset(0 0 0 var(--av-compare-pos));
+}
+
+anvil-compare[vertical] .av-compare__media--after {
+  clip-path: inset(var(--av-compare-pos) 0 0 0);
+}
+
+.av-compare__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--av-compare-pos);
+  width: 2px;
+  background: var(--av-bg);
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.av-compare__handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  border: var(--av-border-w-button) solid var(--av-border);
+  border-radius: var(--av-radius-pill);
+  background: var(--av-bg);
+  box-shadow: var(--av-shadow-md);
+  translate: -50% -50%;
+}
+
+anvil-compare[vertical] .av-compare__handle {
+  top: var(--av-compare-pos);
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  height: 2px;
+  translate: 0 -50%;
+}
+
+.av-compare__range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+anvil-compare:has(.av-compare__range:focus-visible) .av-compare__handle::after {
+  outline: 2px solid var(--av-accent);
+  outline-offset: 2px;
+}
+
+.av-compare__label {
+  position: absolute;
+  top: var(--av-space-3);
+  padding: var(--av-space-1) var(--av-space-3);
+  border-radius: var(--av-radius-badge);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  font-size: var(--av-text-xs);
+  pointer-events: none;
+}
+
+.av-compare__label--before {
+  inset-inline-start: var(--av-space-3);
+}
+
+.av-compare__label--after {
+  inset-inline-end: var(--av-space-3);
+}
+
+anvil-compare[vertical] .av-compare__label--after {
+  top: auto;
+  bottom: var(--av-space-3);
+}

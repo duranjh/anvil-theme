@@ -1,0 +1,98 @@
+{%- liquid
+  assign s = section.settings
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'main-customers-register' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="av-customers-register">
+      <h1 class="av-customers-register__title">{{ s.heading | escape }}</h1>
+      {%- form 'create_customer', id: 'anvil-register-form', class: 'av-customers-register__form' -%}
+        {%- if form.errors -%}
+          <div class="av-customers-register__notice av-form-message av-form-message--error" role="alert">{{ form.errors | default_errors }}</div>
+        {%- endif -%}
+        <div class="av-customers-register__row">
+          <div class="av-customers-register__field av-field">
+            <label class="av-customers-register__label av-field__label" for="anvil-register-first">First name</label>
+            <input class="av-customers-register__input av-field__input" id="anvil-register-first" type="text" name="customer[first_name]" value="{{ form.first_name }}" autocomplete="given-name">
+          </div>
+          <div class="av-customers-register__field av-field">
+            <label class="av-customers-register__label av-field__label" for="anvil-register-last">Last name</label>
+            <input class="av-customers-register__input av-field__input" id="anvil-register-last" type="text" name="customer[last_name]" value="{{ form.last_name }}" autocomplete="family-name">
+          </div>
+        </div>
+        <div class="av-customers-register__field av-field">
+          <label class="av-customers-register__label av-field__label" for="anvil-register-email">Email <span aria-hidden="true">*</span></label>
+          <input class="av-customers-register__input av-field__input" id="anvil-register-email" type="email" name="customer[email]" value="{{ form.email }}" autocomplete="email" autocorrect="off" autocapitalize="off" required aria-required="true">
+        </div>
+        <div class="av-customers-register__field av-field">
+          <label class="av-customers-register__label av-field__label" for="anvil-register-password">Password <span aria-hidden="true">*</span></label>
+          <input class="av-customers-register__input av-field__input" id="anvil-register-password" type="password" name="customer[password]" autocomplete="new-password" required aria-required="true">
+        </div>
+        <div class="av-customers-register__actions">
+          {% render 'anvil-button', label: 'Create account', style: 'primary', size: 'lg', full: true, type: 'submit' %}
+        </div>
+      {%- endform -%}
+      <p class="av-customers-register__alt">Already have an account? <a class="av-customers-register__link" href="{{ routes.account_login_url }}">Log in</a></p>
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+  .av-customers-register {
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .av-customers-register__title {
+    margin: 0 0 var(--av-space-4);
+    font-size: var(--av-text-2xl);
+  }
+  .av-customers-register__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-3);
+  }
+  .av-customers-register__row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-3);
+  }
+  
+  
+  
+  
+  .av-customers-register__actions {
+    margin-top: var(--av-space-2);
+  }
+  .av-customers-register__alt {
+    margin: var(--av-space-4) 0 0;
+    font-size: var(--av-text-sm);
+  }
+  .av-customers-register__link {
+    color: inherit;
+    text-underline-offset: 0.2em;
+  }
+  @media (min-width: 480px) {
+    .av-customers-register__row {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Customer register",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Customer register" },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Create an account"
+    }
+  ]
+}
+{% endschema %}

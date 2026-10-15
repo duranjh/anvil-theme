@@ -1,0 +1,325 @@
+{%- liquid
+  assign s = section.settings
+  assign multi = false
+  if section.blocks.size > 1
+    assign multi = true
+  endif
+-%}
+{%- capture items -%}
+  {%- for block in section.blocks -%}
+    <div class="av-announcement__item" data-slider-slide role="group" aria-roledescription="slide" aria-label="{{ forloop.index }} / {{ forloop.length }}" {{ block.shopify_attributes }}>
+      {%- case block.type -%}
+        {%- when 'text' -%}
+          {%- if block.settings.link != blank -%}
+            <a class="av-announcement__text av-announcement__link" href="{{ block.settings.link }}">{{ block.settings.text }}</a>
+          {%- else -%}
+            <div class="av-announcement__text">{{ block.settings.text }}</div>
+          {%- endif -%}
+        {%- when 'code' -%}
+          {%- if block.settings.code != blank -%}
+            <div class="av-announcement__offer">
+              {%- if block.settings.text != blank -%}<span class="av-announcement__offer-text">{{ block.settings.text | escape }}</span>{%- endif -%}
+              <code class="av-announcement__code">{{ block.settings.code | escape }}</code>
+              <button type="button" class="av-announcement__copy av-js-only" data-anvil-copy="{{ block.settings.code | escape }}" data-anvil-copied="{{ block.settings.copied_label | escape }}">
+                <span class="av-announcement__copy-label">{{ block.settings.copy_label | escape }}</span>
+              </button>
+              <span class="av-visually-hidden" role="status" aria-live="polite" data-anvil-copy-status></span>
+            </div>
+          {%- endif -%}
+        {%- when 'socials' -%}
+          <div class="av-announcement__socials">
+            {%- if block.settings.label != blank -%}<span class="av-announcement__offer-text">{{ block.settings.label | escape }}</span>{%- endif -%}
+            {%- if settings.social_instagram_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_instagram_url }}" rel="noopener">Instagram</a>{%- endif -%}
+            {%- if settings.social_tiktok_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_tiktok_url }}" rel="noopener">TikTok</a>{%- endif -%}
+            {%- if settings.social_facebook_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_facebook_url }}" rel="noopener">Facebook</a>{%- endif -%}
+            {%- if settings.social_youtube_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_youtube_url }}" rel="noopener">YouTube</a>{%- endif -%}
+            {%- if settings.social_x_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_x_url }}" rel="noopener">X</a>{%- endif -%}
+            {%- if settings.social_pinterest_url != blank -%}<a class="av-announcement__pill" href="{{ settings.social_pinterest_url }}" rel="noopener">Pinterest</a>{%- endif -%}
+          </div>
+      {%- endcase -%}
+    </div>
+  {%- endfor -%}
+{%- endcapture -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-announcement-bar' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if multi -%}
+      {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      <anvil-slider class="av-announcement av-announcement--size-{{ s.text_size }} av-announcement--multi{% if s.autoplay > 0 %} av-announcement--autoplay{% endif %}" per-view="1" per-view-desktop="1" peek="0" autoplay="{{ s.autoplay }}" loop{% if s.show_arrows %} arrows{% endif %}>
+        <div class="av-announcement__track" data-slider-track>
+          {{ items }}
+        </div>
+      </anvil-slider>
+      <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+    {%- else -%}
+      <div class="av-announcement av-announcement--size-{{ s.text_size }}">
+        <div class="av-announcement__track">
+          {{ items }}
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+</div>
+{% javascript %}
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-anvil-copy]');
+    if (!button || !navigator.clipboard) return;
+    const status = button.parentElement.querySelector('[data-anvil-copy-status]');
+    navigator.clipboard.writeText(button.dataset.anvilCopy).then(() => {
+      button.classList.add('is-copied');
+      if (status) status.textContent = button.dataset.anvilCopied || '';
+      window.setTimeout(() => {
+        button.classList.remove('is-copied');
+        if (status) status.textContent = '';
+      }, 2000);
+    });
+  });
+{% endjavascript %}
+{% stylesheet %}
+  .av-announcement {
+    display: block;
+    text-align: center;
+    font-size: var(--av-text-sm);
+    line-height: 1.4;
+  }
+  .av-announcement--size-md {
+    font-size: var(--av-text-md);
+  }
+  .av-announcement__track {
+    display: flex;
+    gap: var(--av-space-4);
+  }
+  .av-announcement--multi .av-announcement__track {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .av-announcement--multi .av-announcement__track::-webkit-scrollbar {
+    display: none;
+  }
+  .av-announcement--multi {
+    --av-slider-arrow: 28px;
+    padding-inline: 40px;
+  }
+  .av-announcement--autoplay {
+    padding-inline-end: 76px;
+  }
+  .av-announcement--multi.is-static {
+    padding-inline: 0;
+  }
+  .av-announcement--multi .av-slider__arrow,
+  .av-announcement--multi .av-slider__pause {
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+  }
+  .av-announcement--multi .av-slider__pause {
+    top: 50%;
+    inset-block-end: auto;
+    inset-inline-end: 40px;
+    width: 28px;
+    height: 28px;
+    translate: 0 -50%;
+  }
+  .av-announcement__item {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--av-space-2);
+    min-height: 1.5em;
+    padding-inline: var(--av-space-2);
+  }
+  .av-announcement__text p {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .av-announcement__link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+  .av-announcement__offer,
+  .av-announcement__socials {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--av-space-2);
+  }
+  .av-announcement__code {
+    font-family: inherit;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.1em var(--av-space-2);
+    border: var(--av-border-w-button) solid var(--av-border);
+    border-radius: var(--av-radius-badge);
+  }
+  .av-announcement__copy {
+    appearance: none;
+    background: var(--av-btn-bg);
+    color: var(--av-btn-fg);
+    border: var(--av-border-w-button) solid var(--av-btn-border);
+    border-radius: var(--av-radius-pill);
+    font: inherit;
+    font-size: var(--av-text-xs);
+    padding: 0.2em var(--av-space-3);
+    min-height: 24px;
+    cursor: pointer;
+  }
+  .av-announcement__copy.is-copied {
+    background: var(--av-accent);
+    color: var(--av-on-accent);
+    border-color: var(--av-accent);
+  }
+  .av-announcement__pill {
+    color: inherit;
+    text-decoration: none;
+    padding: 0.1em var(--av-space-3);
+    border: var(--av-border-w-button) solid var(--av-border);
+    border-radius: var(--av-radius-pill);
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .av-announcement__pill:hover {
+    text-decoration: underline;
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Announcement bar",
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Announcement bar" },
+    {
+      "type": "select",
+      "id": "text_size",
+      "label": "Text size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" }
+      ],
+      "default": "sm"
+    },
+    {
+      "type": "range",
+      "id": "autoplay",
+      "label": "Rotate every",
+      "info": "Only applies with two or more bars. 0 turns rotation off.",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 5
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true
+    }
+  ],
+  "max_blocks": 6,
+  "blocks": [
+    {
+      "type": "text",
+      "name": "Text",
+      "settings": [
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "<p>Example announcement — replace this with your own message</p>"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "name": "Discount code",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text before the code",
+          "default": "Use code"
+        },
+        {
+          "type": "text",
+          "id": "code",
+          "label": "Discount code",
+          "info": "Enter a code that exists under Discounts in your admin. The bar shows the code; it does not create or apply the discount.",
+          "default": "EXAMPLECODE"
+        },
+        {
+          "type": "text",
+          "id": "copy_label",
+          "label": "Copy button label",
+          "default": "Copy"
+        },
+        {
+          "type": "text",
+          "id": "copied_label",
+          "label": "Copied confirmation",
+          "default": "Copied"
+        }
+      ]
+    },
+    {
+      "type": "socials",
+      "name": "Social links",
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "Links come from Theme settings > Social links. Only filled-in links show."
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Follow us"
+        }
+      ]
+    }
+  ],
+  "enabled_on": {
+    "groups": ["header"]
+  },
+  "presets": [
+    {
+      "name": "Announcement bar",
+      "settings": {
+        "pad_top": 8,
+        "pad_bottom": 8,
+        "width": "full"
+      },
+      "blocks": [
+        { "type": "text" }
+      ]
+    }
+  ]
+}
+{% endschema %}

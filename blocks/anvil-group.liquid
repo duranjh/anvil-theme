@@ -1,0 +1,49 @@
+{%- liquid
+  assign s = block.settings
+  assign scheme_id = 'scheme-1'
+  if s.color_scheme != blank
+    assign scheme_id = s.color_scheme.id
+  endif
+-%}
+<div class="av-group av-scheme av-scheme--{{ scheme_id }} av-group--{{ s.layout }} av-group--{{ s.width }} av-group--{{ s.align }}{% if s.border %} av-group--border{% endif %}{% if s.rounded %} av-group--rounded{% endif %}" style="--av-group-gap: {{ s.gap }}px; --av-group-pad: {{ s.pad }}px;" {{ block.shopify_attributes }}>
+  {% content_for 'blocks' %}
+</div>
+{% stylesheet %}
+.av-group{box-sizing:border-box;display:flex;flex-direction:column;width:100%;gap:var(--av-group-gap,16px);padding:var(--av-group-pad,24px);background:var(--av-bg);color:var(--av-fg)}
+.av-group--row{flex-direction:row;flex-wrap:wrap;align-items:center}
+.av-group--row>*{flex:1 1 240px;min-width:0}
+.av-group--narrow{max-width:720px;margin-inline:auto}
+.av-group--compact{max-width:480px;margin-inline:auto}
+.av-group--left{text-align:left;justify-content:flex-start}
+.av-group--center{text-align:center;justify-content:center}
+.av-group--right{text-align:right;justify-content:flex-end}
+.av-group--border{border:var(--av-border-w-card,1px) solid var(--av-border)}
+.av-group--rounded{border-radius:var(--av-radius-card)}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Group",
+  "tag": null,
+  "settings": [
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "layout", "label": "Layout", "options": [ { "value": "stack", "label": "Stacked" }, { "value": "row", "label": "Side by side (wraps on phones)" } ], "default": "stack" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ { "value": "full", "label": "Container" }, { "value": "narrow", "label": "Narrow (720 px)" }, { "value": "compact", "label": "Compact (480 px)" } ], "default": "full" },
+    { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" },
+    { "type": "range", "id": "gap", "label": "Gap between blocks", "min": 0, "max": 64, "step": 4, "unit": "px", "default": 16 },
+    { "type": "range", "id": "pad", "label": "Padding", "min": 0, "max": 64, "step": 4, "unit": "px", "default": 24 },
+    { "type": "checkbox", "id": "border", "label": "Border", "default": false },
+    { "type": "checkbox", "id": "rounded", "label": "Rounded corners", "default": true }
+  ],
+  "blocks": [ { "type": "@theme" }, { "type": "@app" } ],
+  "presets": [
+    {
+      "name": "Group",
+      "blocks": [
+        { "type": "anvil-heading", "settings": { "heading": "Example group heading", "size": "sm" } },
+        { "type": "anvil-text" },
+        { "type": "anvil-button" }
+      ]
+    }
+  ]
+}
+{% endschema %}

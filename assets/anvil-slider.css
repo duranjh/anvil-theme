@@ -1,0 +1,168 @@
+/* anvil-slider.css — <anvil-slider> surfaces, keyed on the markup contract ([data-slider-track], [data-slider-slide])
+   plus the controls the JS creates (.av-slider__arrow, __dots, __dot, __pause, __live). Tokens only (--av-slider-arrow,
+   --av-slider-dot from theme settings); motion gated by prefers-reduced-motion and html[data-animations="off"].
+   Layout works without JS (plain scroll-snap row). */
+
+anvil-slider {
+  --n: var(--av-slider-per-view, 1);
+  --av-slider-gap: var(--av-grid-gap, var(--av-space-4));
+  position: relative;
+  display: block;
+}
+
+@media (min-width: 990px) {
+  anvil-slider {
+    --n: var(--av-slider-per-view-desktop, var(--av-slider-per-view, 1));
+  }
+}
+
+anvil-slider > [data-slider-track] {
+  position: relative;
+  display: flex;
+  gap: var(--av-slider-gap);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+anvil-slider > [data-slider-track]::-webkit-scrollbar {
+  display: none;
+}
+
+anvil-slider > [data-slider-track] > [data-slider-slide] {
+  flex: 0 0 calc((100% - var(--av-slider-peek, 0px) - (var(--n) - 1) * var(--av-slider-gap)) / var(--n));
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+/* arrows */
+.av-slider__arrow {
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--av-slider-track-h, 100%) / 2);
+  inset-inline-start: var(--av-space-2);
+  display: grid;
+  place-items: center;
+  width: var(--av-slider-arrow, 44px);
+  height: var(--av-slider-arrow, 44px);
+  padding: 0;
+  border: var(--av-border-w-button) solid var(--av-border);
+  border-radius: var(--av-radius-button);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  box-shadow: var(--av-shadow-sm);
+  translate: 0 -50%;
+  cursor: pointer;
+}
+
+.av-slider__arrow--next {
+  inset-inline-start: auto;
+  inset-inline-end: var(--av-space-2);
+}
+
+.av-slider__arrow--prev svg {
+  rotate: 180deg;
+}
+
+.av-slider__arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* dots */
+.av-slider__dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--av-slider-dot-gap, var(--av-space-1));
+  margin-top: var(--av-space-4);
+}
+
+.av-slider__dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.av-slider__dot::before {
+  content: "";
+  width: var(--av-slider-dot, 8px);
+  height: var(--av-slider-dot, 8px);
+  border-radius: var(--av-radius-pill);
+  background: var(--av-fg);
+  opacity: 0.3;
+}
+
+.av-slider__dot[aria-current="true"]::before {
+  opacity: 1;
+}
+
+/* pause / play */
+.av-slider__pause {
+  position: absolute;
+  z-index: 1;
+  inset-block-end: var(--av-space-2);
+  inset-inline-end: var(--av-space-2);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: var(--av-border-w-button) solid var(--av-border);
+  border-radius: var(--av-radius-button);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  cursor: pointer;
+}
+
+.av-slider__pause .av-slider__ico-play,
+.av-slider__pause.is-paused .av-slider__ico-pause {
+  display: none;
+}
+
+.av-slider__pause.is-paused .av-slider__ico-play {
+  display: inline;
+}
+
+/* live region */
+.av-slider__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* everything fits: no controls */
+anvil-slider.is-static .av-slider__arrow,
+anvil-slider.is-static .av-slider__dots,
+anvil-slider.is-static .av-slider__pause {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  anvil-slider > [data-slider-track] {
+    scroll-behavior: smooth;
+  }
+
+  .av-slider__dot::before {
+    transition: opacity var(--av-dur) var(--av-ease);
+  }
+}
+
+html[data-animations="off"] anvil-slider > [data-slider-track] {
+  scroll-behavior: auto;
+}
+
+html[data-animations="off"] .av-slider__dot::before {
+  transition: none;
+}

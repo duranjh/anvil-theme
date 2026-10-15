@@ -11,6 +11,9 @@ animations_type, fav_collection
 ## Reference-theme identifiers (Dawn / Horizon / Skeleton vocabulary that must not appear)
 `component-[a-z-]+\.css`, `global\.js`, `pubsub\.js`, PUB_SUB_EVENTS, trapFocus, removeTrapFocus, onKeyUpEscape, getFocusableElements, HTMLUpdateUtility, `page-width`, `spacing-sections`, `motion-reduce`, `scroll-trigger`, `animate--slide-in`, `color-background-1`, `--color-foreground`, `utilities\.css`, `critical\.js`, `theme-editor\.js`, `declarative-shadow`
 
+## How the lint matches
+Tokens in back-ticks are extended regular expressions; everything else is a literal. Matching is case-insensitive. A hyphenated token matches only as a standalone identifier: `scripts/cleanroom-lint.sh` requires a non-identifier character in front of it, so Anvil's own `--av-page-width` and `.av-page-width` are allowed while a bare `.page-width` is not.
+
 ## Structural rules
 - Every file in `sections/`, `snippets/`, `blocks/`, `assets/` is prefixed `anvil-`, `_anvil-` or `main-`, except Shopify-fixed names: `header-group.json`, `footer-group.json`, `overlay-group.json`, `apps.liquid`, `_blocks.liquid`.
 - No file over 256 KB; `config/settings_schema.json` under 512 KB.

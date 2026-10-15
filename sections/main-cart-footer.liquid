@@ -1,0 +1,109 @@
+{%- liquid
+  assign s = section.settings
+  assign checkout_label = 'anvil.cart.checkout' | t
+-%}
+{%- unless cart.empty? -%}
+  <div {% render 'anvil-section-attrs', section: section, type: 'main-cart-footer' %}>
+    <div class="av-section__inner">
+      {% render 'anvil-section-head', section: section %}
+      <div class="av-cart-footer">
+        <div class="av-cart-footer__note">
+          {%- if settings.cart_show_note -%}
+            <div class="av-field">
+              <label class="av-field__label" for="anvil-cart-note">{{ 'anvil.cart.note' | t }}</label>
+              <textarea class="av-field__input av-cart-footer__textarea" id="anvil-cart-note" name="note" form="anvil-cart-form" rows="3" data-anvil-note>{{ cart.note }}</textarea>
+            </div>
+          {%- endif -%}
+        </div>
+        <div class="av-cart-footer__summary">
+          {%- for discount in cart.cart_level_discount_applications -%}
+            <div class="av-cart-footer__row av-cart-footer__row--discount">
+              <span>{{ discount.title | escape }}</span>
+              <span>&minus;{{ discount.total_allocated_amount | money }}</span>
+            </div>
+          {%- endfor -%}
+          <div class="av-cart-footer__row av-cart-footer__row--total">
+            <span>{{ 'anvil.cart.subtotal' | t }}</span>
+            <span data-anvil-subtotal>
+              {%- if settings.show_currency_code -%}{{ cart.total_price | money_with_currency }}{%- else -%}{{ cart.total_price | money }}{%- endif -%}
+            </span>
+          </div>
+          {%- if s.show_tax_note -%}
+            <p class="av-cart-footer__tax av-muted">
+              {%- if cart.taxes_included -%}{{ 'anvil.cart.taxes_included_note' | t }}{%- else -%}{{ 'anvil.cart.taxes_note' | t }}{%- endif -%}
+            </p>
+          {%- endif -%}
+          <div class="av-cart-footer__checkout">
+            {% render 'anvil-button', label: checkout_label, style: 'primary', size: 'lg', full: true, type: 'submit', attrs: 'name="checkout" form="anvil-cart-form"' %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{%- endunless -%}
+{% stylesheet %}
+  .av-cart-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--av-space-5);
+  }
+  .av-cart-footer__note .av-field {
+    max-width: 480px;
+  }
+  .av-cart-footer__textarea {
+    resize: vertical;
+  }
+  .av-cart-footer__summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--av-space-2);
+  }
+  .av-cart-footer__row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--av-space-3);
+    font-size: var(--av-text-sm);
+  }
+  .av-cart-footer__row--total {
+    font-size: var(--av-text-lg);
+    font-weight: 700;
+  }
+  .av-cart-footer__tax {
+    margin: 0;
+    font-size: var(--av-text-xs);
+  }
+  .av-cart-footer__checkout {
+    margin-top: var(--av-space-2);
+  }
+  @media (min-width: 750px) {
+    .av-cart-footer {
+      grid-template-columns: minmax(0, 1fr) 360px;
+      justify-content: space-between;
+      align-items: start;
+    }
+  }
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Cart summary",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "header", "content": "Cart summary" },
+    {
+      "type": "paragraph",
+      "content": "The order note is switched on under Theme settings > Cart."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_tax_note",
+      "label": "Show shipping and taxes note",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,29 @@
+{% doc %}
+  Section heading and subheading from the chassis settings (heading, subheading, head_align, head_size, accent_style).
+  In the heading, <strong> becomes an accent span. Renders nothing when both texts are blank.
+
+  @param {object} section - The section object
+  @param {string} [tag] - Heading element, default 'h2'
+
+  @example
+  {% render 'anvil-section-head', section: section %}
+  {% render 'anvil-section-head', section: section, tag: 'h1' %}
+{% enddoc %}
+{%- liquid
+  assign s = section.settings
+  assign head_tag = tag | default: 'h2'
+  assign head_align = s.head_align | default: 'center'
+  assign head_size = s.head_size | default: 'lg'
+  assign accent_style = s.accent_style | default: 'color'
+  assign accent_open = '<span class="av-accent av-accent--' | append: accent_style | append: '">'
+-%}
+{%- if s.heading != blank or s.subheading != blank -%}
+<div class="av-section-head av-section-head--{{ head_align }} av-section-head--{{ head_size }}">
+  {%- if s.heading != blank -%}
+    <{{ head_tag }} class="av-section-head__title">{{ s.heading | replace: '<strong>', accent_open | replace: '</strong>', '</span>' }}</{{ head_tag }}>
+  {%- endif -%}
+  {%- if s.subheading != blank -%}
+    <div class="av-section-head__sub av-rte">{{ s.subheading }}</div>
+  {%- endif -%}
+</div>
+{%- endif -%}

@@ -1,0 +1,216 @@
+/* anvil-dialog.css — surfaces for <anvil-dialog> (native <dialog>) and <anvil-drawer>, plus the scroll lock that
+   anvil-dom.js toggles. Tokens only; only transform/opacity animate, gated by prefers-reduced-motion and
+   html[data-animations="off"]. --av-overlay-rgb / --av-overlay-a may be set by the tokens snippet. */
+
+html.av-scroll-locked {
+  overflow: hidden;
+  padding-inline-end: var(--av-scrollbar-w, 0px);
+}
+
+/* ---------- dialog ---------- */
+.av-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(var(--av-dialog-width, 560px), calc(100% - 2 * var(--av-gutter)));
+  max-height: calc(100dvh - 2 * var(--av-gutter));
+  margin: auto;
+  padding: var(--av-space-6);
+  border: var(--av-border-w-card) solid var(--av-border);
+  border-radius: var(--av-radius-popup);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  box-shadow: var(--av-shadow-lg);
+  overflow: auto;
+}
+
+.av-dialog::backdrop {
+  background: rgb(var(--av-overlay-rgb, 0 0 0) / var(--av-overlay-a, 0.5));
+}
+
+.av-dialog__close,
+.av-drawer__close {
+  position: absolute;
+  top: var(--av-space-2);
+  inset-inline-end: var(--av-space-2);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--av-radius-button);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.av-dialog__title {
+  margin: 0 var(--av-space-8) var(--av-space-4) 0;
+  font-family: var(--av-font-heading);
+  font-size: var(--av-text-lg);
+  font-weight: var(--av-heading-weight);
+}
+
+@media (max-width: 749px) {
+  .av-dialog--sheet {
+    inset: auto 0 0 0;
+    width: 100%;
+    max-height: 90dvh;
+    margin: 0;
+    border-radius: var(--av-radius-drawer) var(--av-radius-drawer) 0 0;
+  }
+}
+
+/* ---------- drawer ---------- */
+anvil-drawer {
+  display: block;
+}
+
+.av-drawer__overlay,
+.av-drawer__panel {
+  position: fixed;
+  z-index: var(--av-z-drawer, 90);
+  visibility: hidden;
+}
+
+.av-drawer__overlay {
+  inset: 0;
+  background: rgb(var(--av-overlay-rgb, 0 0 0) / var(--av-overlay-a, 0.5));
+  opacity: 0;
+}
+
+.av-drawer__panel {
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--av-drawer-width, 400px), 100%);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  box-shadow: var(--av-shadow-lg);
+  border-start-end-radius: var(--av-radius-drawer);
+  border-end-end-radius: var(--av-radius-drawer);
+  transform: translateX(-100%);
+}
+
+[dir="rtl"] .av-drawer__panel {
+  transform: translateX(100%);
+}
+
+anvil-drawer[side="right"] .av-drawer__panel {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  border-radius: var(--av-radius-drawer) 0 0 var(--av-radius-drawer);
+  transform: translateX(100%);
+}
+
+[dir="rtl"] anvil-drawer[side="right"] .av-drawer__panel {
+  transform: translateX(-100%);
+}
+
+anvil-drawer[side="bottom"] .av-drawer__panel {
+  top: auto;
+  inset-inline: 0;
+  width: 100%;
+  max-height: 90dvh;
+  border-radius: var(--av-radius-drawer) var(--av-radius-drawer) 0 0;
+  transform: translateY(100%);
+}
+
+anvil-drawer[open] .av-drawer__overlay {
+  visibility: visible;
+  opacity: 1;
+}
+
+anvil-drawer[open] .av-drawer__panel {
+  visibility: visible;
+  transform: none;
+}
+
+/* <details> fallback: visible without JS once the summary is opened */
+html.no-js anvil-drawer details[open] > .av-drawer__panel {
+  visibility: visible;
+  transform: none;
+}
+
+.av-drawer__head {
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-3);
+  min-height: 60px;
+  padding: var(--av-space-3) var(--av-space-4);
+  border-bottom: var(--av-border-w-card) solid var(--av-border);
+}
+
+.av-drawer__title {
+  margin: 0;
+  font-family: var(--av-font-heading);
+  font-size: var(--av-text-lg);
+  font-weight: var(--av-heading-weight);
+}
+
+.av-drawer__body {
+  flex: 1 1 auto;
+  padding: var(--av-space-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  container-type: inline-size;
+}
+
+.av-drawer__foot {
+  padding: var(--av-space-4);
+  border-top: var(--av-border-w-card) solid var(--av-border);
+}
+
+.av-drawer__close {
+  position: static;
+  margin-inline-start: auto;
+}
+
+/* ---------- motion ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .av-dialog[open] {
+    animation: av-dialog-in var(--av-dur) var(--av-ease);
+  }
+
+  .av-dialog[open]::backdrop {
+    animation: av-fade-in var(--av-dur) var(--av-ease);
+  }
+
+  .av-drawer__overlay {
+    transition: opacity var(--av-dur) var(--av-ease), visibility 0s linear var(--av-dur);
+  }
+
+  .av-drawer__panel {
+    transition: transform var(--av-dur) var(--av-ease), visibility 0s linear var(--av-dur);
+  }
+
+  anvil-drawer[open] .av-drawer__overlay,
+  anvil-drawer[open] .av-drawer__panel {
+    transition-delay: 0s;
+  }
+}
+
+@keyframes av-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes av-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+html[data-animations="off"] .av-dialog[open],
+html[data-animations="off"] .av-dialog[open]::backdrop {
+  animation: none;
+}
+
+html[data-animations="off"] .av-drawer__overlay,
+html[data-animations="off"] .av-drawer__panel {
+  transition: none;
+}

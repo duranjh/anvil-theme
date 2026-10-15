@@ -1,0 +1,832 @@
+{
+  "settings_schema": {
+    "logo": {
+      "name": "Logo & favicon",
+      "settings": {
+        "logo": {
+          "label": "Logo",
+          "info": "Shown in the header, the footer and the password page. SVG or PNG, at least 300 px wide."
+        },
+        "logo_light": {
+          "label": "Light logo",
+          "info": "Optional. Used over dark backgrounds, for example a transparent header on a dark hero."
+        },
+        "logo_width": {
+          "label": "Logo width on desktop"
+        },
+        "logo_width_mobile": {
+          "label": "Logo width on phones"
+        },
+        "favicon": {
+          "label": "Favicon",
+          "info": "A square image. Shopify resizes it to 32 × 32 px."
+        }
+      }
+    },
+    "colors": {
+      "schemes": {
+        "background": {
+          "label": "Background"
+        },
+        "background_gradient": {
+          "label": "Background gradient",
+          "info": "Optional. Drawn over the background colour."
+        },
+        "text": {
+          "label": "Text"
+        },
+        "text_muted": {
+          "label": "Muted text",
+          "info": "Captions, hints and secondary labels."
+        },
+        "border": {
+          "label": "Borders"
+        },
+        "accent": {
+          "label": "Accent",
+          "info": "Links, highlighted words and focus rings."
+        },
+        "on_accent": {
+          "label": "Text on accent"
+        },
+        "button": {
+          "label": "Button background"
+        },
+        "button_text": {
+          "label": "Button text"
+        },
+        "button_border": {
+          "label": "Button border"
+        }
+      },
+      "name": "Colors",
+      "settings": {
+        "body_color_scheme": {
+          "label": "Page colour scheme",
+          "info": "The page background and anything outside a section. Every section picks its own scheme."
+        },
+        "header__1": {
+          "content": "Badges"
+        },
+        "badge_sale_bg": {
+          "label": "Sale badge"
+        },
+        "badge_sale_text": {
+          "label": "Sale badge text"
+        },
+        "badge_soldout_bg": {
+          "label": "Sold-out badge"
+        },
+        "badge_soldout_text": {
+          "label": "Sold-out badge text"
+        },
+        "badge_custom_bg": {
+          "label": "Custom badge"
+        },
+        "badge_custom_text": {
+          "label": "Custom badge text"
+        },
+        "header__2": {
+          "content": "Status colours"
+        },
+        "color_success": {
+          "label": "Success"
+        },
+        "color_error": {
+          "label": "Error"
+        },
+        "color_rating": {
+          "label": "Rating stars"
+        },
+        "header__3": {
+          "content": "Shadows"
+        },
+        "shadow_color": {
+          "label": "Shadow colour"
+        },
+        "shadow_opacity": {
+          "label": "Shadow opacity"
+        }
+      }
+    },
+    "typography": {
+      "name": "Typography",
+      "settings": {
+        "header__1": {
+          "content": "Headings"
+        },
+        "font_heading": {
+          "label": "Font"
+        },
+        "font_heading_scale": {
+          "label": "Size scale"
+        },
+        "font_heading_weight": {
+          "label": "Weight",
+          "info": "Weights the font family does not offer fall back to its own weight.",
+          "options__1": {
+            "label": "Font's own weight"
+          },
+          "options__2": {
+            "label": "Regular"
+          },
+          "options__3": {
+            "label": "Medium"
+          },
+          "options__4": {
+            "label": "Semibold"
+          },
+          "options__5": {
+            "label": "Bold"
+          },
+          "options__6": {
+            "label": "Extra bold"
+          }
+        },
+        "font_heading_case": {
+          "label": "Letter case",
+          "options__1": {
+            "label": "As typed"
+          },
+          "options__2": {
+            "label": "Uppercase"
+          },
+          "options__3": {
+            "label": "Capitalise Each Word"
+          }
+        },
+        "font_heading_letter_spacing": {
+          "label": "Letter spacing",
+          "info": "As a percentage of the font size."
+        },
+        "header__2": {
+          "content": "Body"
+        },
+        "font_body": {
+          "label": "Font"
+        },
+        "font_body_scale": {
+          "label": "Size scale"
+        },
+        "header__3": {
+          "content": "Custom fonts"
+        },
+        "use_custom_fonts": {
+          "label": "Use custom fonts",
+          "info": "Upload .woff2 files under Content > Files, then paste their URLs here. They replace the fonts picked above."
+        },
+        "custom_heading_font_url": {
+          "label": "Heading font file URL"
+        },
+        "custom_heading_font_family": {
+          "label": "Heading font family name",
+          "info": "Exactly as CSS should see it, for example Brand Sans."
+        },
+        "custom_body_font_url": {
+          "label": "Body font file URL"
+        },
+        "custom_body_font_family": {
+          "label": "Body font family name"
+        }
+      }
+    },
+    "layout": {
+      "name": "Layout",
+      "settings": {
+        "page_width": {
+          "label": "Page width"
+        },
+        "narrow_width": {
+          "label": "Narrow content width",
+          "info": "Used by sections set to Narrow."
+        },
+        "gutter_mobile": {
+          "label": "Side padding on phones"
+        },
+        "gutter_desktop": {
+          "label": "Side padding on desktop"
+        },
+        "section_spacing_desktop": {
+          "label": "Space between sections on desktop",
+          "info": "Sections also have their own top and bottom padding."
+        },
+        "section_spacing_mobile": {
+          "label": "Space between sections on phones"
+        },
+        "grid_gap": {
+          "label": "Grid gap"
+        }
+      }
+    },
+    "buttons": {
+      "name": "Buttons",
+      "settings": {
+        "button_radius": {
+          "label": "Corner radius"
+        },
+        "button_border_width": {
+          "label": "Border width"
+        },
+        "button_shadow": {
+          "label": "Shadow",
+          "options__1": {
+            "label": "None"
+          },
+          "options__2": {
+            "label": "Soft"
+          },
+          "options__3": {
+            "label": "Medium"
+          },
+          "options__4": {
+            "label": "Strong"
+          }
+        },
+        "button_text_case": {
+          "label": "Text case",
+          "options__1": {
+            "label": "As typed"
+          },
+          "options__2": {
+            "label": "Uppercase"
+          }
+        },
+        "button_hover": {
+          "label": "Hover effect",
+          "options__1": {
+            "label": "Darken"
+          },
+          "options__2": {
+            "label": "Lift"
+          },
+          "options__3": {
+            "label": "Outline"
+          },
+          "options__4": {
+            "label": "None"
+          }
+        }
+      }
+    },
+    "inputs": {
+      "name": "Inputs",
+      "settings": {
+        "input_radius": {
+          "label": "Corner radius"
+        },
+        "input_border_width": {
+          "label": "Border width"
+        },
+        "input_shadow": {
+          "label": "Shadow",
+          "options__1": {
+            "label": "None"
+          },
+          "options__2": {
+            "label": "Soft"
+          },
+          "options__3": {
+            "label": "Medium"
+          }
+        }
+      }
+    },
+    "cards": {
+      "name": "Cards",
+      "settings": {
+        "header__1": {
+          "content": "Product cards"
+        },
+        "card_style": {
+          "label": "Style",
+          "options__1": {
+            "label": "Flat"
+          },
+          "options__2": {
+            "label": "Outlined"
+          },
+          "options__3": {
+            "label": "Raised"
+          }
+        },
+        "card_radius": {
+          "label": "Corner radius"
+        },
+        "card_border_width": {
+          "label": "Border width"
+        },
+        "card_shadow": {
+          "label": "Shadow",
+          "options__1": {
+            "label": "None"
+          },
+          "options__2": {
+            "label": "Soft"
+          },
+          "options__3": {
+            "label": "Medium"
+          },
+          "options__4": {
+            "label": "Strong"
+          }
+        },
+        "card_color_scheme": {
+          "label": "Colour scheme"
+        },
+        "card_text_align": {
+          "label": "Text alignment"
+        },
+        "card_image_ratio": {
+          "label": "Image ratio",
+          "options__1": {
+            "label": "Adapt to image"
+          },
+          "options__2": {
+            "label": "Square"
+          },
+          "options__3": {
+            "label": "Portrait"
+          },
+          "options__4": {
+            "label": "Tall"
+          },
+          "options__5": {
+            "label": "Landscape"
+          }
+        },
+        "header__2": {
+          "content": "Collection cards"
+        },
+        "collection_card_style": {
+          "label": "Style",
+          "options__1": {
+            "label": "Flat"
+          },
+          "options__2": {
+            "label": "Outlined"
+          },
+          "options__3": {
+            "label": "Raised"
+          }
+        },
+        "collection_card_image_ratio": {
+          "label": "Image ratio",
+          "options__1": {
+            "label": "Adapt to image"
+          },
+          "options__2": {
+            "label": "Square"
+          },
+          "options__3": {
+            "label": "Portrait"
+          },
+          "options__4": {
+            "label": "Tall"
+          },
+          "options__5": {
+            "label": "Landscape"
+          }
+        },
+        "header__3": {
+          "content": "Blog cards"
+        },
+        "blog_card_style": {
+          "label": "Style",
+          "options__1": {
+            "label": "Flat"
+          },
+          "options__2": {
+            "label": "Outlined"
+          },
+          "options__3": {
+            "label": "Raised"
+          }
+        },
+        "blog_card_image_ratio": {
+          "label": "Image ratio",
+          "options__1": {
+            "label": "Adapt to image"
+          },
+          "options__2": {
+            "label": "Square"
+          },
+          "options__3": {
+            "label": "Portrait"
+          },
+          "options__4": {
+            "label": "Tall"
+          },
+          "options__5": {
+            "label": "Landscape"
+          }
+        }
+      }
+    },
+    "media": {
+      "name": "Media",
+      "settings": {
+        "media_radius": {
+          "label": "Corner radius"
+        },
+        "media_border_width": {
+          "label": "Border width"
+        },
+        "media_shadow": {
+          "label": "Shadow",
+          "options__1": {
+            "label": "None"
+          },
+          "options__2": {
+            "label": "Soft"
+          },
+          "options__3": {
+            "label": "Medium"
+          },
+          "options__4": {
+            "label": "Strong"
+          }
+        }
+      }
+    },
+    "containers": {
+      "name": "Content containers",
+      "settings": {
+        "container_radius": {
+          "label": "Corner radius"
+        },
+        "container_border_width": {
+          "label": "Border width"
+        },
+        "container_shadow": {
+          "label": "Shadow",
+          "options__1": {
+            "label": "None"
+          },
+          "options__2": {
+            "label": "Soft"
+          },
+          "options__3": {
+            "label": "Medium"
+          },
+          "options__4": {
+            "label": "Strong"
+          }
+        }
+      }
+    },
+    "drawers": {
+      "name": "Drawers & popups",
+      "settings": {
+        "header__1": {
+          "content": "Drawers"
+        },
+        "drawer_radius": {
+          "label": "Corner radius"
+        },
+        "drawer_shadow": {
+          "label": "Shadow",
+          "options__1": {
+            "label": "None"
+          },
+          "options__2": {
+            "label": "Soft"
+          },
+          "options__3": {
+            "label": "Medium"
+          },
+          "options__4": {
+            "label": "Strong"
+          }
+        },
+        "drawer_width": {
+          "label": "Width on desktop",
+          "info": "On phones the drawer is always full width."
+        },
+        "header__2": {
+          "content": "Popups"
+        },
+        "popup_radius": {
+          "label": "Corner radius"
+        },
+        "popup_shadow": {
+          "label": "Shadow",
+          "options__1": {
+            "label": "None"
+          },
+          "options__2": {
+            "label": "Soft"
+          },
+          "options__3": {
+            "label": "Medium"
+          },
+          "options__4": {
+            "label": "Strong"
+          }
+        }
+      }
+    },
+    "badges": {
+      "name": "Badges",
+      "settings": {
+        "badge_position": {
+          "label": "Position on cards",
+          "options__1": {
+            "label": "Top left"
+          },
+          "options__2": {
+            "label": "Top right"
+          },
+          "options__3": {
+            "label": "Bottom left"
+          },
+          "options__4": {
+            "label": "Bottom right"
+          }
+        },
+        "badge_radius": {
+          "label": "Corner radius"
+        },
+        "badge_sale_format": {
+          "label": "Sale badge shows",
+          "info": "Percentage and amount are computed from the compare-at price only. Nothing is typed in.",
+          "options__1": {
+            "label": "The word Sale"
+          },
+          "options__2": {
+            "label": "Percentage saved"
+          },
+          "options__3": {
+            "label": "Amount saved"
+          }
+        },
+        "badge_show_soldout": {
+          "label": "Show a sold-out badge"
+        }
+      }
+    },
+    "swatches": {
+      "name": "Colour swatches",
+      "settings": {
+        "swatch_shape": {
+          "label": "Shape",
+          "options__1": {
+            "label": "Circle"
+          },
+          "options__2": {
+            "label": "Square"
+          }
+        },
+        "swatch_size": {
+          "label": "Size"
+        },
+        "swatch_border": {
+          "label": "Border width"
+        },
+        "swatch_fallback_colors": {
+          "label": "Fallback colours",
+          "info": "One per line as Name:#hex, for example Navy:#1B2A4A. Used only where Shopify's option swatches are not set up."
+        }
+      }
+    },
+    "pills": {
+      "name": "Variant pills",
+      "settings": {
+        "pill_radius": {
+          "label": "Corner radius"
+        },
+        "pill_border_width": {
+          "label": "Border width"
+        },
+        "pill_selected_style": {
+          "label": "Selected style",
+          "options__1": {
+            "label": "Filled"
+          },
+          "options__2": {
+            "label": "Thick outline"
+          },
+          "options__3": {
+            "label": "Underline"
+          }
+        }
+      }
+    },
+    "quantity": {
+      "name": "Quantity picker",
+      "settings": {
+        "qty_style": {
+          "label": "Style",
+          "options__1": {
+            "label": "Boxed"
+          },
+          "options__2": {
+            "label": "Pill"
+          },
+          "options__3": {
+            "label": "Minimal"
+          }
+        },
+        "qty_radius": {
+          "label": "Corner radius"
+        }
+      }
+    },
+    "slider": {
+      "name": "Slider controls",
+      "settings": {
+        "slider_arrow_style": {
+          "label": "Arrow style",
+          "options__1": {
+            "label": "Circle"
+          },
+          "options__2": {
+            "label": "Square"
+          },
+          "options__3": {
+            "label": "Plain"
+          }
+        },
+        "slider_arrow_size": {
+          "label": "Arrow size"
+        },
+        "slider_dot_style": {
+          "label": "Dot style",
+          "options__1": {
+            "label": "Dots"
+          },
+          "options__2": {
+            "label": "Bars"
+          },
+          "options__3": {
+            "label": "Numbers"
+          }
+        },
+        "slider_dot_size": {
+          "label": "Dot size"
+        }
+      }
+    },
+    "animations": {
+      "name": "Animations",
+      "settings": {
+        "animations_enabled": {
+          "label": "Enable animations",
+          "info": "Off also stops hover effects and section reveals. Shoppers who ask their device for reduced motion never see animations."
+        },
+        "animations_reveal": {
+          "label": "Default reveal style",
+          "info": "For cards and blocks that animate as they scroll into view. Each section has its own reveal setting.",
+          "options__1": {
+            "label": "None"
+          },
+          "options__2": {
+            "label": "Fade up"
+          },
+          "options__3": {
+            "label": "Fade"
+          },
+          "options__4": {
+            "label": "Zoom"
+          }
+        },
+        "animations_hover_lift": {
+          "label": "Lift cards and buttons on hover"
+        },
+        "animations_duration": {
+          "label": "Duration"
+        }
+      }
+    },
+    "scrollbar": {
+      "name": "Scrollbar",
+      "settings": {
+        "scrollbar_style": {
+          "label": "Style",
+          "info": "Hidden only hides the bar; the page still scrolls.",
+          "options__1": {
+            "label": "Browser default"
+          },
+          "options__2": {
+            "label": "Thin"
+          },
+          "options__3": {
+            "label": "Hidden"
+          }
+        },
+        "scrollbar_color": {
+          "label": "Colour"
+        }
+      }
+    },
+    "social": {
+      "name": "Social links",
+      "settings": {
+        "social_instagram_url": {
+          "label": "Instagram",
+          "info": "Full URL, for example https://www.instagram.com/yourstore"
+        },
+        "social_tiktok_url": {
+          "label": "TikTok"
+        },
+        "social_facebook_url": {
+          "label": "Facebook"
+        },
+        "social_youtube_url": {
+          "label": "YouTube"
+        },
+        "social_x_url": {
+          "label": "X"
+        },
+        "social_pinterest_url": {
+          "label": "Pinterest"
+        }
+      }
+    },
+    "cart": {
+      "name": "Cart",
+      "settings": {
+        "cart_type": {
+          "label": "Cart type",
+          "options__1": {
+            "label": "Drawer"
+          },
+          "options__2": {
+            "label": "Page"
+          }
+        },
+        "cart_open_on_add": {
+          "label": "Open the drawer after adding to cart"
+        },
+        "cart_show_note": {
+          "label": "Show the order note field"
+        },
+        "cart_show_discount_field": {
+          "label": "Show the discount code field"
+        },
+        "cart_show_vendor": {
+          "label": "Show product vendors"
+        },
+        "cart_show_savings": {
+          "label": "Show a savings line",
+          "info": "Savings come from compare-at prices and Shopify discounts only; nothing is typed in."
+        },
+        "cart_empty_link": {
+          "label": "Empty cart button link"
+        }
+      }
+    },
+    "currency": {
+      "name": "Currency",
+      "settings": {
+        "show_currency_code": {
+          "label": "Show the currency code after prices",
+          "info": "For example $20.00 USD."
+        }
+      }
+    },
+    "search": {
+      "name": "Search",
+      "settings": {
+        "predictive_search_enabled": {
+          "label": "Show suggestions while typing"
+        },
+        "predictive_search_show_price": {
+          "label": "Show prices in suggestions"
+        }
+      }
+    },
+    "security": {
+      "name": "Security",
+      "settings": {
+        "block_right_click": {
+          "label": "Block right-click and copying",
+          "info": "Breaks screen readers, translation tools and shoppers copying an address. Off is recommended."
+        },
+        "block_devtools_shortcuts": {
+          "label": "Block developer-tools shortcuts",
+          "info": "Cosmetic only: the tools still open from the browser menu."
+        },
+        "country_block_enabled": {
+          "label": "Use a country rule",
+          "info": "Checks the shopper's Shopify Market country, not their location. Shoppers on a listed market see your message instead of the store."
+        },
+        "country_block_mode": {
+          "label": "Rule",
+          "options__1": {
+            "label": "Block the listed countries"
+          },
+          "options__2": {
+            "label": "Allow only the listed countries"
+          }
+        },
+        "country_block_list": {
+          "label": "Country codes",
+          "info": "Two-letter ISO codes separated by commas, for example US, CA, GB."
+        },
+        "country_block_message": {
+          "label": "Message"
+        }
+      }
+    }
+  }
+}
