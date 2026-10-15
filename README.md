@@ -1,10 +1,37 @@
 # Anvil
 
-Anvil is a free, MIT-licensed Shopify Online Store 2.0 theme for conversion-focused, one-product and small-catalog stores: offer-ladder variant cards, sticky add-to-cart, a cart drawer with a free-shipping bar, gift-at-threshold and upsells, tickers, comparison tables, testimonials, FAQ, timelines and the rest of the sections dropshippers reach for.
+Anvil is a free Shopify theme for stores that sell one product or a small catalog. It has the product page and cart features those stores use: offer cards for packs, quantity tiers, a sticky add-to-cart bar, a cart drawer with a free-shipping bar, gifts and upsells, and sections such as tickers, comparison tables, reviews, FAQ and timelines. It is written from scratch against Shopify's public developer documentation and released under the MIT licence. Anvil is not affiliated with Shopify Inc., Shrine Solutions Ltd, or the "Anvil – Product Options" app.
 
-It is written from scratch against Shopify's public developer documentation: an independent, free, conversion-focused theme. See `NOTICE` for licences and affiliation.
+**Version:** 1.0.0-rc.1, a release candidate (Shopify shows it as 1.0.0). What has been checked on a live store and what is still open: `docs/STATUS.md`, "Release candidate".
 
-**Status:** in development. The chassis, the product page, the cart drawer and the full section library are built and pass the static gates (`npm run lint`, `npm run check`, `npm test`); live-store checks and the release zip are still to come. Install and store setup: `docs/INSTALL.md`; every section, where it can go and its card: `docs/SECTIONS.md`.
+## Install in 5 minutes
+
+You need a Shopify plan that can add themes. On the Starter plan only the Spotlight theme is available. Basic, Grow and Advanced plans hold up to 20 themes (Plus up to 100); if you are at the limit, delete a theme you no longer use first.
+
+1. **Download the zip.** On the [Releases page](https://github.com/duranjh/anvil-theme/releases), download `Anvil-<version>.zip`. Keep it zipped: if your browser unpacked it into a folder, use the `.zip` file, not the folder.
+2. **Open your themes.** In your Shopify admin, go to **Online Store**.
+3. **Upload it.** In the **Draft themes** section, click **Import theme** > **Upload zip file**. Click **Choose File**, pick the zip, then click **Upload**. Anvil arrives as a draft theme. Your live store does not change.
+4. **Customize it.** Next to Anvil, click **Edit theme**. Add your logo, colours and menus. Replace or delete every text that starts with "Example:" and every example image. The full first pass is in [`docs/INSTALL.md`](docs/INSTALL.md#2-first-pass-in-the-theme-editor).
+5. **Publish when ready.** In the theme editor's top bar, click **Publish**, then **Publish** again in the window that opens. Your old theme moves to **Draft themes** with nothing lost, so you can switch back.
+
+Shopify's own help: [Adding themes](https://help.shopify.com/en/manual/online-store/themes/adding-themes), [Publishing themes](https://help.shopify.com/en/manual/online-store/themes/managing-themes/publishing-themes).
+
+## If you are moving from a Shrine-style theme
+
+- Your products, collections, pages, blog posts, menus and discounts live in the Shopify admin. They stay when you change themes.
+- What you built in the old theme's editor does not move to Anvil. Section layouts, the text and images inside sections, theme settings and custom templates belong to that theme. Rebuild those pages in Anvil's theme editor; "What's inside" below lists the sections and blocks.
+- For a product that should use the long sales page, open the product in your admin and set **Theme template** to `landing`.
+- When Anvil is published and checked, delete the old theme copy from **Draft themes**. Also remove any paid third-party sections that are not licensed to your store. Anvil does not need them.
+
+## Set up the conversion features
+
+Anvil shows offers; Shopify grants them. Set up each one in your admin first, so that what the store says is true. More detail: [`docs/INSTALL.md`](docs/INSTALL.md#3-shopify-side-setup-the-theme-relies-on).
+
+- **Offer cards from variants.** Give the product one variant per offer, for example an option "Pack" with the values 1 pack, 2 pack and 3 pack, each with its own price and image. Add a compare-at price only if the item really sold at that price: the card's savings come from it. In the theme editor, select the product page's **Variant picker** block and set **Style** to **Offer cards**. Without **Offer card** blocks, Anvil makes one card per option value; add Offer card blocks to give a card its own label, caption or badge. The `landing` template already uses offer cards.
+- **Quantity tiers.** In **Discounts**, click **Create discount** > **Amount off products**, choose **Automatic discount** and set a **Minimum quantity of items**. Then set the **Quantity selector** block's **Style** to **Tier cards**, add a **Quantity tier** block for each quantity, and copy the discount's percentage into **Discount to show** and its title into **Discount name**. Shopify allows up to 25 active automatic discounts.
+- **Gifts.** For a gift on quantity (the product page's **Gifts on quantity** block) or a gift at a cart total (the **Free gift at threshold** block in the cart drawer, or in the Cart summary when the cart is a page), create an automatic **Buy X get Y** discount. Under **Customer gets**, choose the gift and select **Free**. Anvil adds and removes the gift line; the cart says "Free" only when Shopify priced it at zero.
+- **Free-shipping threshold.** In **Settings** > **Shipping and delivery**, add a free shipping rate with a minimum order price. Enter the same amount in the cart drawer's **Free shipping bar** block (**Free shipping minimum**), and one line per market for other currencies.
+- **Ratings from a review app.** Install a product review app that writes Shopify's standard rating metafields (`reviews.rating` and `reviews.rating_count`). Stars and review counts then show on product cards and in the **Rating stars** block. Stars typed into a section show only with a rating and a link to the review.
 
 ## What's inside
 
@@ -88,9 +115,26 @@ It is written from scratch against Shopify's public developer documentation: an 
 - **Gallery** — swipeable media with variant filtering, a hover magnifier and a pinch-zoom lightbox.
 
 ### Cart
-- **Cart drawer** (or cart page) with line items, subtotals and checkout, plus blocks for a free-shipping bar, a checkpoints bar, a countdown to a real end date, product upsells, a free gift at a spend threshold, text with icon, image, icons with text, payment badges, a discount field, a cart note, a policies checkbox and custom Liquid.
+- **Cart drawer** (or cart page) with line items, subtotals and checkout, plus blocks for a free-shipping bar, a checkpoints bar, a countdown to a real end date, product upsells, a free gift at a spend threshold, text with icon, image, icons with text, payment badges, a discount field, a cart note, a policies checkbox and custom Liquid. With the cart page instead of the drawer, the cart summary has its own policies checkbox and free gift at a spend threshold.
+
+## Performance
+
+Lighthouse, mobile profile, on an unpublished copy of Anvil on a live store, median of three runs (2026-10-15, `docs/LIVE-QA-2026-10-15.md`):
+
+| Page | Performance | Accessibility |
+|---|---|---|
+| Home | 97 | 97 |
+| Product | 96 | 97 |
+| Landing (`product.landing`) | 93 | 97 |
+| Collection | 98 | 97 |
+
+Each page loads only the stylesheets of the sections on it, and stylesheets below the first screen do not block the first paint. The remaining accessibility finding was Shopify's own preview bar, which appears only while a draft theme is previewed. Your own scores depend on your images, apps and content.
 
 ## Documents
+- `docs/INSTALL.md` — install, first editor pass and the Shopify-side setup each offer needs
+- `docs/SECTIONS.md` — every section, where it can be added and its card
+- `docs/STATUS.md` — what has been verified, what is still open
+- `CHANGELOG.md` — what each release contains
 - `docs/SPEC.md` — functional specification (what the merchant can set, what the shopper sees)
 - `docs/ARCHITECTURE.md` — core architecture
 - `docs/DESIGN-money-path.md` — product page and cart drawer design
@@ -98,6 +142,8 @@ It is written from scratch against Shopify's public developer documentation: an 
 - `docs/DECISIONS.md` — architecture decision records
 - `docs/CLEANROOM.md` — how this theme was kept free of third-party code
 - `docs/HONEST.md` — honest-marketing rules the theme enforces by default
+
+For developers: `npm run lint`, `npm run check` and `npm test` are the static gates; `npm run package` builds the zip. A version tag (`v1.0.0`, or `v1.0.0-rc.1` for a pre-release) builds and publishes a GitHub Release (`.github/workflows/release.yml`).
 
 ## Licence
 MIT. See `LICENSE` and `NOTICE`.

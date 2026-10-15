@@ -24,7 +24,7 @@
   if qb_label == blank
     assign qb_label = 'anvil.product.add_to_cart' | t
   else
-    assign qb_label = qb_label | escape
+    assign qb_label = qb_label | escape_once
   endif
   assign qb_title = product.title | escape
 

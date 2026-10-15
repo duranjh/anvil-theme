@@ -12,7 +12,7 @@
   @param {string} [loading] - lazy | eager (default lazy)
   @param {boolean} [priority] - LCP media: eager, fetchpriority high and preload (an image, or the cover of a
     YouTube/Vimeo facade)
-  @param {string} [alt] - Alt text; defaults to the media's own alt (a blank value falls back too)
+  @param {string} [alt] - Alt text; defaults to the media's own alt (a blank value falls back too; escaped here with escape_once)
   @param {boolean} [decorative] - Image: write alt="" because a link or heading around it already names it
   @param {string} [play_label] - YouTube/Vimeo facade: hidden name of the play link (default "Play video")
   @param {string} [fit] - cover | contain (default cover)
@@ -107,7 +107,7 @@
   if alt_text == blank and kind == 'external'
     assign alt_text = 'anvil.media.video' | t
   endif
-  assign alt_text = alt_text | default: '' | escape
+  assign alt_text = alt_text | default: '' | escape_once
   assign img_alt = alt_text
   if decorative
     assign img_alt = ''

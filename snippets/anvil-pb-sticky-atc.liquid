@@ -91,8 +91,8 @@
         </anvil-quantity>
       {%- endif -%}
       <button type="submit" name="add" form="{{ form_id }}" class="av-btn av-btn--{{ btn_style }} av-sticky-bar__btn"{% if variant.available == false %} disabled{% endif %}>
-        <span class="av-btn__label" data-anvil-bind="add_label" data-anvil-label-add="{{ add_label | escape }}" data-anvil-label-sold-out="{{ sold_label | escape }}">
-          {{- label | escape -}}
+        <span class="av-btn__label" data-anvil-bind="add_label" data-anvil-label-add="{{ add_label | escape_once }}" data-anvil-label-sold-out="{{ sold_label | escape_once }}">
+          {{- label | escape_once -}}
         </span>
       </button>
     </div>

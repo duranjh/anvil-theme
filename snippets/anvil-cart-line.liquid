@@ -70,7 +70,7 @@
   {%- endif -%}
   <div class="av-cart-line__info">
     {%- if is_gift -%}
-      <span class="av-cart-line__gift av-badge av-badge--accent">{% render 'anvil-icon', name: 'gift', size: 14 %}{{ gift_text | escape }}</span>
+      <span class="av-cart-line__gift av-badge av-badge--accent">{% render 'anvil-icon', name: 'gift', size: 14 %}{{ gift_text | escape_once }}</span>
     {%- endif -%}
     <a class="av-cart-line__name" href="{{ item.url }}">{{ item.product.title | escape }}</a>
     {%- if vendor_on and item.vendor != blank -%}

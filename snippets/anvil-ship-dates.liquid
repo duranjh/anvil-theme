@@ -161,7 +161,7 @@
                 {%- render 'anvil-icon', name: step_icon, size: 20 -%}
               {%- endif -%}
             </span>
-            <span class="av-ship__label">{{ step_label | escape }}</span>
+            <span class="av-ship__label">{{ step_label | escape_once }}</span>
             <span class="av-ship__date" data-anvil-ship="{{ step_key }}">{{ step_dates }}</span>
           </li>
         {%- endfor -%}

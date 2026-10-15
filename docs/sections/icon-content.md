@@ -37,7 +37,7 @@ Local block `item`, `max_blocks: 12`; `{{ block.shopify_attributes }}` is on eac
 | `icon_image` | image_picker | — | replaces the icon; info: only artwork the merchant may use, never a seal or badge for a certification they do not hold; alt text is read only when the item has no heading or text |
 | `heading` | text | "Example heading — replace with a real feature" | `<h3>`; info: state only what is true, claims need evidence |
 | `text` | richtext | `<p>Example text — explain one real benefit in plain words.</p>` | info: results, ratings, review or customer counts, guarantees, delivery and return promises must match the product, real reviews and policies |
-| `button_label` | text | "Learn more" | info: shows only when the item has a link |
+| `button_label` | text | blank | info: leave empty and the heading becomes the link; a label shows only when the item has a link and should say where it goes (for example "Read our shipping policy") |
 | `button_link` | url | — | |
 
 Preset "Icons with content": heading "Example heading — what to **expect**" and three items (sparkles, leaf, chat bubble) whose headings start with "Example:" and whose texts say what to replace; the third carries a "Contact us" label that appears once a link is added. An unedited publish makes no claim.
@@ -82,3 +82,6 @@ No `@app` block: app content is not plausible inside a feature card (DESIGN-sect
 - Setting ids follow the theme-wide vocabulary (CONVENTIONS §5; DECISIONS 82–100); the tables above use the new ids: `card_align` → `text_align`, `image` → `icon_image`. Saved templates were migrated.
 - Uses the shared pieces: card boxes from `snippets/anvil-surface` and `.av-surface` (DECISIONS 83); columns from the shared `.av-grid` rule (DECISIONS 82); eager or lazy media from `snippets/anvil-above-fold` (DECISIONS 85); the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87); icon frames from `.av-icon-frame` (DECISIONS 92); a hidden fallback heading through `anvil-section-head` (DECISIONS 84).
 - Availability: `disabled_on` groups ["header","custom.overlay"] (CONVENTIONS §4, DECISIONS 100).
+
+## Honest-defaults pass (2026-10-15)
+- `button_label` has no default: with a link and no label the heading is the link, which always names the destination (WCAG 2.4.4). A default such as "See what's included" was wrong for most links and the "Example:" sweep would not catch it (DECISIONS 142, superseding that part of 125). The contact page's third item keeps its own "Contact us".

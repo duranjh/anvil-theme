@@ -33,7 +33,7 @@ Local block `card`. `{{ block.shopify_attributes }}` is on each `<li>`.
 | `image` | image_picker | — | its `info` asks for the real product or result and for images the merchant may use; the alt text comes from the image's own alt in Files |
 | `heading` | text | "Example feature — replace me" | its `info` covers claims such as "best-selling" or "clinically proven" |
 | `text` | richtext | `<p>Example text — describe one real benefit in a sentence or two.</p>` | its `info` says results, guarantees and delivery promises must match the store's policies |
-| `button_label` | text | "Learn more" | its `info` says the button only shows when the card has a link |
+| `button_label` | text | blank | its `info` says that left empty the heading becomes the link, that a label only shows when the card has a link, and to say where it goes (for example "See the size guide") |
 | `button_link` | url | — | its `info` says the link shows on the button, or on the heading when the button label is empty, and that a card with neither shows no link |
 
 The preset "Feature grid" ships an example heading ("Example heading — what makes it **different**") and three cards. Each card heading starts with "Example feature —" and each text starts with "Example text —". The cards have no links, so no button shows until the merchant adds one.
@@ -84,3 +84,6 @@ Nine minor findings, all applied: button links named with the card heading (`ari
 - Setting ids follow the theme-wide vocabulary (CONVENTIONS §5; DECISIONS 82–100); the tables above use the new ids: `card_align` → `text_align`, `ratio` → `image_ratio`. Saved templates were migrated.
 - Uses the shared pieces: card boxes from `snippets/anvil-surface` and `.av-surface` (DECISIONS 83); columns from the shared `.av-grid` rule (DECISIONS 82); eager or lazy media from `snippets/anvil-above-fold` (DECISIONS 85); the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87); a hidden fallback heading through `anvil-section-head` (DECISIONS 84).
 - Availability: `disabled_on` groups ["header","custom.overlay"] (CONVENTIONS §4, DECISIONS 100).
+
+## Honest-defaults pass (2026-10-15)
+- `button_label` has no default: with a link and no label the heading is the link, which always names the destination (WCAG 2.4.4). A default such as "See how it works" was wrong for most links and the "Example:" sweep would not catch it (DECISIONS 142, superseding that part of 125). The `aria-labelledby` pairing with the card heading stays for typed labels, so repeated labels are still told apart.

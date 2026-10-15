@@ -3,6 +3,33 @@
 All notable changes to Anvil are recorded here. The format follows Keep a Changelog; versions follow SemVer.
 
 ## [Unreleased]
+
+## [1.0.0-rc.1] - 2026-10-15
+
+First release candidate of Anvil 1.0.0, published as a GitHub pre-release for review before the final 1.0.0. Inside Shopify the theme shows version 1.0.0; the download is `Anvil-1.0.0-rc.1.zip`. Install steps: README "Install in 5 minutes".
+
+### What ships
+- **Product page.** A media gallery beside a buy column that you build from 38 block types plus app blocks. The gallery swipes, shows the selected variant's images first, magnifies on hover and opens a full-screen viewer with pinch zoom. The buy box still works with JavaScript off and with no blocks added.
+- **Product blocks.** Variant picker as dropdowns, pills with colour swatches, or offer cards (one card per pack or option, with its own image, label and savings from the compare-at price). Quantity stepper or tier cards tied to an automatic discount. Buy buttons with optional express checkout, and a sticky add-to-cart bar. Price with compare-at savings and unit price; stock and urgency lines from Shopify's tracked inventory. Rating stars, reviews and badges. Estimated delivery dates and shipping checkpoints. Custom fields saved on the order line. Size chart, popups and collapsible tabs. Discount code, bundle offer, upsells, complementary products and gifts on quantity. Trust, image, video and text blocks. The Featured product section offers the same blocks anywhere on the store, except the sticky bar and quantity gifts.
+- **Cart drawer.** Opens after add to cart, with quantity steppers, remove, note, discount field and checkout. 16 blocks: line items, subtotals, checkout, free-shipping bar (with amounts per market), checkpoints bar, countdown to a real end date, upsells, a gift at a cart total, text with icon, image, icons with text, payment badges, discount field, note, policies checkbox and custom Liquid. A cart page can be used instead (Theme settings > Cart); its summary has its own policies checkbox and gift at a cart total.
+- **59 sections.** 54 you add in the theme editor, from heroes, banners and tickers to comparison tables, reviews, FAQ, bundles, pricing, newsletter and a promo popup (the full list is in the README), plus the Apps section. Four more the theme renders itself: the cart drawer, the cart count, search suggestions and the cart upsell row. 19 template sections cover the product, collection, search, cart, blog, article, page, 404, password and customer account pages.
+- **Templates.** 23 in all: a finished homepage (12 sections), a long product sales page (`product.landing`, 19 sections) and the standard product page, contact, FAQ and track-order pages, a 404 page with featured products, collection, collections list, search, cart, blog, article, page, password, gift card and seven customer account pages. Example text starts with "Example:" so it is easy to find and replace.
+- **Theme settings.** 117 settings in 23 groups: logo, colours and colour schemes, typography, layout, buttons, inputs, cards, media, content containers, drawers and popups, badges, colour swatches, variant pills and dropdowns, quantity picker, slider controls, animations, scrollbar, social links, cart, currency, search and security. Two style presets: Anvil and Anvil Dark.
+- **Honest defaults.** Timers count down to a real end date the merchant enters. Stock lines read Shopify's tracked inventory and show nothing when it is not tracked. Savings come from compare-at prices or Shopify discounts, never from a typed number. "Free" shows only when Shopify priced a line at zero. Stars and review counts come from review-app metafields or carry a link to the review. "Most popular" badges need a "backed by sales data" tick. No platform logos ship. Settings that could be misused say so in the editor (`docs/HONEST.md`).
+- **Performance and accessibility.** Each page loads only the stylesheets of the sections on it, and stylesheets below the first screen do not block the first paint. Lighthouse, mobile, on an unpublished copy on a live store (median of three runs, 2026-10-15): performance home 97, product 96, landing 93, collection 98; accessibility 97 on all four. Keyboard use, visible focus, reduced motion and one H1 per page are built in.
+- **Shopify features.** Online Store 2.0 JSON templates, section groups for header, footer and overlays, theme blocks and app blocks. Every storefront string is in `locales/en.default.json`.
+- **Text shows as typed.** Translated text and the plain text you type in settings are escaped exactly once, in page text, page titles, labels for screen readers and messages the scripts write, so an apostrophe or an ampersand never shows up as `&#39;` or `&amp;`.
+- **Repository tooling** (not in the zip). Theme Check with zero findings, clean-room and asset lints, schema, template and size checks, unit tests for the gift engine and delivery dates, and a release workflow that builds this zip from a version tag.
+
+### Known limits
+- Not yet checked in the live theme editor: editing the cart drawer's blocks, nested theme blocks against block limits, the promo popup's signup block and settings that show or hide other settings. `docs/STATUS.md` "Release candidate" lists these and the other open store checks.
+- Hero sections take images, not background video.
+- English storefront text only.
+
+## Development log (before 1.0.0-rc.1)
+
+The detailed record of the build passes that led to 1.0.0-rc.1, kept as written. It is not part of any release's notes.
+
 ### Changed (consistency and completeness fix pass, 2026-10-15)
 - One vocabulary for shared settings across every section (CONVENTIONS §4): columns (`cols_desktop` / `cols_mobile`, one tablet rule), image shape (`image_ratio` with one label set and "Same as theme cards"), card style, row style, button style (a plain text link never draws an arrow), alignment, spacing, content box, content width, slider arrows and dots, auto-advance (0–10 s), uploaded-video autoplay, review fields, hotspot dots, icons, marquee speed and link names. Saved templates and presets were migrated; DECISIONS 82–108.
 - Shared pieces replace per-section copies: the `.av-grid` column rule, `.av-surface` card boxes, `.av-icon-frame`, `.av-hover-zoom`, `.av-editor-empty`, the accordion stylesheet, and the snippets `anvil-surface`, `anvil-above-fold`, `anvil-main-heading-tag`, `anvil-editor-empty`, `anvil-typed-date`, `anvil-slider-attrs`, `anvil-product-row` and `anvil-quick-buy`. Related products no longer copies featured collection's stylesheet; product videos and shoppable image share one add-to-cart form.

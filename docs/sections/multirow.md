@@ -35,7 +35,7 @@ Local block `row`. `{{ block.shopify_attributes }}` is on each row `<li>`.
 | `eyebrow` | text | — | the short label above the heading. `info`: words like "Best seller" or "New" only where they are true |
 | `heading` | inline_richtext | "Example row heading — replace it" | `<strong>` becomes the accent span in the section's own `accent_style`, the same way `anvil-section-head` does it. `info` covers claims such as "best-selling" or "clinically proven" |
 | `text` | richtext | `<p>Example text — describe one feature, material or step in your own words.</p>` | `info`: results, guarantees and delivery promises must match the product and the store's policies |
-| `button_label` | text | "Learn more" | `info`: the button shows only once the row has a link |
+| `button_label` | text | "Example: Read the full story" | `info`: the button shows only once the row has a link; replace the example with words that say where it goes (for example "See how it is made") |
 | `button_link` | url | — | |
 
 The preset "Multirow" ships the heading "Example heading — how it **works**" and three rows. Their eyebrows read "Example — step 1/2/3", their headings start with "Example:" and their texts start with "Example text —". Only the first row has a link (`/collections/all`, labelled "Shop now"), so the unedited preset shows one button. The other two keep the default label with no link, so they show no button.
@@ -92,3 +92,6 @@ The preset "Multirow" ships the heading "Example heading — how it **works**" a
 - Setting ids follow the theme-wide vocabulary (CONVENTIONS §5; DECISIONS 82–100); the tables above use the new ids: `ratio` → `image_ratio`, `content_align` → `text_align`, `content_valign` → `valign`. Saved templates were migrated.
 - Uses the shared pieces: eager or lazy media from `snippets/anvil-above-fold` (DECISIONS 85); the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87); a hidden fallback heading through `anvil-section-head` (DECISIONS 84).
 - Availability: `disabled_on` groups ["header","custom.overlay"] (CONVENTIONS §4, DECISIONS 100).
+
+## Honest-defaults pass (2026-10-15)
+- `button_label` defaults to "Example: Read the full story": a row has no heading link to fall back on (the button needs a label), so the default reads as an example and the README's "Example:" sweep finds it (DECISIONS 142, superseding that part of 125). The preset's first row keeps "Shop now".

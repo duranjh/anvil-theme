@@ -256,6 +256,7 @@
       "ship_bar_hidden": "The free shipping bar is hidden: set a minimum in your store currency, and add a line for each market that uses another currency.",
       "checkpoints_hidden": "Add checkpoint amounts, lowest first. The bar only shows in your store currency.",
       "gift_not_ready": "Pick an available gift product and the cart total that unlocks it. A sold-out gift is never promised, and the gift is only added in your store currency.",
+      "gift_page_only": "Free gift at threshold works only while Theme settings > Cart > Cart type is Page, and shows once the cart has items. With Drawer, set the gift in the cart drawer's own gift block.",
       "audio_no_file": "Add an audio file link in this section's settings. Shoppers see nothing until you do.",
       "audio_not_file": "This link does not end in an audio file type such as .mp3, so it may not play.",
       "bundle_list_mode": "Products come from the product list, so the slot blocks are not shown. Switch “Products from” to use them.",

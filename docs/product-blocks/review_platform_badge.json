@@ -6,7 +6,7 @@
     {"type": "text", "id": "badge_logo_alt", "label": "Logo description", "info": "Read by screen readers, usually the platform's name."},
     {"type": "text", "id": "badge_text", "label": "Text", "default": "Example: rated by our customers on — replace with your real wording", "info": "Words only. Do not type a rating or review count here; use the rating below with a source link."},
     {"type": "url", "id": "badge_source_url", "label": "Source link", "info": "The page where shoppers can check this rating, such as your profile on the platform. The number and stars show only when this is set."},
-    {"type": "range", "id": "badge_rating", "label": "Rating on the source page", "min": 0, "max": 5, "step": 0.1, "default": 5, "info": "Copy it exactly from the source page and keep it up to date. Shown only with a source link."},
+    {"type": "range", "id": "badge_rating", "label": "Rating on the source page", "min": 0, "max": 5, "step": 0.1, "default": 0, "info": "0 means not set: no number or stars show. Copy it exactly from the source page and keep it up to date. Shown only with a source link."},
     {"type": "checkbox", "id": "badge_show_stars", "label": "Show stars", "default": true},
     {"type": "select", "id": "badge_size", "label": "Size", "options": [{"value": "sm", "label": "Small"}, {"value": "md", "label": "Medium"}], "default": "sm"},
     {"type": "text_alignment", "id": "badge_align", "label": "Alignment", "default": "left"}

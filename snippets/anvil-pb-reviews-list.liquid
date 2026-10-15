@@ -51,7 +51,7 @@
     <ul class="av-pb-reviews-list__list" role="list"{% if s.quotes_heading != blank %} aria-labelledby="{{ rl_heading_id }}"{% endif %}>
       {{- rl_items -}}
     </ul>
-    <p class="av-pb-reviews-list__disclosure">{{ rl_disclosure | escape }}</p>
+    <p class="av-pb-reviews-list__disclosure">{{ rl_disclosure | escape_once }}</p>
   </div>
 {%- elsif request.design_mode -%}
   <div class="av-pb-reviews-list" {{ block.shopify_attributes }}>

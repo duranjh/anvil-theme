@@ -68,7 +68,7 @@
         {%- elsif b.icon != blank and b.icon != 'none' -%}
           <span class="av-tabs__icon">{% render 'anvil-icon', name: b.icon, size: icon_px %}</span>
         {%- endif -%}
-        <span class="av-tabs__text">{{ title | escape }}</span>
+        <span class="av-tabs__text">{{ title | escape_once }}</span>
       </span>
     </button>
   {%- endfor -%}

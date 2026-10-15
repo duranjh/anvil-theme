@@ -15,7 +15,7 @@
   assign s = block.settings
   assign btn_label = s.label | strip | escape
   if s.new_tab and btn_label != blank
-    assign new_tab_note = 'anvil.a11y.new_window' | t | escape
+    assign new_tab_note = 'anvil.a11y.new_window' | t
     assign btn_label = btn_label | append: '<span class="av-visually-hidden"> ' | append: new_tab_note | append: '</span>'
   endif
   assign btn_icon = s.icon

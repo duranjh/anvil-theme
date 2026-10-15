@@ -50,7 +50,7 @@ The blocks inside a slide keep their own alignment settings (heading, text and b
 Section: `scheme-4`, full width, padding 0 / 0, heights `lg` / `md`, autoplay on (6 s), arrows and dots on, transition slide. Three slides, all with placeholder images (`lifestyle-1`, `lifestyle-2`, alternating):
 1. Overlay 35 %, centred. An `h2` "Example slide heading — **replace** me" (xl), example text and a primary "Shop now" button.
 2. Overlay 35 %, middle left on desktop and bottom on phones. An `h2` "Example second slide — a collection or a story", text that says to announce a sale only when a real Shopify discount backs it, and a secondary "Browse the collection" button.
-3. No overlay, bottom right, content box on in its own `scheme-1`, box width 480. An `h2` "Example third slide — text on a panel", text and a "Learn more" text link.
+3. No overlay, bottom right, content box on in its own `scheme-1`, box width 480. An `h2` "Example third slide — text on a panel", text and a "Shop all products" text link.
 
 ## Markup and behaviour
 ```
@@ -134,3 +134,6 @@ Existing keys used: `anvil.editor.empty_section`. The slider's own strings (`anv
 - Setting ids follow the theme-wide vocabulary (CONVENTIONS §5; DECISIONS 82–100); the tables above use the new ids: `autoplay_speed` removed, `arrows` → `show_arrows`, `dots` → `show_dots`, `box_width` → `content_width`, `link_label` → `link_name`. Saved templates were migrated.
 - Uses the shared pieces: slider attributes, peek, arrows and dots per width from `snippets/anvil-slider-attrs` (DECISIONS 89); the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87).
 - Availability: `disabled_on` groups ["header","custom.overlay"] (CONVENTIONS §4, DECISIONS 100).
+
+## Honest-defaults pass (2026-10-15)
+- The third preset slide's text link reads "Shop all products" instead of "Learn more" (Lighthouse flags "Learn more" as non-descriptive link text on the homepage; WCAG 2.4.4 Link Purpose). `templates/index.json` ships the same label (DECISIONS 125).

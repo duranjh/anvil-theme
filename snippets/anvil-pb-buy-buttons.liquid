@@ -77,8 +77,8 @@
     class="av-btn av-btn--{{ btn_style }} av-btn--lg av-btn--full av-buy__atc"
     {%- if disabled %} disabled{% endif %}
   >
-    <span class="av-btn__label" data-anvil-bind="add_label" data-anvil-label-add="{{ add_label | escape }}" data-anvil-label-sold-out="{{ sold_label | escape }}">
-      {{- label | escape -}}
+    <span class="av-btn__label" data-anvil-bind="add_label" data-anvil-label-add="{{ add_label | escape_once }}" data-anvil-label-sold-out="{{ sold_label | escape_once }}">
+      {{- label | escape_once -}}
     </span>
   </button>
   <div class="av-form-message av-form-message--error av-buy__error" role="alert" data-anvil-form-error></div>
@@ -86,7 +86,7 @@
   {%- if bs.show_secure_line -%}
     <p class="av-buy__secure">
       {%- render 'anvil-icon', name: 'lock', size: 16 -%}
-      <span>{{ secure_text | escape }}</span>
+      <span>{{ secure_text | escape_once }}</span>
     </p>
   {%- endif -%}
 </anvil-product-form>

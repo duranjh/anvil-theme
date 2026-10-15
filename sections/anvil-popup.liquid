@@ -76,8 +76,8 @@
     <div class="av-section__inner">
       <anvil-popup class="{{ popup_class }}" trigger="{{ trigger }}" delay="{{ delay }}" scroll="{{ depth }}" days="{{ days }}" key="{{ key | escape }}" campaign="{{ campaign | escape }}" form-id="{{ form_id }}" style="--av-popup-gap: {{ gap }}px;">
         <anvil-dialog id="{{ uid }}" data-anvil-editor-open{% unless s.close_on_backdrop %} no-light-dismiss{% endunless %}>
-          <dialog class="{{ dialog_class }}" aria-label="{{ 'anvil.popup.label' | t | escape }}" style="--av-dialog-width: {{ popup_w }}px;">
-            <button type="button" class="av-popup__close" data-anvil-close aria-label="{{ 'anvil.a11y.close' | t | escape }}">
+          <dialog class="{{ dialog_class }}" aria-label="{{ 'anvil.popup.label' | t }}" style="--av-dialog-width: {{ popup_w }}px;">
+            <button type="button" class="av-popup__close" data-anvil-close aria-label="{{ 'anvil.a11y.close' | t }}">
               {%- render 'anvil-icon', name: 'x', size: 20 -%}
             </button>
             <div class="av-popup__layout">

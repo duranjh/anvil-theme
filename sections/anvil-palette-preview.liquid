@@ -96,6 +96,8 @@
               -%}
               <li class="av-palette-preview__card">
                 <div class="av-palette-preview__head">
+                  {%- comment -%} card_title is a translation, escaped by t; the checks caption's t escapes its variable again, so it takes a plain copy (DECISIONS 135 rule 6). {%- endcomment -%}
+                  {%- assign card_title_plain = card_title | replace: '&#39;', "'" | replace: '&quot;', '"' | replace: '&lt;', '<' | replace: '&gt;', '>' | replace: '&amp;', '&' -%}
                   <h3 class="av-palette-preview__name">{{ card_title }}</h3>
                   {%- if card == 'scheme' -%}
                     <code class="av-palette-preview__id">{{ scheme.id }}</code>
@@ -175,7 +177,7 @@
                   <p class="av-palette-preview__note">{{ 'anvil.palette_preview.badges_note' | t }}</p>
                 {%- endif -%}
                 <table class="av-palette-preview__table">
-                  <caption class="av-visually-hidden">{{ 'anvil.palette_preview.checks_caption' | t: name: card_title }}</caption>
+                  <caption class="av-visually-hidden">{{ 'anvil.palette_preview.checks_caption' | t: name: card_title_plain }}</caption>
                   <thead>
                     <tr>
                       <th scope="col">{{ 'anvil.palette_preview.col_pair' | t }}</th>

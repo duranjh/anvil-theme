@@ -79,7 +79,7 @@
           -%}
           <details class="av-accordion__item"{{ open_attr }} {{ block.shopify_attributes }}>
             <summary class="av-accordion__summary">
-              <h3 class="av-accordion__title">{{ question | escape }}</h3>
+              <h3 class="av-accordion__title">{{ question | escape_once }}</h3>
               <span class="av-accordion__toggle" aria-hidden="true">{{ toggle_html }}</span>
             </summary>
             <div class="av-accordion__body av-rte">{{ block.settings.answer }}</div>

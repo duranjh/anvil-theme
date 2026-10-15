@@ -74,7 +74,7 @@
         <span class="av-badge av-badge--accent av-offer-card__badge">{{ badge | escape }}</span>
       {%- endif -%}
       <span class="av-offer-card__text">
-        <span class="av-offer-card__label">{{ label | escape }}</span>
+        <span class="av-offer-card__label">{{ label | escape_once }}</span>
         {%- if promo -%}
           {%- assign title_html = title | escape -%}
           <span class="av-offer-card__caption">{{ 'anvil.product.with_discount_html' | t: title: title_html }}</span>

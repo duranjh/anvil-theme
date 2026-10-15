@@ -12,7 +12,8 @@
         <div class="av-404__text">{{ s.text }}</div>
       {%- endif -%}
       <div class="av-404__actions">
-        {% render 'anvil-button', label: s.button_label, url: routes.root_url, style: 'primary', size: 'lg' %}
+        {%- assign btn_label = s.button_label | escape -%}
+        {% render 'anvil-button', label: btn_label, url: routes.root_url, style: 'primary', size: 'lg' %}
         <a class="av-404__link" href="{{ routes.search_url }}">{{ 'anvil.not_found.search' | t }}</a>
       </div>
     </div>

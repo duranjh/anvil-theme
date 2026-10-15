@@ -19,6 +19,10 @@
   assign s = block.settings
   assign p = s.product | default: closest.product
   assign form_id = 'av-atc-' | append: block.id
+  # anvil-button prints its label as markup, so the typed labels are escaped here.
+  assign add_label = s.label | escape
+  assign sold_label = s.sold_out_label | escape
+  assign options_label = s.options_label | escape
 -%}
 <div class="av-atc av-atc--{{ s.align }}" {{ block.shopify_attributes }}>
   {%- if p != blank -%}
@@ -38,9 +42,9 @@
           <input type="hidden" name="id" value="{{ v.id }}">
           <input type="hidden" name="quantity" value="1">
           {%- if v.available -%}
-            {%- render 'anvil-button', label: s.label, type: 'submit', style: s.style, size: s.size, full: s.full, attrs: 'name="add"' -%}
+            {%- render 'anvil-button', label: add_label, type: 'submit', style: s.style, size: s.size, full: s.full, attrs: 'name="add"' -%}
           {%- else -%}
-            {%- render 'anvil-button', label: s.sold_out_label, type: 'submit', style: 'secondary', size: s.size, full: s.full, disabled: true -%}
+            {%- render 'anvil-button', label: sold_label, type: 'submit', style: 'secondary', size: s.size, full: s.full, disabled: true -%}
           {%- endif -%}
           <p class="av-atc__status" role="status" aria-live="polite" data-anvil-form-status></p>
         {%- endform -%}
@@ -50,7 +54,7 @@
       {%- if s.show_price -%}
         {%- render 'anvil-price', product: p, size: 'md', class: 'av-atc__price' -%}
       {%- endif -%}
-      {%- render 'anvil-button', label: s.options_label, url: p.url, style: s.style, size: s.size, full: s.full -%}
+      {%- render 'anvil-button', label: options_label, url: p.url, style: s.style, size: s.size, full: s.full -%}
     {%- endif -%}
   {%- elsif request.design_mode -%}
     <p class="av-atc__note">{{ 'anvil.editor.atc_no_product' | t }}</p>

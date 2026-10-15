@@ -351,7 +351,7 @@
                   {%- liquid
                     # A button without a link would do nothing, so it is left out for shoppers and shown disabled in
                     # the editor as a reminder. Consecutive button blocks share one row.
-                    assign label = b.label | strip
+                    assign label = b.label | strip | escape
                     assign show_btn = false
                     if label != blank
                       if b.url != blank or request.design_mode

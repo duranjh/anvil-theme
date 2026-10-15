@@ -44,7 +44,7 @@
           value="{{ 'anvil.product.field_yes' | t }}"
           form="{{ form_id }}"
           aria-describedby="{{ described }}"
-          data-anvil-field="{{ required_msg | escape }}"
+          data-anvil-field="{{ required_msg }}"
           {% if bs.field_required %}
             required
           {% endif %}
@@ -69,7 +69,7 @@
             rows="3"
             placeholder="{{ bs.field_placeholder | escape }}"
             aria-describedby="{{ described }}"
-            data-anvil-field="{{ required_msg | escape }}"
+            data-anvil-field="{{ required_msg }}"
             {% if bs.field_required %}
               required
             {% endif %}
@@ -83,7 +83,7 @@
               name="{{ prop_name | escape }}"
               form="{{ form_id }}"
               aria-describedby="{{ described }}"
-              data-anvil-field="{{ required_msg | escape }}"
+              data-anvil-field="{{ required_msg }}"
               {% if bs.field_required %}
                 required
               {% endif %}
@@ -109,7 +109,7 @@
               type="text" autocomplete="off" placeholder="{{ bs.field_placeholder | escape }}"
             {% endif %}
             aria-describedby="{{ described }}"
-            data-anvil-field="{{ required_msg | escape }}"
+            data-anvil-field="{{ required_msg }}"
             {% if bs.field_required %}
               required
             {% endif %}

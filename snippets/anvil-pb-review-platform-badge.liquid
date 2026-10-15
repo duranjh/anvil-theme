@@ -1,7 +1,8 @@
 {% doc %}
   Product block review_platform_badge ("Review platform badge"): the merchant's own wording and an uploaded platform
   logo, linked to the source page. The rating number and stars are claims, so they show only when a source URL is set
-  (shoppers can follow it to check them); without it only the words and the logo show, and an editor note says why.
+  (shoppers can follow it to check them) and a rating above 0 is typed (the default 0 means "not set"); without the
+  URL only the words and the logo show, and an editor note says why.
   Anvil ships no platform logos (docs/HONEST.md).
   Called by the product block dispatcher with product, block, section, form_id and current_variant
   (WAVE1-CONTRACTS §1); it reads only block. The arguments are described in prose
@@ -20,7 +21,7 @@
   assign rp_logo_alt = s.badge_logo_alt | default: s.badge_logo.alt | default: ''
 
   capture rp_inner
-    if rp_has_url
+    if rp_has_url and s.badge_rating > 0
       if s.badge_show_stars
         render 'anvil-stars', rating: s.badge_rating, max: 5, size: rp_star_px
       endif

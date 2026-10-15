@@ -187,9 +187,9 @@
                   {%- endif -%}
                   <h3 class="av-collection-list__title">
                     {%- if c != blank -%}
-                      <a class="av-collection-list__link" href="{{ c.url }}">{{ card_title | escape }}</a>
+                      <a class="av-collection-list__link" href="{{ c.url }}">{{ card_title | escape_once }}</a>
                     {%- else -%}
-                      {{ card_title | escape }}
+                      {{ card_title | escape_once }}
                     {%- endif -%}
                   </h3>
                   {%- if count_text != blank -%}

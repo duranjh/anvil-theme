@@ -71,16 +71,16 @@
 <anvil-countdown class="av-countdown av-countdown--{{ s.size }} av-countdown--{{ s.align }}{% if is_expired %} av-is-expired{% endif %}"{% if has_date %} ends-at="{{ ends_at | escape }}"{% endif %}{% if has_date and zone != blank %} timezone="{{ zone | escape }}"{% elsif has_date %} data-anvil-end="{{ end_s }}"{% endif %} expired="{{ s.expired }}"{% if hide_root %} hidden{% endif %} {{ block.shopify_attributes }}>
   {%- if has_date -%}
     {%- if s.label != blank -%}
-      <p class="av-countdown__label">{{ s.label }}</p>
+      <p class="av-countdown__label">{{ s.label | escape }}</p>
     {%- endif -%}
     <div class="av-countdown__units" data-anvil-running{% if is_expired %} hidden{% endif %}>
-      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="days">{{ cd_days }}</span><span class="av-countdown__name">{{ s.unit_days }}</span></div>
-      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="hours">{{ cd_hours }}</span><span class="av-countdown__name">{{ s.unit_hours }}</span></div>
-      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="minutes">{{ cd_minutes }}</span><span class="av-countdown__name">{{ s.unit_minutes }}</span></div>
-      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="seconds">{{ cd_seconds }}</span><span class="av-countdown__name">{{ s.unit_seconds }}</span></div>
+      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="days">{{ cd_days }}</span><span class="av-countdown__name">{{ s.unit_days | escape }}</span></div>
+      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="hours">{{ cd_hours }}</span><span class="av-countdown__name">{{ s.unit_hours | escape }}</span></div>
+      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="minutes">{{ cd_minutes }}</span><span class="av-countdown__name">{{ s.unit_minutes | escape }}</span></div>
+      <div class="av-countdown__unit"><span class="av-countdown__value" data-anvil-cd="seconds">{{ cd_seconds }}</span><span class="av-countdown__name">{{ s.unit_seconds | escape }}</span></div>
     </div>
     {%- if s.expired == 'text' -%}
-      <p class="av-countdown__expired" data-anvil-expired{% unless is_expired %} hidden{% endunless %}>{{ s.expired_text }}</p>
+      <p class="av-countdown__expired" data-anvil-expired{% unless is_expired %} hidden{% endunless %}>{{ s.expired_text | escape }}</p>
     {%- elsif is_expired and request.design_mode -%}
       <p class="av-countdown__note">{{ 'anvil.editor.countdown_ended' | t }}</p>
     {%- endif -%}

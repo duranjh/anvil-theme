@@ -71,7 +71,7 @@ One per template, not in the Add section list.
 | 404 page | `sections/main-404.liquid` | none | 404 |
 | Article | `sections/main-article.liquid` | none | article |
 | Blog | `sections/main-blog.liquid` | none | blog |
-| Cart summary | `sections/main-cart-footer.liquid` | none | cart |
+| Cart summary | `sections/main-cart-footer.liquid` | 1 local (gift_threshold) | cart |
 | Cart items | `sections/main-cart-items.liquid` | none | cart |
 | Collection banner | `sections/main-collection-banner.liquid` | none | collection |
 | Collection | `sections/main-collection.liquid` | none | collection |

@@ -3,7 +3,7 @@
   plain text (Anvil ships no platform logos). Renders nothing when no link is set.
 
   @param {string} [class] - Extra classes on the <ul>
-  @param {string} [label] - Accessible name for the list (default "Follow us")
+  @param {string} [label] - Accessible name for the list (default "Follow us"; escaped here with escape_once)
 
   @example
   {% render 'anvil-social-links', class: 'av-footer__socials' %}
@@ -20,7 +20,7 @@
   endif
 -%}
 {%- if social_any -%}
-  <ul class="av-social av-list-reset{% if class != blank %} {{ class }}{% endif %}" aria-label="{{ social_list_label | escape }}">
+  <ul class="av-social av-list-reset{% if class != blank %} {{ class }}{% endif %}" aria-label="{{ social_list_label | escape_once }}">
     {%- if settings.social_instagram_url != blank -%}<li><a class="av-social__pill" href="{{ settings.social_instagram_url | escape }}" rel="noopener">Instagram</a></li>{%- endif -%}
     {%- if settings.social_tiktok_url != blank -%}<li><a class="av-social__pill" href="{{ settings.social_tiktok_url | escape }}" rel="noopener">TikTok</a></li>{%- endif -%}
     {%- if settings.social_facebook_url != blank -%}<li><a class="av-social__pill" href="{{ settings.social_facebook_url | escape }}" rel="noopener">Facebook</a></li>{%- endif -%}

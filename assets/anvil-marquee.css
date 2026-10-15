@@ -1,5 +1,6 @@
 /* anvil-marquee.css — <anvil-marquee> strip. The JS clones [data-marquee-track] into .av-marquee__clone siblings,
-   adds the .av-marquee__pause button and sets --av-marquee-duration / --av-marquee-direction. Only transform
+   adds the .av-marquee__pause button (over the strip's inline end, or beside it with .av-marquee--lane) and sets
+   --av-marquee-duration / --av-marquee-direction. Only transform
    animates, and only once the element is defined (no clones and no pause button before that, so nothing slides
    out and snaps back); reduced motion, html[data-animations="off"] and html.no-js show one static wrapping row
    from the first paint. */
@@ -76,6 +77,23 @@ anvil-marquee:defined:has(:focus-visible) > :is([data-marquee-track], .av-marque
   color: var(--av-fg);
   translate: 0 -50%;
   cursor: pointer;
+}
+
+/* Lane (.av-marquee--lane): the pause button gets a lane of its own at the inline end instead of sitting over the
+   strip, so moving content never runs under it and a focused item is never hidden behind it. While the strip moves it
+   leaves the lane free and is not positioned: the button's containing block is then the strip's parent, which lies
+   outside the strip's clip (CSS 2.1 §11.1.1), so the button is never cut off. The parent must be positioned and hold
+   only the strip; the button is centred on it, flush with its inline end. */
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.no-js):not([data-animations="off"]) anvil-marquee.av-marquee--lane {
+    position: static;
+    width: auto;
+    margin-inline-end: calc(44px + var(--av-space-2));
+  }
+}
+
+anvil-marquee.av-marquee--lane > .av-marquee__pause {
+  inset-inline-end: 0;
 }
 
 .av-marquee__pause .av-marquee__ico-play,

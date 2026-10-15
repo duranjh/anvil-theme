@@ -27,7 +27,7 @@
 -%}
 {%- if popup_page != blank -%}
   {%- liquid
-    assign table_label = 'anvil.a11y.scroll_table' | t | escape
+    assign table_label = 'anvil.a11y.scroll_table' | t
     assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
     assign popup_body = popup_page.content | replace: '<table', table_open | replace: '</table>', '</table></div>'
     assign open_attrs = 'data-anvil-open="' | append: dialog_id | append: '" aria-haspopup="dialog" aria-expanded="false"'
@@ -40,7 +40,7 @@
     {%- render 'anvil-button', label: trigger_label, url: popup_page.url, style: popup_style, size: 'sm', icon: popup_icon, icon_first: true, class: 'av-pb-popup__trigger av-fallback-only' -%}
     {%- render 'anvil-button', label: trigger_label, style: popup_style, size: 'sm', icon: popup_icon, icon_first: true, attrs: open_attrs, class: 'av-pb-popup__trigger av-enhanced-only' -%}
     <dialog class="av-dialog av-dialog--sheet av-pb-popup__dialog" aria-labelledby="{{ title_id }}">
-      <button type="button" class="av-dialog__close" data-anvil-close aria-label="{{ 'anvil.a11y.close' | t | escape }}">
+      <button type="button" class="av-dialog__close" data-anvil-close aria-label="{{ 'anvil.a11y.close' | t }}">
         {%- render 'anvil-icon', name: 'x', size: 20 -%}
       </button>
       <h2 class="av-dialog__title" id="{{ title_id }}">{{ popup_page.title | escape }}</h2>

@@ -5,7 +5,7 @@
 
   @param {string} name - Icon name, for example 'check', 'truck' or 'star'
   @param {number} [size] - Width and height in pixels (default 24)
-  @param {string} [label] - Accessible name; when set the icon gets role="img" and aria-label, otherwise it is aria-hidden
+  @param {string} [label] - Accessible name; when set the icon gets role="img" and aria-label, otherwise it is aria-hidden (escaped here with escape_once)
   @param {string} [class] - Extra classes added to the <svg>
 
   @example
@@ -29,5 +29,5 @@
   endcapture
 -%}
 {%- if icon_body != blank -%}
-<svg class="av-icon{% if class != blank %} {{ class }}{% endif %}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="{{ icon_size }}" height="{{ icon_size }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"{% if label != blank %} role="img" aria-label="{{ label | escape }}"{% else %} aria-hidden="true" focusable="false"{% endif %}>{{ icon_body }}</svg>
+<svg class="av-icon{% if class != blank %} {{ class }}{% endif %}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="{{ icon_size }}" height="{{ icon_size }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"{% if label != blank %} role="img" aria-label="{{ label | escape_once }}"{% else %} aria-hidden="true" focusable="false"{% endif %}>{{ icon_body }}</svg>
 {%- endif -%}

@@ -10,7 +10,7 @@
   @param {string} [icon] - Icon name from anvil-icon, drawn after the label
   @param {boolean} [icon_first] - Draw the icon before the label instead
   @param {string} [attrs] - Extra attributes, written verbatim
-  @param {string} [aria_label] - Accessible name when the label is not descriptive
+  @param {string} [aria_label] - Accessible name when the label is not descriptive (escaped here with escape_once)
   @param {string} [type] - button | submit (default button; <button> only)
   @param {boolean} [external] - Open the link in a new tab
   @param {boolean} [disabled] - Disable the <button>
@@ -48,8 +48,8 @@
     {%- if icon != blank and icon_first != true -%}{% render 'anvil-icon', name: icon, size: icon_size, class: 'av-btn__icon' %}{%- endif -%}
   {%- endcapture -%}
   {%- if url != blank -%}
-    <a class="{{ classes }}" href="{{ url | escape }}"{% if external %} target="_blank" rel="noopener"{% endif %}{% if aria_label != blank %} aria-label="{{ aria_label | escape }}"{% endif %}{% if attrs != blank %} {{ attrs }}{% endif %}>{{ btn_inner }}</a>
+    <a class="{{ classes }}" href="{{ url | escape }}"{% if external %} target="_blank" rel="noopener"{% endif %}{% if aria_label != blank %} aria-label="{{ aria_label | escape_once }}"{% endif %}{% if attrs != blank %} {{ attrs }}{% endif %}>{{ btn_inner }}</a>
   {%- else -%}
-    <button class="{{ classes }}" type="{{ btn_type }}"{% if disabled %} disabled{% endif %}{% if aria_label != blank %} aria-label="{{ aria_label | escape }}"{% endif %}{% if attrs != blank %} {{ attrs }}{% endif %}>{{ btn_inner }}</button>
+    <button class="{{ classes }}" type="{{ btn_type }}"{% if disabled %} disabled{% endif %}{% if aria_label != blank %} aria-label="{{ aria_label | escape_once }}"{% endif %}{% if attrs != blank %} {{ attrs }}{% endif %}>{{ btn_inner }}</button>
   {%- endif -%}
 {%- endif -%}

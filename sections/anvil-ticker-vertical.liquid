@@ -62,10 +62,10 @@
           <button
             type="button"
             class="av-ticker-vertical__toggle av-enhanced-only"
-            aria-label="{{ pause_label | escape }}"
+            aria-label="{{ pause_label }}"
             data-anvil-toggle
-            data-anvil-pause="{{ pause_label | escape }}"
-            data-anvil-play="{{ play_label | escape }}"
+            data-anvil-pause="{{ pause_label }}"
+            data-anvil-play="{{ play_label }}"
           >
             {%- render 'anvil-icon', name: 'pause', size: 18, class: 'av-ticker-vertical__ico-pause' -%}
             {%- render 'anvil-icon', name: 'play', size: 18, class: 'av-ticker-vertical__ico-play' -%}

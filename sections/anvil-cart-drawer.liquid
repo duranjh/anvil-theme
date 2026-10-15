@@ -152,7 +152,8 @@
 
       {%- when 'checkout' -%}
         {%- liquid
-          assign ck_label = bs.checkout_label | default: checkout_default
+          # Typed text (raw) or the translated default (already escaped): escaped once either way (DECISIONS 135 rule 2).
+          assign ck_label = bs.checkout_label | default: checkout_default | escape_once
           assign ck_attrs = 'name="checkout" data-anvil-checkout form="' | append: form_id | append: '"'
           assign ck_icons = bs.show_payment_icons | default: false, allow_false: true
           assign ck_view = bs.show_view_cart | default: false, allow_false: true
@@ -210,7 +211,7 @@
                 {{ bs.ship_bar_text_before | escape | replace: ph_a, fs_money | replace: ph_b, fs_money | replace: ph_c, fs_money }}
               {%- else -%}
                 {%- render 'anvil-icon', name: 'check-circle', size: 16 -%}
-                {{ bs.ship_bar_text_after | default: ship_after_default | escape }}
+                {{ bs.ship_bar_text_after | default: ship_after_default | escape_once }}
               {%- endif -%}
             </p>
             <div class="av-cart-drawer__track" aria-hidden="true">
@@ -332,7 +333,7 @@
               <div class="av-cart-drawer__cd-unit"><span class="av-cart-drawer__cd-value" data-anvil-cd="seconds">{{ cd_seconds }}</span><span class="av-cart-drawer__cd-name">{{ 'anvil.countdown.seconds' | t }}</span></div>
             </div>
             {%- if cd_mode == 'text' -%}
-              <p class="av-cart-drawer__cd-ended" data-anvil-expired{{ cd_text_hide }}>{{ cd_text | escape }}</p>
+              <p class="av-cart-drawer__cd-ended" data-anvil-expired{{ cd_text_hide }}>{{ cd_text | escape_once }}</p>
             {%- endif -%}
           </anvil-countdown>
         {%- elsif request.design_mode -%}
@@ -469,7 +470,7 @@
         {% render 'anvil-payment-badges', source: pb_source, filter: bs.badges_filter, settings: bs, size: pb_size, align: 'center', uid: pb_uid %}
 
       {%- when 'discount_field' -%}
-        {%- assign df_button = bs.discount_button | default: apply_default -%}
+        {%- assign df_button = bs.discount_button | default: apply_default | escape_once -%}
         <div class="av-cart-drawer__discount av-field av-enhanced-only">
           <label class="av-field__label" for="anvil-cart-drawer-code">{{ 'anvil.cart.discount_code' | t }}</label>
           <div class="av-field--inline">
@@ -496,7 +497,7 @@
 
       {%- when 'note' -%}
         <div class="av-cart-drawer__note av-field">
-          <label class="av-field__label" for="anvil-cart-drawer-note">{{ bs.note_label | default: note_default | escape }}</label>
+          <label class="av-field__label" for="anvil-cart-drawer-note">{{ bs.note_label | default: note_default | escape_once }}</label>
           <textarea class="av-field__input av-cart-drawer__textarea" id="anvil-cart-drawer-note" name="note" form="{{ form_id }}" rows="2" placeholder="{{ bs.note_placeholder | escape }}" data-anvil-note data-anvil-focus-key="note">{{ cart.note | escape }}</textarea>
         </div>
 
@@ -710,7 +711,7 @@
       "type": "gift_threshold",
       "name": "Free gift at threshold",
       "settings": [
-        { "type": "paragraph", "content": "Adds the gift once the cart total reaches the amount and removes it below. The theme does not make it free: create a Buy X Get Y automatic discount in Shopify for that. The cart says \"Free\" only when Shopify prices the line at zero." },
+        { "type": "paragraph", "content": "Adds the gift once the cart total reaches the amount and removes it below. The theme does not make it free: create a Buy X Get Y automatic discount in Shopify for that. The cart says \"Free\" only when Shopify prices the line at zero. Works while Cart type is Drawer; for Cart type Page, add this block to the Cart summary section of the cart template instead." },
         { "type": "product", "id": "gift_product", "label": "Gift product" },
         { "type": "range", "id": "gift_variant_position", "label": "Gift variant (position)", "min": 1, "max": 10, "step": 1, "default": 1, "info": "1 is the product's first variant. While it is sold out the block shows nothing and no gift is added." },
         { "type": "number", "id": "gift_threshold_amount", "label": "Cart total that unlocks the gift", "info": "In your store currency; the gift is not added in other currencies. Gift lines are left out of the total." },

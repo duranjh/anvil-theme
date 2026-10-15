@@ -4,7 +4,7 @@
   Settings (id · type · values · default):
   - source · select · product | manual · default "product"
   - product · product
-  - rating · range · 0–5 step 0.5 · default 5
+  - rating · range · 0–5 step 0.5 · default 0 (not set: typed stars show only once a rating above 0 and a source link are entered)
   - source_url · url
   - show_number · checkbox · default true
   - text · text
@@ -29,7 +29,8 @@
       assign rating_count = p.metafields.reviews.rating_count.value
       assign has_source = true
     endif
-  elsif s.source_url != blank
+  elsif s.source_url != blank and s.rating > 0
+    # A typed rating defaults to 0, "not set": nothing shows until the merchant types the rating the source shows.
     assign rating_value = s.rating
     assign source_url = s.source_url
     assign has_source = true
@@ -47,7 +48,7 @@
       {%- render 'anvil-stars', rating: rating_value, max: rating_max, size: star_px -%}
       {%- if s.show_number -%}<span class="av-stars-block__number">{{ rating_value | round: 1 }}/{{ rating_max | round }}</span>{%- endif -%}
       {%- if rating_count != blank -%}<span class="av-stars-block__count" aria-hidden="true">({{ rating_count }})</span><span class="av-visually-hidden">{{ 'anvil.stars.count' | t: count: rating_count }}</span>{%- endif -%}
-      {%- if s.text != blank -%}<span class="av-stars-block__text">{{ s.text }}</span>{%- endif -%}
+      {%- if s.text != blank -%}<span class="av-stars-block__text">{{ s.text | escape }}</span>{%- endif -%}
     {%- endcapture -%}
     {%- if source_url != blank -%}
       <a class="av-stars-block__link" href="{{ source_url }}" target="_blank" rel="noopener">{{ stars_inner }}</a>
@@ -55,7 +56,11 @@
       {{ stars_inner }}
     {%- endif -%}
   {%- elsif request.design_mode -%}
-    <p class="av-stars-block__note">{{ 'anvil.editor.stars_no_source' | t }}</p>
+    {%- if s.source == 'manual' and s.source_url != blank -%}
+      <p class="av-stars-block__note">{{ 'anvil.editor.block_empty' | t }}</p>
+    {%- else -%}
+      <p class="av-stars-block__note">{{ 'anvil.editor.stars_no_source' | t }}</p>
+    {%- endif -%}
   {%- endif -%}
 </div>
 {% stylesheet %}
@@ -79,7 +84,7 @@
   "settings": [
     { "type": "select", "id": "source", "label": "Rating source", "options": [ { "value": "product", "label": "Product review rating" }, { "value": "manual", "label": "Typed, with a source link" } ], "default": "product", "info": "Product ratings come from the reviews.rating metafield your review app writes. Typed stars show only with a link shoppers can check." },
     { "type": "product", "id": "product", "label": "Product", "info": "Leave empty to use the product in context" },
-    { "type": "range", "id": "rating", "label": "Typed rating", "min": 0, "max": 5, "step": 0.5, "default": 5, "info": "Used only with a source link" },
+    { "type": "range", "id": "rating", "label": "Typed rating", "min": 0, "max": 5, "step": 0.5, "default": 0, "info": "0 means not set. Type the rating exactly as the source page shows it; typed stars show only with a source link." },
     { "type": "url", "id": "source_url", "label": "Source link", "info": "Where shoppers can verify the rating. Without it, typed stars are not shown." },
     { "type": "checkbox", "id": "show_number", "label": "Show the number", "default": true },
     { "type": "text", "id": "text", "label": "Text after the stars", "info": "For example a review count you can back up with the source link" },

@@ -18,7 +18,7 @@
 -%}
 {%- if body != blank -%}
   {%- liquid
-    assign table_label = 'anvil.a11y.scroll_table' | t | escape
+    assign table_label = 'anvil.a11y.scroll_table' | t
     assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
     assign body = body | replace: '<table', table_open | replace: '</table>', '</table></div>'
 

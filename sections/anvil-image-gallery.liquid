@@ -182,12 +182,12 @@
               <button type="button" class="av-image-gallery__lb-close" data-anvil-close autofocus aria-label="{{ 'anvil.a11y.close' | t }}">
                 {%- render 'anvil-icon', name: 'x', size: 20 -%}
               </button>
-              <div class="av-image-gallery__lb-track" data-anvil-lb-track data-anvil-slide="{{ 'anvil.a11y.slide' | t | escape }}" tabindex="0" role="region" aria-roledescription="{{ 'anvil.a11y.carousel' | t | escape }}" aria-label="{{ list_label | escape_once }}"></div>
+              <div class="av-image-gallery__lb-track" data-anvil-lb-track data-anvil-slide="{{ 'anvil.a11y.slide' | t }}" tabindex="0" role="region" aria-roledescription="{{ 'anvil.a11y.carousel' | t }}" aria-label="{{ list_label | escape_once }}"></div>
               <div class="av-image-gallery__lb-bar">
                 <button type="button" class="av-image-gallery__lb-btn" data-anvil-lb-prev aria-label="{{ 'anvil.image_gallery.previous' | t }}">
                   {%- render 'anvil-icon', name: 'chevron-left', size: 20 -%}
                 </button>
-                <p class="av-image-gallery__lb-count" data-anvil-lb-count data-anvil-text="{{ 'anvil.image_gallery.count' | t: index: '[index]', total: '[total]' | escape }}" aria-live="polite" aria-atomic="true"></p>
+                <p class="av-image-gallery__lb-count" data-anvil-lb-count data-anvil-text="{{ 'anvil.image_gallery.count' | t: index: '[index]', total: '[total]' }}" aria-live="polite" aria-atomic="true"></p>
                 <button type="button" class="av-image-gallery__lb-btn" data-anvil-lb-next aria-label="{{ 'anvil.image_gallery.next' | t }}">
                   {%- render 'anvil-icon', name: 'chevron-right', size: 20 -%}
                 </button>

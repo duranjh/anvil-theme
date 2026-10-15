@@ -1,10 +1,14 @@
-# Files Shopify CLI skips on theme push, pull and dev (root of the theme; simple names,
-# wildcards and /regular expressions/ per shopify.dev "Shopify CLI for themes").
-# Only the theme folders belong on a store; the repo's tooling and docs stay local.
-/^(docs|scripts|tests|dist|\.harness|\.github|node_modules)\//
+# Files Shopify CLI skips on theme push, pull and dev, as paths from the theme root. An entry is a simple name, a
+# wildcard or a /regular expression/ (shopify.dev "Shopify CLI for themes"). Only the theme folders belong on a
+# store; the repo's tooling and docs stay local (`shopify theme package` zips the theme folders only).
+# CLI 4.9 warns "Directory pattern may be misleading" for any entry that ends in "/" without a "*". Every regular
+# expression ends in "/", so the folder rule ends in .* ("anything below the folder") and draws no warning.
+/^(docs|scripts|tests|dist|\.harness|\.github|node_modules)\/.*/
 package.json
 package-lock.json
 shopify.theme.toml
+.theme-check.yml
+.gitignore
 README.md
 CHANGELOG.md
 LICENSE

@@ -174,7 +174,7 @@
                 {%- endif -%}
                 {%- if link_url != '' -%}
                   <a class="av-guarantees__link" href="{{ link_url }}"{% if title != blank %} id="{{ title_id }}-link" aria-labelledby="{{ title_id }}-link {{ title_id }}"{% endif %}>
-                    {{- link_text | escape -}}
+                    {{- link_text | escape_once -}}
                   </a>
                 {%- endif -%}
               </div>

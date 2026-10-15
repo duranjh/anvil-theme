@@ -369,7 +369,7 @@
   if add_label == blank
     assign add_label = 'anvil.product.bundle_add' | t
   endif
-  assign add_label = add_label | escape
+  assign add_label = add_label | escape_once
   assign add_attrs = 'data-anvil-bundle-add aria-describedby="' | append: uid | append: '-progress"'
 
   comment
@@ -386,7 +386,7 @@
   <div class="av-section__inner">
     {% render 'anvil-section-head', section: section %}
     {%- if visible_heading == blank -%}
-      <h2 class="av-visually-hidden">{{ hidden_heading | escape }}</h2>
+      <h2 class="av-visually-hidden">{{ hidden_heading | escape_once }}</h2>
     {%- endif -%}
     {%- if slot_total > 0 -%}
       <anvil-bundle
@@ -395,9 +395,9 @@
         {% if s.pick_exact %}
           data-anvil-exact
         {% endif %}
-        data-anvil-progress="{{ 'anvil.bundle.progress' | t: picked: '[picked]', total: '[total]' | escape }}"
-        data-anvil-picked="{{ 'anvil.bundle.picked' | t: picked: '[picked]' | escape }}"
-        data-anvil-limit="{{ 'anvil.bundle.limit' | t: count: need | escape }}"
+        data-anvil-progress="{{ 'anvil.bundle.progress' | t: picked: '[picked]', total: '[total]' }}"
+        data-anvil-picked="{{ 'anvil.bundle.picked' | t: picked: '[picked]' }}"
+        data-anvil-limit="{{ 'anvil.bundle.limit' | t: count: need }}"
       >
         <div class="av-bundle__picker">
           <fieldset class="av-bundle__set">

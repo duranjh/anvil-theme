@@ -28,3 +28,6 @@ Savings only from compare-at (rounded down, DECISIONS 43); "Most popular"-style 
 ## Fix pass (2026-10-15)
 - Uses the shared pieces: the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87).
 - Availability: `disabled_on` groups ["*"] (CONVENTIONS §4, DECISIONS 100).
+
+## Honest-defaults pass (2026-10-15)
+- The schema is generated from `docs/product-blocks/` (shared with the product page). Review platform badge: `badge_rating` defaults to 0, "not set", and `snippets/anvil-pb-review-platform-badge` draws the number and stars only with a source link **and** a rating above 0; the words and logo behave as before. Link button: `label` defaults to "Browse all products" (its default link is `/collections/all`) instead of "Learn more", and its `info` asks for a label that says where the link goes (DECISIONS 124, 125).

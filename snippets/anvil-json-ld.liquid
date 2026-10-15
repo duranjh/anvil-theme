@@ -9,8 +9,14 @@
 {% enddoc %}
 {%- liquid
   assign page_type = request.page_type
-  assign home_label = 'anvil.breadcrumbs.home' | t
-  assign collections_label = 'anvil.breadcrumbs.collections' | t
+
+  comment
+    t escapes its output for HTML, but a JSON-LD script is raw text: turn the apostrophe, quote and ampersand
+    entities back into characters so a label such as "Page d'accueil" reaches search engines as written
+    (&amp; last, so an escaped entity stays text). < and > stay escaped inside the script (DECISIONS 135).
+  endcomment
+  assign home_label = 'anvil.breadcrumbs.home' | t | replace: '&#39;', "'" | replace: '&quot;', '"' | replace: '&amp;', '&'
+  assign collections_label = 'anvil.breadcrumbs.collections' | t | replace: '&#39;', "'" | replace: '&quot;', '"' | replace: '&amp;', '&'
 -%}
 {%- if page_type == 'index' -%}
   {%- liquid

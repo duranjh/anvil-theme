@@ -168,7 +168,7 @@
           </p>
         {%- endif -%}
         <button class="av-btn av-btn--primary av-btn--md av-btn--full" type="button" data-anvil-bundle-add{% if bundle_total == 0 %} disabled{% endif %}>
-          {{- add_label | escape -}}
+          {{- add_label | escape_once -}}
         </button>
         <p class="av-pb-bundle__status" role="status" data-anvil-status></p>
       </div>

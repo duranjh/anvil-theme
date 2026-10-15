@@ -62,7 +62,7 @@
   endif
   assign example_label = 'anvil.card.example_product' | t
   assign close_label = 'anvil.a11y.close' | t
-  assign add_label_html = add_label | escape
+  assign add_label_html = add_label | escape_once
 
   # Icons are captured once and printed in every dot and card.
   if dot_shape == 'plus'
@@ -133,7 +133,8 @@
               assign spot_class = spot_class | append: ' av-shoppable-image__spot--left'
             endif
 
-            assign spot_title = example_label
+            # example_label is escaped by t; spot_title goes into spot_label's t, so it is plain text here (DECISIONS 135 rule 6).
+            assign spot_title = example_label | replace: '&#39;', "'" | replace: '&quot;', '"' | replace: '&lt;', '<' | replace: '&gt;', '>' | replace: '&amp;', '&'
             if p != blank
               assign spot_title = p.title
             endif
@@ -188,7 +189,7 @@
             </button>
             <div class="av-hotspots__pop av-shoppable-image__pop av-scheme av-scheme--{{ card_scheme }}" id="{{ pop_id }}" role="dialog" aria-labelledby="{{ pop_id }}-t" tabindex="-1" hidden>
               <div class="av-shoppable-image__card{% if s.show_image %} av-shoppable-image__card--thumb{% endif %}">
-                <button type="button" class="av-shoppable-image__close" data-anvil-spot-close aria-label="{{ close_label | escape }}">
+                <button type="button" class="av-shoppable-image__close" data-anvil-spot-close aria-label="{{ close_label }}">
                   {{- icon_close -}}
                 </button>
                 {%- if s.show_image -%}

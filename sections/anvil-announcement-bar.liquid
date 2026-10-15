@@ -78,9 +78,9 @@
               {%- if block.settings.text != blank -%}<span class="av-announcement-bar__offer-text">{{ block.settings.text | escape }}</span>{%- endif -%}
               <code class="av-announcement-bar__code">{{ code | escape }}</code>
               {%- if block.settings.mode == 'apply' -%}
-                <a class="av-announcement-bar__copy" href="{{ root_url }}discount/{{ code | url_encode }}?redirect={{ request.path | url_encode }}" data-anvil-apply="{{ code | escape }}" data-anvil-applied="{{ applied_fallback | escape }}">{{ apply_label | escape }}</a>
+                <a class="av-announcement-bar__copy" href="{{ root_url }}discount/{{ code | url_encode }}?redirect={{ request.path | url_encode }}" data-anvil-apply="{{ code | escape }}" data-anvil-applied="{{ applied_fallback }}">{{ apply_label | escape_once }}</a>
               {%- else -%}
-                <button type="button" class="av-announcement-bar__copy av-js-only" data-anvil-copy="{{ code | escape }}" data-anvil-copied="{{ copied_label | escape }}">{{ copy_label | escape }}</button>
+                <button type="button" class="av-announcement-bar__copy av-js-only" data-anvil-copy="{{ code | escape }}" data-anvil-copied="{{ copied_label | escape_once }}">{{ copy_label | escape_once }}</button>
               {%- endif -%}
               <span class="av-visually-hidden" role="status" aria-live="polite" data-anvil-code-status></span>
             </div>

@@ -3,6 +3,7 @@
 .av-cart-footer{display:grid;grid-template-columns:1fr;gap:var(--av-space-5)}
 .av-cart-footer__note .av-field{max-width:480px}
 .av-cart-footer__summary{display:flex;flex-direction:column;gap:var(--av-space-3)}
+.av-cart-footer__gifts{display:grid;gap:var(--av-space-3);padding-block-end:var(--av-space-3);border-block-end:1px solid var(--av-border)}
 .av-cart-footer__codes{display:flex;flex-wrap:wrap;gap:var(--av-space-2);margin:0}
 .av-cart-footer__code{display:inline-flex;align-items:center;gap:var(--av-space-1);padding-inline-start:var(--av-space-3);font-size:var(--av-text-xs);font-weight:600;border:1px solid var(--av-border);border-radius:var(--av-radius-pill)}
 .av-cart-footer__code-remove{display:grid;place-items:center;width:28px;height:28px;color:inherit}

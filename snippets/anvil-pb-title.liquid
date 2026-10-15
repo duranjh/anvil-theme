@@ -36,9 +36,9 @@
 {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
 <div class="{{ title_classes }}" style="--av-pb-mt: {{ s.space_top | default: 0 }}px; --av-pb-mb: {{ s.space_bottom | default: 0 }}px;" {{ block.shopify_attributes }}>
   <{{ heading_tag }} class="av-pb-title__heading">
-    {%- if headline != blank -%}{{ headline | escape }}{%- else -%}{{ product_name | escape }}{%- endif -%}
+    {%- if headline != blank -%}{{ headline | escape }}{%- else -%}{{ product_name | escape_once }}{%- endif -%}
   </{{ heading_tag }}>
   {%- if headline != blank and s.show_name -%}
-    <p class="av-pb-title__name">{{ product_name | escape }}</p>
+    <p class="av-pb-title__name">{{ product_name | escape_once }}</p>
   {%- endif -%}
 </div>

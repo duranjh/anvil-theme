@@ -47,7 +47,8 @@
           </div>
         </div>
         <div class="av-contact-form__actions">
-          {% render 'anvil-button', label: s.button_label, style: 'primary', size: 'lg', type: 'submit' %}
+          {%- assign btn_label = s.button_label | escape -%}
+          {% render 'anvil-button', label: btn_label, style: 'primary', size: 'lg', type: 'submit' %}
         </div>
       {%- endform -%}
     </div>

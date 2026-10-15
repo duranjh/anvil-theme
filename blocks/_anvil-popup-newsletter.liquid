@@ -77,7 +77,7 @@
     {%- if form.posted_successfully? -%}
       <p class="av-popup-newsletter__notice av-form-message av-form-message--success" role="status" tabindex="-1" data-anvil-result="success">
         {%- render 'anvil-icon', name: 'check-circle', size: 20, class: 'av-form-message__icon' -%}
-        <span>{{ success_text | escape }}</span>
+        <span>{{ success_text | escape_once }}</span>
       </p>
     {%- else -%}
       {%- if form.errors -%}

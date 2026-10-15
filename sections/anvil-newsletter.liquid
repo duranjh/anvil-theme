@@ -119,7 +119,7 @@
           {%- if form.posted_successfully? -%}
             <p class="av-newsletter__notice av-form-message av-form-message--success" id="{{ success_id }}" role="status">
               {%- render 'anvil-icon', name: 'check-circle', size: 20, class: 'av-form-message__icon' -%}
-              <span>{{ success_text | escape }}</span>
+              <span>{{ success_text | escape_once }}</span>
             </p>
           {%- elsif form.errors -%}
             <div class="av-newsletter__notice av-form-message av-form-message--error" id="{{ errors_id }}" role="alert">

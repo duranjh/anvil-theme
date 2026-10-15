@@ -1,10 +1,10 @@
 {% doc %}
-  Theme block: "rated X on <platform>" badge. Every part of it (stars, number, wording, logo) renders only with a source link shoppers can follow.
+  Theme block: "rated X on <platform>" badge. Every part of it (stars, number, wording, logo) renders only with a source link shoppers can follow; the stars and the number also need a typed rating above 0.
 
   Settings (id · type · values · default):
   - logo · image_picker
   - text · text · default "Example: rated by our customers on — replace with your real wording"
-  - rating · range · 0–5 step 0.1 · default 5
+  - rating · range · 0–5 step 0.1 · default 0 (not set: no stars or number until the merchant types the rating)
   - source_url · url
   - show_stars · checkbox · default true
   - show_number · checkbox · default true
@@ -19,16 +19,21 @@
   if s.source_url != blank
     assign has_source = true
   endif
+  assign has_rating = false
+  if s.rating > 0
+    assign has_rating = true
+  endif
   assign logo_alt = s.logo.alt | default: ''
   comment
     Everything in this badge is a rating claim (stars, number, wording, platform logo), so all of it renders only
-    with a source link shoppers can follow to check it (docs/HONEST.md, CONVENTIONS section 10).
+    with a source link shoppers can follow to check it (docs/HONEST.md, CONVENTIONS section 10). The rating defaults
+    to 0, "not set", so the stars and the number stay hidden until the merchant types the rating the source shows.
   endcomment
   capture badge_inner
-    if s.show_stars
+    if has_rating and s.show_stars
       render 'anvil-stars', rating: s.rating, size: 18, class: 'av-review-stars__stars'
     endif
-    if s.show_number
+    if has_rating and s.show_number
       echo '<span class="av-review-stars__number">'
       echo s.rating
       echo '/5</span>'
@@ -42,12 +47,17 @@
       echo s.logo | image_url: width: 200 | image_tag: widths: '100, 200', sizes: '100px', loading: 'lazy', alt: logo_alt, class: 'av-review-stars__logo'
     endif
   endcapture
+  assign badge_inner = badge_inner | strip
 -%}
 <div class="av-review-stars av-review-stars--{{ s.align }}" {{ block.shopify_attributes }}>
-  {%- if has_source -%}
+  {%- if has_source and badge_inner != blank -%}
     <a class="av-review-stars__link" href="{{ s.source_url }}" target="_blank" rel="noopener">{{ badge_inner }}<span class="av-visually-hidden"> {{ 'anvil.a11y.new_window' | t }}</span></a>
   {%- elsif request.design_mode -%}
-    <p class="av-review-stars__note">{{ 'anvil.editor.review_stars_no_source' | t }}</p>
+    {%- if has_source -%}
+      <p class="av-review-stars__note">{{ 'anvil.editor.block_empty' | t }}</p>
+    {%- else -%}
+      <p class="av-review-stars__note">{{ 'anvil.editor.review_stars_no_source' | t }}</p>
+    {%- endif -%}
   {%- endif -%}
 </div>
 {% stylesheet %}
@@ -68,7 +78,7 @@
   "settings": [
     { "type": "image_picker", "id": "logo", "label": "Platform logo", "info": "Upload a logo you are entitled to use. Anvil ships no third-party logos." },
     { "type": "text", "id": "text", "label": "Text", "default": "Example: rated by our customers on — replace with your real wording", "info": "Do not type a rating or review count here. The number shows only from the rating below, and the whole badge only with a source link shoppers can check." },
-    { "type": "range", "id": "rating", "label": "Rating", "min": 0, "max": 5, "step": 0.1, "default": 5 },
+    { "type": "range", "id": "rating", "label": "Rating", "min": 0, "max": 5, "step": 0.1, "default": 0, "info": "0 means not set: no stars or number show. Type the rating exactly as the source page shows it and keep it up to date." },
     { "type": "url", "id": "source_url", "label": "Source link", "info": "The page where shoppers can verify this rating. Nothing in this badge shows until this link is set." },
     { "type": "checkbox", "id": "show_stars", "label": "Show stars", "default": true },
     { "type": "checkbox", "id": "show_number", "label": "Show the number", "default": true },

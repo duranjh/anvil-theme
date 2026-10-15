@@ -76,9 +76,9 @@
           loading: {{ 'anvil.a11y.loading' | t | json }},
           error: {{ 'anvil.a11y.error' | t | json }},
           copied: {{ 'anvil.product.copied' | t | json }},
-          shipBarBefore: {{ 'anvil.cart.ship_bar_before_html' | t: remaining: '[remaining]' | json }},
+          shipBarBeforeHtml: {{ 'anvil.cart.ship_bar_before_html' | t: remaining: '[remaining]' | json }},
           shipBarAfter: {{ 'anvil.cart.ship_bar_after' | t | json }},
-          youSave: {{ 'anvil.cart.you_save_html' | t: amount: '[amount]' | json }}
+          youSaveHtml: {{ 'anvil.cart.you_save_html' | t: amount: '[amount]' | json }}
         },
         settings: {
           cartType: {{ settings.cart_type | json }},
@@ -90,6 +90,18 @@
           predictiveSearchShowPrice: {{ settings.predictive_search_show_price | json }}
         }
       };
+      {%- comment -%}
+        Shopify HTML-escapes every translation whose key does not end in _html, and script content is raw text, so
+        the entities would reach JavaScript as written ("can&#39;t"). Decode them once to plain text for textContent
+        and setAttribute; strings from _html keys end in Html and stay HTML (DECISIONS 135).
+      {%- endcomment %}
+      (function (s, box) {
+        for (var k in s) {
+          if (/Html$/.test(k)) continue;
+          box.innerHTML = s[k];
+          s[k] = box.value;
+        }
+      })(window.Anvil.strings, document.createElement('textarea'));
     </script>
     <link rel="modulepreload" href="{{ 'anvil-events.js' | asset_url }}">
     <link rel="modulepreload" href="{{ 'anvil-cart-api.js' | asset_url }}">

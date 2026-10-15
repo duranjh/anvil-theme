@@ -6,9 +6,13 @@
 .av-ticker--heading .av-ticker__strip{font-family:var(--av-font-heading);font-weight:var(--av-heading-weight);letter-spacing:var(--av-heading-spacing)}
 .av-ticker--upper .av-ticker__strip{text-transform:uppercase;letter-spacing:0.06em}
 .av-ticker--bleed{margin-inline:calc(var(--av-gutter) * -1)}
-/* The pause button the marquee adds is 44 px tall and the strip clips its overflow, so the strip is at least that tall while it moves. */
+/* The row is the pause button's containing block: the marquee's lane modifier (av-marquee--lane) centres the 44 px
+   button on it, beside the strip, so moving text never runs under the button. While the strip moves it is at least
+   as tall as the button, and at full width the row ends at the page gutter, so the button lines up with the page. */
+.av-ticker__row{position:relative}
 @media (prefers-reduced-motion: no-preference){
 .av-ticker__strip:where([data-animations="on"] *){min-height:44px}
+.av-ticker--bleed .av-ticker__row:where(.js[data-animations="on"] *){margin-inline-end:var(--av-gutter)}
 }
 /* Room for the focus ring of a linked item: the strip clips at its padding box. */
 .av-ticker__strip{padding-block:var(--av-space-2);margin-block:calc(var(--av-space-2) * -1)}

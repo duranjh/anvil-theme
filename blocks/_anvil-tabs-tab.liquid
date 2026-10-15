@@ -62,7 +62,7 @@
 -%}
 {%- if show -%}
   <div class="{{ panel_class }}" id="{{ panel_id }}" role="tabpanel" aria-labelledby="{{ tab_id }}"{% if block.id != open_id %} hidden{% endif %} style="--av-tabs-gap: {{ b.gap }}px;" {{ block.shopify_attributes }}>
-    <h3 class="av-tabs__title">{{ title | escape }}</h3>
+    <h3 class="av-tabs__title">{{ title | escape_once }}</h3>
     <div class="av-tabs__content">
       {% content_for 'blocks' %}
     </div>

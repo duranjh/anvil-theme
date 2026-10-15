@@ -4,13 +4,15 @@
 
   # Column names. Your column falls back to the store name, the other column to a generic word, so the
   # table always has column headers (and an accessible caption) even when the merchant clears them.
+  # The generic word comes out of t already escaped; it is turned back into plain text (&amp; last) so both
+  # names are plain when they go into the caption's t, which escapes every variable once (DECISIONS 135 rule 6).
   assign ours_name = s.our_heading | strip
   if ours_name == blank
     assign ours_name = shop.name
   endif
   assign theirs_name = s.their_heading | strip
   if theirs_name == blank
-    assign theirs_name = 'anvil.compare_table.others' | t
+    assign theirs_name = 'anvil.compare_table.others' | t | replace: '&#39;', "'" | replace: '&quot;', '"' | replace: '&lt;', '<' | replace: '&gt;', '>' | replace: '&amp;', '&'
   endif
   assign label_head = s.label_heading | strip
 
@@ -127,7 +129,7 @@
                     {{ ours_name | escape }}
                   {%- endif -%}
                 </th>
-                <th scope="col" class="av-compare-table__head av-compare-table__theirs">{{ theirs_name | escape }}</th>
+                <th scope="col" class="av-compare-table__head av-compare-table__theirs">{{ theirs_name | escape_once }}</th>
               </tr>
             </thead>
             <tbody>
@@ -146,7 +148,7 @@
                 -%}
                 <tr class="av-compare-table__row" {{ block.shopify_attributes }}>
                   <th scope="row" class="av-compare-table__label">
-                    {{- label | escape -}}
+                    {{- label | escape_once -}}
                     {%- if row_note != blank -%}
                       <span class="av-compare-table__label-note">{{ row_note | escape }}</span>
                     {%- endif -%}
@@ -162,16 +164,17 @@
                       assign key = side | append: '_source'
                       assign v_source = b[key]
 
-                      # Stars render only from a review-app metafield or with a source link shoppers can follow.
+                      # Stars render only from a review-app metafield or with a source link shoppers can follow. A typed
+                      # rating of 0 is "not set" (the default), so a stars cell shows its text or a dash until it is typed.
                       assign stars_value = ''
                       assign stars_max = 5
                       assign stars_url = ''
                       assign editor_hint = ''
                       if v_type == 'stars'
-                        if v_source != blank
+                        if v_source != blank and v_rating > 0
                           assign stars_value = v_rating
                           assign stars_url = v_source
-                        elsif request.design_mode
+                        elsif request.design_mode and v_source == blank
                           assign editor_hint = hint_stars
                         endif
                       elsif v_type == 'rating'
@@ -425,8 +428,8 @@
           "min": 0,
           "max": 5,
           "step": 0.5,
-          "default": 5,
-          "info": "Type the rating exactly as the linked page shows it."
+          "default": 0,
+          "info": "0 means not set: the cell shows its text or a dash. Type the rating exactly as the linked page shows it."
         },
         {
           "type": "url",
@@ -461,8 +464,8 @@
           "min": 0,
           "max": 5,
           "step": 0.5,
-          "default": 5,
-          "info": "Type the rating exactly as the linked page shows it."
+          "default": 0,
+          "info": "0 means not set: the cell shows its text or a dash. Type the rating exactly as the linked page shows it."
         },
         {
           "type": "url",

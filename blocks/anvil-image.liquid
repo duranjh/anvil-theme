@@ -65,7 +65,7 @@
     {{ media_html }}
   {%- endif -%}
   {%- if s.caption != blank -%}
-    <figcaption class="av-image-block__caption">{{ s.caption }}</figcaption>
+    <figcaption class="av-image-block__caption">{{ s.caption | escape }}</figcaption>
   {%- endif -%}
 </figure>
 {% stylesheet %}

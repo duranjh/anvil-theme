@@ -8,13 +8,115 @@
   validation); it is the cart attribute anvil_terms_accepted, the same one the cart drawer's Policies checkbox block
   writes, and assets/anvil-cart.js saves it on change so a re-render keeps the tick. Totals styles come from
   assets/anvil-cart-drawer.css (shared with the drawer).
+  "Free gift at threshold" blocks are the cart drawer's gift_threshold block for cart type Page (the drawer is not
+  rendered then): the same setting ids, the same spend rule JSON for assets/anvil-gifts.js (key spend:<cents>, gift
+  lines left out of the total) and the drawer's progress markup and classes from assets/anvil-cart-drawer.css. They
+  apply only while Theme settings > Cart > Cart type is Page, so a gift is never set up in two places at once; with
+  Drawer the drawer's own block runs on every page, the cart page included. A rule is written only while the gift
+  variant is available and the cart is in the store currency; the progress line also shows while a gift line of its
+  key is in the cart. The gift line's label is the items section's default ("Gift").
 {%- endcomment -%}
 {%- liquid
   assign s = section.settings
   assign checkout_label = 'anvil.cart.checkout' | t
   assign apply_label = 'anvil.cart.apply' | t
   assign terms_default = 'anvil.cart.terms_default' | t
+
+  assign gift_rules = ''
+  assign gift_html = ''
+  assign gift_on = false
+  if settings.cart_type == 'page' and section.blocks.size > 0 and cart.item_count > 0
+    assign gift_on = true
+    assign shop_currency = false
+    if cart.currency.iso_code == shop.currency
+      assign shop_currency = true
+    endif
+    assign gift_total = 0
+    for item in cart.items
+      if item.properties['_anvil_gift'] != blank
+        assign gift_total = gift_total | plus: item.final_line_price
+      endif
+    endfor
+    assign total_ex_gift = cart.total_price | minus: gift_total | at_least: 0
+    assign ph_a = '{' | append: '{ remaining }}'
+    assign ph_b = '{' | append: '{remaining}}'
+    assign ph_c = '[remaining]'
+  endif
 -%}
+{%- if gift_on -%}
+  {%- for block in section.blocks -%}
+    {%- liquid
+      assign bs = block.settings
+      assign g_product = bs.gift_product
+      assign g_threshold = bs.gift_threshold_amount | times: 100 | round
+      assign g_key = 'spend:' | append: g_threshold
+      assign g_index = bs.gift_variant_position | default: 1 | minus: 1 | at_least: 0
+      assign g_variant = g_product.variants[g_index] | default: g_product.selected_or_first_available_variant
+      assign g_has_line = false
+      for item in cart.items
+        if item.properties['_anvil_gift'] == g_key
+          assign g_has_line = true
+          break
+        endif
+      endfor
+      assign g_ok = false
+      if g_product != blank and g_threshold > 0 and shop_currency
+        assign g_ok = true
+      endif
+      assign g_show = false
+      if g_ok
+        if g_variant.available or g_has_line
+          assign g_show = true
+        endif
+      endif
+    -%}
+    {%- if g_ok and g_variant.available -%}
+      {%- capture g_rule -%}<script type="application/json" data-anvil-gift-rule data-anvil-cart-count="{{ cart.item_count }}">{"key":{{ g_key | json }},"trigger":"spend","threshold":{{ g_threshold }},"giftVariantId":{{ g_variant.id }},"excludeGifts":true}</script>{%- endcapture -%}
+      {%- assign gift_rules = gift_rules | append: g_rule -%}
+    {%- endif -%}
+    {%- capture g_html -%}
+      {%- if g_show -%}
+        {%- liquid
+          assign g_remaining = g_threshold | minus: total_ex_gift
+          assign g_ratio = total_ex_gift | times: 1.0 | divided_by: g_threshold | round: 3 | at_most: 1
+        -%}
+        {%- if g_remaining > 0 or g_has_line -%}
+          <div class="av-cart-drawer__progress av-cart-drawer__progress--gift{% if g_remaining <= 0 %} av-is-complete{% endif %}" {{ block.shopify_attributes }}>
+            <p class="av-cart-drawer__progress-text">
+              {%- render 'anvil-icon', name: 'gift', size: 16 -%}
+              {%- if g_remaining > 0 -%}
+                {%- capture g_money -%}<strong>{% render 'anvil-money', amount: g_remaining %}</strong>{%- endcapture -%}
+                <span>{{ bs.gift_text_before | escape | replace: ph_a, g_money | replace: ph_b, g_money | replace: ph_c, g_money }}</span>
+              {%- else -%}
+                <span>{{ bs.gift_text_after | escape }}</span>
+              {%- endif -%}
+            </p>
+            {%- if bs.gift_show_bar -%}
+              <div class="av-cart-drawer__track" aria-hidden="true">
+                <span class="av-cart-drawer__fill" style="--av-progress: {{ g_ratio }}"></span>
+              </div>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      {%- elsif request.design_mode -%}
+        {%- assign g_note = 'anvil.editor.gift_not_ready' | t -%}
+        <div {{ block.shopify_attributes }}>{% render 'anvil-editor-empty', text: g_note %}</div>
+      {%- endif -%}
+    {%- endcapture -%}
+    {%- assign gift_html = gift_html | append: g_html -%}
+  {%- endfor -%}
+{%- elsif request.design_mode and section.blocks.size > 0 -%}
+  {%- comment -%}
+    The blocks do nothing while the cart type is Drawer or the cart is empty (the editor's usual cart preview), so
+    each block gets an editor note that carries its attributes and can be selected. Printed after the summary when
+    the cart is empty.
+  {%- endcomment -%}
+  {%- assign g_note = 'anvil.editor.gift_page_only' | t -%}
+  {%- for block in section.blocks -%}
+    {%- capture g_html -%}<div {{ block.shopify_attributes }}>{% render 'anvil-editor-empty', text: g_note %}</div>{%- endcapture -%}
+    {%- assign gift_html = gift_html | append: g_html -%}
+  {%- endfor -%}
+{%- endif -%}
 {% render 'anvil-stylesheet', file: 'anvil-cart-drawer.css', section: section %}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-cart-footer' %}>
   <div class="av-section__inner" data-anvil-cart-render="{{ section.id }}">
@@ -34,6 +136,10 @@
           {%- endif -%}
         </div>
         <div class="av-cart-footer__summary">
+          {%- if gift_html != blank -%}
+            <div class="av-cart-footer__gifts">{{ gift_html }}</div>
+          {%- endif -%}
+          {{- gift_rules -}}
           <p class="av-form-message av-form-message--error" role="alert" data-anvil-cart-error hidden></p>
           {%- if settings.cart_show_discount_field -%}
             <div class="av-cart-footer__discount av-field av-enhanced-only">
@@ -82,7 +188,13 @@
         </div>
       </anvil-cart-form>
       <script type="module" src="{{ 'anvil-cart.js' | asset_url }}"></script>
+      {%- if gift_rules != '' -%}
+        <script type="module" src="{{ 'anvil-gifts.js' | asset_url }}"></script>
+      {%- endif -%}
     {%- endunless -%}
+    {%- if cart.empty? and gift_html != blank -%}
+      <div class="av-cart-footer__gifts">{{ gift_html }}</div>
+    {%- endif -%}
   </div>
 </div>
 {% schema %}
@@ -128,6 +240,22 @@
       "info": "Lists the policies written under Settings > Policies.",
       "default": true,
       "visible_if": "{{ section.settings.show_terms }}"
+    }
+  ],
+  "max_blocks": 3,
+  "blocks": [
+    {
+      "type": "gift_threshold",
+      "name": "Free gift at threshold",
+      "settings": [
+        { "type": "paragraph", "content": "Works while Theme settings > Cart > Cart type is Page; with Drawer, use the cart drawer's own Free gift at threshold block, which also runs on this page. On the cart page the gift is added once the total reaches the amount and removed below it; Buy it now buttons skip the cart. The theme does not make it free: create a Buy X Get Y automatic discount in Shopify for that. The cart says \"Free\" only when Shopify prices the line at zero." },
+        { "type": "product", "id": "gift_product", "label": "Gift product" },
+        { "type": "range", "id": "gift_variant_position", "label": "Gift variant (position)", "min": 1, "max": 10, "step": 1, "default": 1, "info": "1 is the product's first variant. While it is sold out the block shows nothing and no gift is added." },
+        { "type": "number", "id": "gift_threshold_amount", "label": "Cart total that unlocks the gift", "info": "In your store currency; the gift is not added in other currencies. Gift lines are left out of the total." },
+        { "type": "text", "id": "gift_text_before", "label": "Message before the amount", "default": "Spend [remaining] more to unlock a gift", "info": "[remaining] becomes the amount still needed. Only promise a gift your discount really gives." },
+        { "type": "text", "id": "gift_text_after", "label": "Message once added", "default": "Your gift is in the cart" },
+        { "type": "checkbox", "id": "gift_show_bar", "label": "Show a progress bar", "default": true }
+      ]
     }
   ]
 }

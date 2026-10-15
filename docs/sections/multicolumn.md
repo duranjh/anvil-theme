@@ -32,7 +32,7 @@ Local block `column`. `{{ block.shopify_attributes }}` is on each item (`<li>` i
 | `icon` | select (68 Lucide names) | `check-circle` | icon mode without an image. Every value exists in `snippets/anvil-icon-*` (checked by script) |
 | `heading` | text | "Example column — replace me" | `info` on claims such as best-selling or clinically proven |
 | `text` | richtext | `<p>Example text — describe one real benefit in a sentence or two.</p>` | `info`: results, guarantees and delivery times must match products and policies |
-| `button_label` | text | "Learn more" | `info`: shows as a button once the column has a link; without a label a linked heading becomes the link |
+| `button_label` | text | blank | `info`: leave empty and the heading becomes the link; a label shows as a button once the column has a link and should say where it goes (for example "See the size guide") |
 | `button_link` | url | — | |
 
 The preset "Multicolumn" ships an example heading ("Example heading — what sets it **apart**") and three image columns whose headings start with "Example column —" and texts with "Example text —". The columns have no links, so no button shows until the merchant adds one. The empty images show the `collection-1` to `collection-6` placeholders in turn.
@@ -74,3 +74,6 @@ The preset "Multicolumn" ships an example heading ("Example heading — what set
 - Setting ids follow the theme-wide vocabulary (CONVENTIONS §5; DECISIONS 82–100); the tables above use the new ids: `link_label` → `button_label`, `link` → `button_link`. Saved templates were migrated.
 - Uses the shared pieces: card boxes from `snippets/anvil-surface` and `.av-surface` (DECISIONS 83); columns from the shared `.av-grid` rule (DECISIONS 82); slider attributes, peek, arrows and dots per width from `snippets/anvil-slider-attrs` (DECISIONS 89); eager or lazy media from `snippets/anvil-above-fold` (DECISIONS 85); the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87); a hidden fallback heading through `anvil-section-head` (DECISIONS 84).
 - Availability: `disabled_on` groups ["header","custom.overlay"] (CONVENTIONS §4, DECISIONS 100).
+
+## Honest-defaults pass (2026-10-15)
+- `button_label` has no default: with a link and no label the heading is the link, which always names the destination (WCAG 2.4.4). A default such as "Shop the collection" was wrong for most links and the "Example:" sweep would not catch it (DECISIONS 142, superseding that part of 125). The visually hidden heading copy after a typed label stays.

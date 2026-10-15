@@ -115,7 +115,7 @@
   section-id="{{ section.id }}"
   form-id="{{ form_id }}"
   {%- if bs.picker_hide_sold_out %} hide-sold-out{% endif %}
-  {%- if save_tpl != blank %} data-anvil-save-tpl="{{ save_tpl | escape }}"{% endif %}
+  {%- if save_tpl != blank %} data-anvil-save-tpl="{{ save_tpl }}"{% endif %}
   {{ block.shopify_attributes }}
 >
   <script type="application/json" data-anvil-product-json>
@@ -178,7 +178,7 @@
         {%- if chart_block != blank and chart_option != blank and option_key == chart_option -%}
           <button type="button" class="av-picker__chart" data-anvil-open="anvil-size-chart-{{ section.id }}" aria-haspopup="dialog">
             {%- render 'anvil-icon', name: 'ruler', size: 16 -%}
-            <span>{{ chart_label | escape }}</span>
+            <span>{{ chart_label | escape_once }}</span>
           </button>
         {%- endif -%}
       {%- endcapture -%}

@@ -1,6 +1,48 @@
-# Anvil — Status after the section library (waves 2–5), its integration and the fix pass
+# Anvil — Status at release candidate 1.0.0-rc.1, and the build passes before it
 
-_2026-10-15. Section F is the consistency and completeness fix pass (54 audit findings, DECISIONS 82–119). Section S below is the section-library integration pass (45 sections from the first run plus the rebuilt `anvil-stats`), written by the integrator. Numbers come from the in-place gate (`shopify theme check --fail-level warning`, Shopify CLI 4.9.3), the repo scripts and `node --test`. Section W1 is the wave-1 record (product page and cart drawer) and sections 1–5 the wave-0 record, kept as written; their live-store lists still apply._
+_2026-10-15. Section RC is the release candidate 1.0.0-rc.1: what the live store verified and what is still open. Section F is the consistency and completeness fix pass (54 audit findings, DECISIONS 82–119). Section S below is the section-library integration pass (45 sections from the first run plus the rebuilt `anvil-stats`), written by the integrator. Numbers come from the in-place gate (`shopify theme check --fail-level warning`, Shopify CLI 4.9.3), the repo scripts and `node --test`. Section W1 is the wave-1 record (product page and cart drawer) and sections 1–5 the wave-0 record, kept as written; their live-store lists still apply._
+
+## RC. Release candidate 1.0.0-rc.1 (2026-10-15)
+
+`theme_version` is `1.0.0`. Pushing the tag `v1.0.0-rc.1` makes a GitHub pre-release with `Anvil-1.0.0-rc.1.zip` and the CHANGELOG section `[1.0.0-rc.1]` (`.github/workflows/release.yml`; DECISIONS 131–134). The owner reviews it before the final `v1.0.0`. Details of every live check: `docs/LIVE-QA-2026-10-15.md`.
+
+### RC.1 Verified on the live store
+Unpublished dev theme 189166714959 on ftsegk-n1, preview mode, 375 px and desktop. The checks ran on the 2026-10-15 pushes (wave 0 + 1 at commit 11ec30c, then the section library with the section CSS moved to asset files), not on the tagged commit itself.
+- **Upload.** The whole theme uploads. The two errors Shopify's upload found (a range default off its step; two `content_for 'blocks'` in one file) are fixed and are now caught by `scripts/check-schema-ranges.py` and `scripts/chassis-lint.py` (DECISIONS 121, 122).
+- **Templates.** Home, product, landing, collection, collections list, search, cart, contact, FAQ, track order, 404 and blog render with no Liquid or translation errors and exactly one `h1`; the 404 page returns status 404.
+- **Scripts.** No theme console errors (only Shopify's own 401 on `/sf_private_access_tokens`); `window.Anvil` loads and every `<anvil-*>` element on the home page is defined.
+- **Money path** (phone width). Add to cart posts, announces "Added to cart" and opens the drawer with the line; the stepper updates count, subtotal and header bubble and keeps focus; remove shows the empty state and moves focus to the drawer title; offer cards on the landing page update price, compare-at, Sale badge, the form's variant, the sticky bar and `?variant=` (keeping `view=landing`), and move the variant image first in the gallery.
+- **Stylesheets.** Shopify's shared `compiled_assets/styles.css` is 11,813 B (from 41,471 B); each page loads only its sections' CSS files (4–21). Home on a phone: 36 Anvil requests, 47 KB compressed.
+- **Lighthouse** (mobile, median of 3), performance / accessibility: home 97 / 97, product 96 / 97, landing 93 / 97, collection 98 / 97. The remaining misses come from Shopify (preview bar frame without a title, third-party cookies, the 401 above).
+
+### RC.2 Still unverified before 1.0.0
+Theme editor (the admin rendered blank with the browser pane hidden, so none of these ran):
+1. **Static cart drawer blocks editable**: add, edit, reorder and hide the cart drawer's blocks in the editor, and "block wins" for the note and discount field (W1.4 item 8; DECISIONS 4, 28).
+2. **Nested theme blocks vs `max_blocks`**: whether blocks inside columns, tabs, pricing plans and hero slides count toward a section's cap. Custom columns ships without a cap until this is known (DECISIONS 117; S.5, S.6 item 2).
+3. **Promo popup**: the unlisted static signup block shows and can be hidden; the popup never opens on editor load; delay, scroll depth and exit intent open it on the storefront once per period (S.6 item 2).
+4. **`visible_if`**: settings that show or hide other settings, including `and` / `or` conditions and conditions on header settings (`show_arrows` / `show_dots`, `box_scheme`, `transparent_templates`, the Cart summary policies settings; F.4 item 1, S.6 item 2).
+5. **Cart summary's Free gift at threshold block**: with an empty preview cart, and with Cart type Drawer, selecting the block highlights its editor note (`anvil.editor.gift_page_only`); with Cart type Page and items in the cart, the progress line or `gift_not_ready` shows (DECISIONS 141).
+
+Also still open: the rest of S.6, W1.4 and F.4 and the wave-0 list in §4 (among them the no-JavaScript variant post, gifts and tiers with real Shopify discounts, the free-shipping bar in a second currency, ship dates around midnight, Firefox and Safari). Changes recorded from DECISIONS 124 on were made after the live pushes and have not been seen on the store: typed star ratings default to not set, descriptive link labels (button labels now blank or "Example:", DECISIONS 142), offer cards on `product.landing` showing the product's own option values (DECISIONS 136), `.shopifyignore`, the spend gift on the cart page, the ticker's pause button in its own lane, this release preparation and the two-job release workflow (DECISIONS 137; it runs for the first time on the `v1.0.0-rc.1` tag). Translated-string escaping and the `window.Anvil.strings` decode (DECISIONS 135, 138, 139): on the dev theme, check a tag-filtered collection `<title>` (`Tagged "…"`, no `&amp;quot;`), an `aria-label` from a translation (cart line "Remove …", slider "Slide N of M"), a JS-written string ("Added to cart", "Slide N of M", "Pause"), and a button or countdown label typed with `&` or `<` (it shows as typed and is not parsed as markup). The ticker's disclosure line seen in LIVE-QA comes from the example review saved in `index` and `product.landing` (DECISIONS 130); keeping that example is an owner call.
+
+### RC.3 Before tagging v1.0.0
+1. Review the pre-release on GitHub (notes and zip).
+2. Push the tagged build to the dev theme, or upload its zip as a draft, and run RC.2 and a short repeat of RC.1.
+3. Fix or accept what that finds, add a `## [1.0.0] - <date>` CHANGELOG section, and tag `v1.0.0` (`theme_version` stays `1.0.0`).
+
+F.5's "Create the dev theme?" is answered: 189166714959 exists and carried every check above.
+
+### RC.4 Review fixes on the release candidate (DECISIONS 136–143)
+Nine review findings (one major, eight minor), all applied; nothing was pushed to the store and git was not run.
+- **Offer cards on `product.landing`** no longer ship typed labels: each card shows the product's own option value, so a product whose options are not pack counts never shows cards claiming 1, 2 or 3 packs (136, superseding 126).
+- **Release workflow** split into a read-only `build` job (checkout without saved credentials, Shopify CLI from npm, checks, package, artifact) and a `release` job that alone holds `contents: write`, installs nothing and runs `gh release create` (137). The tag, version and CHANGELOG steps were re-run locally from the parsed workflow: `v1.0.0-rc.1` passes; `v1.0.0`, `v1.0.1`, `v1.0` and `1.0.0` stop with their errors.
+- **Escaping.** A translation is never passed as a variable into another key (compare table caption, palette preview checks caption, shoppable image spot labels; 138). Typed plain text reaches `anvil-button` escaped (contact form, 404, welcome, image banner, cart drawer checkout and discount buttons, Add to cart and Button theme blocks) and the countdown, image and rating-stars blocks escape their text settings (139).
+- **CHANGELOG** rc.1: 59 sections (54 addable, Apps, 4 theme-rendered), and a line on text shown as typed (140).
+- **Cart summary gift block** is selectable in the editor with an empty cart or Cart type Drawer, with its own note `anvil.editor.gift_page_only` (141; RC.2 item 5).
+- **Button labels.** Multicolumn, Feature grid and Icons with content have no default label (the heading becomes the link); Multirow's default is "Example: Read the full story" (142, superseding that part of 125).
+- **CONVENTIONS** §1 carries the escaping rules and §6 the marquee's `av-marquee--lane` modifier (143).
+
+Gates after the pass: `shopify theme check --fail-level warning` 247 files, 0 offenses (CLI 4.9.3); `npm run lint` clean (cleanroom 30 patterns, asset audit, chassis 96 files 0 warnings, limits, ranges, section CSS, templates 25 files, SECTIONS.md); `sync-block-schemas.py --check --strict` up to date; `node --test` 24/24.
 
 ## F. Consistency and completeness fix pass (2026-10-15)
 
@@ -97,7 +139,7 @@ Section cards: every `docs/sections/<slug>.md` touched by a rename has its table
 - **Create the dev theme?** `shopify theme push --unpublished --theme "ANVIL dev - DO NOT PUBLISH" --store ftsegk-n1.myshopify.com`, then put its id in `shopify.theme.toml` and `DEV_THEME_ID`. Never `--live`; the live theme is #189067624527. Every live-store list in this file waits on it. Also confirm a page with handle `contact` exists for `SCRATCH_PAGE`.
 - **Hero video**: keep heroes image-only (DECISIONS 112) or add a background video with visible pause controls and a poster.
 - **Columns cap**: restore `max_blocks: 4` on Custom columns once the editor shows whether nested theme blocks count.
-- **Spend gifts with cart type Page**: the gift at a cart total is a drawer block; with a page cart it never adds. Offer it on the Cart summary too (a second copy of the rule), or document drawer-only (current state)?
+- ~~**Spend gifts with cart type Page**~~: closed (DECISIONS 128). The Cart summary section offers its own Free gift at threshold block, applied only with cart type Page; the drawer's block keeps cart type Drawer.
 
 ### F.6 Earlier open items closed by this pass
 S.4: the product-row snippet, slider `per-view-tablet` (now per-width inputs), hotspots pointer close, `.av-bundle` naming; S.5: hero H1 rule, transparent header offset, fallback headings, marquee speed wording; W1.5: Video block mute, cart page policies checkbox.
@@ -155,7 +197,7 @@ S.4: the product-row snippet, slider `per-view-tablet` (now per-width inputs), h
 - **Harness rule**: let a section's builder edit its own existing `assets/anvil-<slug>*` (DESIGN-sections §5 already lists them as allowed paths). The stats rebuild left two fixes to `anvil-stats.js` for the integrator because the wave made existing assets read-only; both landed here.
 - **Fallback headings**: generic hidden "Highlights" / "Features" / "Guarantees" vs card titles as `h2` when the section heading is blank.
 - **Nested theme blocks and `max_blocks`** (columns, tabs, pricing, hero slideshow): unknown whether nested blocks count; caps were removed where they could break presets.
-- **Translation escaping**: several sections write `| t | escape`, which double-escapes `&` and apostrophes in translations; choose one rule theme-wide.
+- **Translation escaping**: several sections write `| t | escape`, which double-escapes `&` and apostrophes in translations; choose one rule theme-wide. **Answered:** one rule (DECISIONS 135, 138, 139), written into CONVENTIONS §1.
 - **Marquee and ticker speed** is pixels per second, not seconds per loop (spec card).
 - **Popup**: the result page after a signup opens the popup at once (answering the shopper's own submit); an `aria-modal` consent banner holds it back.
 - **Bundle**: fewer buyable products than "Products to pick" lowers the count and hides the savings text (alternative: block the bundle); every pick is added at quantity 1; no selling plans; no form fallback without JavaScript.
@@ -221,7 +263,7 @@ S.4: the product-row snippet, slider `per-view-tablet` (now per-width inputs), h
 
 ### W1.5 Open questions for the owner
 - ~~**No-JS fallback vs module failure (CONVENTIONS §6).**~~ Closed by the fix pass: the picker's controls ship disabled and the module enables them (DECISIONS 55). The Buy buttons fallback select lives in `<noscript>`. If JavaScript runs but `anvil-product.js` fails to load, the picker shows but does nothing and the button adds the opening variant. The rule-following alternative (an `.av-fallback-only` select disabled once the module loads) shifts the layout on every product page. Keep `<noscript>`?
-- **Spend gifts with cart type "page".** Spend rules render only with the drawer; with cart type "page" no page renders them, so threshold gifts are never added (orphans are still removed, and since the fix pass the engine also runs on the cart page whenever a gift line exists). Render the drawer's rules from `main-cart-footer` too?
+- ~~**Spend gifts with cart type "page".**~~ Closed (DECISIONS 128): `main-cart-footer` has a `gift_threshold` block that writes the same spend rule and progress line while cart type is Page.
 - **Drawer complexity.** `anvil-cart-drawer.liquid` is just under Theme Check's `LiquidComplexity` limit; the next drawer block needs a helper snippet (e.g. `snippets/anvil-cart-drawer-block.liquid`). Approve that file for the drawer owner in wave 2?
 - **Behaviour changes from wave 0 to confirm:** once any drawer block exists, the note/discount theme settings no longer apply; the savings figure is split into "You save" (discounts) and a compare-at line; the cart page lists lines in a `<ul>` instead of a table.
 - **Duplicate stylesheet links.** Content, trust and commerce blocks each print their area stylesheet (`stylesheet_tag`, fetched once). Load them once per product section instead? Tidier markup, no network difference.

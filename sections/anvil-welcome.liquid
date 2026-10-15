@@ -25,7 +25,8 @@
       {%- endif -%}
       {%- if s.button_label != blank -%}
         <div class="av-welcome__actions">
-          {% render 'anvil-button', label: s.button_label, url: s.button_link, style: btn_style, size: 'lg', icon: btn_icon %}
+          {%- assign btn_label = s.button_label | escape -%}
+          {% render 'anvil-button', label: btn_label, url: s.button_link, style: btn_style, size: 'lg', icon: btn_icon %}
         </div>
       {%- endif -%}
     </div>

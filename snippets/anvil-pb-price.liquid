@@ -141,10 +141,11 @@
     {%- if s.show_tax_note -%}
       <p class="av-pb-price__note">
         {%- if shop.shipping_policy.body != blank -%}
+          {%- assign policy_url = shop.shipping_policy.url | escape -%}
           {%- if cart.taxes_included -%}
-            {{ 'anvil.product.tax_included_shipping_html' | t: link: shop.shipping_policy.url }}
+            {{ 'anvil.product.tax_included_shipping_html' | t: link: policy_url }}
           {%- else -%}
-            {{ 'anvil.product.tax_shipping_html' | t: link: shop.shipping_policy.url }}
+            {{ 'anvil.product.tax_shipping_html' | t: link: policy_url }}
           {%- endif -%}
         {%- elsif cart.taxes_included -%}
           {{ 'anvil.cart.taxes_included_note' | t }}

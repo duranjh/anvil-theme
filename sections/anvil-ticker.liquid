@@ -79,6 +79,7 @@
     assign sep_html = '<span class="av-ticker__sep" aria-hidden="true">' | append: sep_html | append: '</span>'
   endif
 
+  # The disclosure line prints only when at least one review item renders (a typed review with a quote).
   assign has_review = false
   # Only the first few rendered items can sit inside the clipped strip on load, so only they load eagerly.
   assign item_pos = 0
@@ -262,11 +263,14 @@
     {%- if items != blank -%}
       {% render 'anvil-stylesheet', file: 'anvil-marquee.css', section: section %}
       <div class="{{ ticker_class }}" style="--av-ticker-icon: {{ icon_px }}px; --av-ticker-img: {{ img_h }}px;">
-        <anvil-marquee class="av-ticker__strip" speed="{{ s.speed | default: 40 }}" direction="{{ s.direction | default: 'left' }}"{% if s.pause_hover %} pause-on-hover{% endif %} style="--av-marquee-gap: {{ s.gap | default: 32 }}px;">
-          <ul class="av-ticker__track" role="list" data-marquee-track>
-            {{- items -}}
-          </ul>
-        </anvil-marquee>
+        {%- comment -%} The row holds only the strip: av-marquee--lane puts the pause button beside the strip, centred on this row, so moving text never runs under it. {%- endcomment -%}
+        <div class="av-ticker__row">
+          <anvil-marquee class="av-ticker__strip av-marquee--lane" speed="{{ s.speed | default: 40 }}" direction="{{ s.direction | default: 'left' }}"{% if s.pause_hover %} pause-on-hover{% endif %} style="--av-marquee-gap: {{ s.gap | default: 32 }}px;">
+            <ul class="av-ticker__track" role="list" data-marquee-track>
+              {{- items -}}
+            </ul>
+          </anvil-marquee>
+        </div>
         {%- if s.show_disclosure and has_review -%}
           <p class="av-ticker__note">{{ disclosure }}</p>
         {%- endif -%}

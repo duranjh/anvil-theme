@@ -202,7 +202,7 @@
       </div>
     {%- endif -%}
     {%- if b.link != blank -%}
-      <a class="av-hero-slideshow__link" href="{{ b.link }}"><span class="av-visually-hidden">{{ link_name | escape }}</span></a>
+      <a class="av-hero-slideshow__link" href="{{ b.link }}"><span class="av-visually-hidden">{{ link_name | escape_once }}</span></a>
     {%- endif -%}
     {%- if link_unnamed -%}
       <p class="av-hero-slideshow__note av-example-note">{{ 'anvil.editor.slide_link_name' | t: index: slide_index }}</p>

@@ -116,7 +116,7 @@
             "hero_slide_3_button_1": {
               "type": "anvil-button",
               "settings": {
-                "label": "Learn more",
+                "label": "Shop all products",
                 "url": "/collections/all",
                 "style": "link",
                 "align": "left"

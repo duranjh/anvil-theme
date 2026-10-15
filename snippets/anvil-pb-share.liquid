@@ -26,10 +26,10 @@
   endif
 -%}
 {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}
-<anvil-share class="av-pb-share av-enhance" data-anvil-url="{{ share_url | escape }}" data-anvil-title="{{ product.title | escape }}" data-anvil-copied="{{ 'anvil.product.copied' | t | escape }}" {{ block.shopify_attributes }}>
+<anvil-share class="av-pb-share av-enhance" data-anvil-url="{{ share_url | escape }}" data-anvil-title="{{ product.title | escape }}" data-anvil-copied="{{ 'anvil.product.copied' | t }}" {{ block.shopify_attributes }}>
   <button type="button" class="av-pb-share__btn av-enhanced-only">
     {%- if s.show_icon -%}{%- render 'anvil-icon', name: 'share-2', size: 18 -%}{%- endif -%}
-    <span>{{ share_label | escape }}</span>
+    <span>{{ share_label | escape_once }}</span>
   </button>
   <span class="av-pb-share__status" role="status"></span>
 </anvil-share>

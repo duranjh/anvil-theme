@@ -50,7 +50,6 @@
           "type": "offer_card",
           "settings": {
             "card_variant_position": 1,
-            "card_label": "Example: 1 pack",
             "card_caption": "Example: what this option includes",
             "card_badge_backed_by_sales": false,
             "card_show_image": true
@@ -60,7 +59,6 @@
           "type": "offer_card",
           "settings": {
             "card_variant_position": 2,
-            "card_label": "Example: 2 pack",
             "card_caption": "Example: what this option includes",
             "card_badge": "Most popular",
             "card_badge_backed_by_sales": false,
@@ -72,7 +70,6 @@
           "type": "offer_card",
           "settings": {
             "card_variant_position": 3,
-            "card_label": "Example: 3 pack",
             "card_caption": "Example: what this option includes",
             "card_badge_backed_by_sales": false,
             "card_show_image": true

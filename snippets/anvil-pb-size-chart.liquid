@@ -54,11 +54,11 @@
       {%- if bs.chart_icon != 'none' -%}
         {%- render 'anvil-icon', name: 'ruler', size: 18 -%}
       {%- endif -%}
-      <span>{{ link_text | escape }}</span>
+      <span>{{ link_text | escape_once }}</span>
     </a>
     <anvil-dialog id="{{ dialog_id }}">
       <dialog class="av-dialog av-dialog--sheet av-size-chart__dialog" aria-labelledby="{{ dialog_id }}-title">
-        <h2 class="av-dialog__title" id="{{ dialog_id }}-title">{{ chart_title | escape }}</h2>
+        <h2 class="av-dialog__title" id="{{ dialog_id }}-title">{{ chart_title | escape_once }}</h2>
         <button class="av-dialog__close" type="button" data-anvil-close>
           {%- render 'anvil-icon', name: 'x', size: 22 -%}
           <span class="av-visually-hidden">{{ 'anvil.a11y.close' | t }}</span>

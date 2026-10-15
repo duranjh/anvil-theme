@@ -280,8 +280,8 @@
                       <a class="av-collage__fill av-fallback-only" href="{{ fallback_url }}">{{ play_inner }}</a>
                     {%- endif -%}
                     <button type="button" class="av-collage__fill av-enhanced-only" data-anvil-open="{{ dialog_id }}" aria-haspopup="dialog" aria-expanded="false">{{ play_inner }}</button>
-                    <dialog class="av-dialog av-collage__dialog" aria-label="{{ dialog_name | escape }}" style="--av-collage-ratio: {{ ratio_num }};">
-                      <button type="button" class="av-dialog__close" data-anvil-close aria-label="{{ close_label | escape }}">{{ icon_close }}</button>
+                    <dialog class="av-dialog av-collage__dialog" aria-label="{{ dialog_name | escape_once }}" style="--av-collage-ratio: {{ ratio_num }};">
+                      <button type="button" class="av-dialog__close" data-anvil-close aria-label="{{ close_label }}">{{ icon_close }}</button>
                       {%- if b.video != blank -%}
                         {%- comment -%}
                           A <video> in the page loads its poster and metadata even inside a closed dialog, so the uploaded

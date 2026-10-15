@@ -175,7 +175,7 @@
                   {%- endif -%}
                 </div>
                 <div class="av-product-videos__buy">
-                  <button class="av-btn av-btn--{{ btn_style }} av-btn--sm av-btn--full" type="button" disabled>{{ add_label | escape }}</button>
+                  <button class="av-btn av-btn--{{ btn_style }} av-btn--sm av-btn--full" type="button" disabled>{{ add_label | escape_once }}</button>
                 </div>
               </div>
             {%- elsif action == 'product' -%}

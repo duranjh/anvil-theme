@@ -6,7 +6,8 @@
       "type": "text",
       "id": "label",
       "label": "Label",
-      "default": "Learn more"
+      "default": "Browse all products",
+      "info": "Say where the link goes, for example \"See the size guide\". A label such as \"Learn more\" does not tell shoppers where it leads."
     },
     {
       "type": "url",

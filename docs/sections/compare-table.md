@@ -65,11 +65,11 @@ Local block `row` (name "Row"), `max_blocks: 20`:
 | `note` | text | empty | short muted line under the label (a condition, for example "on orders over $50") |
 | `ours_type` | select `check` / `cross` / `text` / `stars` / `rating` | `text` | `stars` = typed stars with a source link; `rating` = the review app's metafield rating of `rating_product`. The default `text` with no text shows the dash and "Not stated", so a new row claims nothing. `info`: a check says your product or store offers this today |
 | `ours_text` | text | empty | shown alone for Text, or beside a check, cross or stars |
-| `ours_rating` | range 0–5 step 0.5 | 5 | used only by `stars`, and only with `ours_source`. `info`: type the rating exactly as the linked page shows it |
+| `ours_rating` | range 0–5 step 0.5 | 0 (not set) | used only by `stars`, and only with `ours_source` and a value above 0. `info`: 0 means not set (the cell shows its text or a dash); type the rating exactly as the linked page shows it |
 | `ours_source` | url | — | a public page that shows this exact rating. Without it, typed stars are not shown |
 | `theirs_type` | select `check` / `cross` / `text` / `stars` | `text` | no `rating` option: the other column never reads a product of yours. The default `text` with no text shows the dash and "Not stated", so a new row makes no claim about a competitor |
 | `theirs_text` | text | empty | as `ours_text`. `info` warns that unproven competitor claims can be unlawful |
-| `theirs_rating` | range 0–5 step 0.5 | 5 | as `ours_rating` |
+| `theirs_rating` | range 0–5 step 0.5 | 0 (not set) | as `ours_rating` |
 | `theirs_source` | url | — | as `ours_source` (for example the product's public review page) |
 
 `{{ block.shopify_attributes }}` sits on the `<tr>`, so the editor selects and scrolls to the row.
@@ -128,7 +128,7 @@ Existing keys reused: `anvil.a11y.new_window`, `anvil.editor.empty_section`, `an
 2. **Always-focusable scroll region.** A tab stop even when the table fits. Making it focusable only on overflow needs a small script, which the spec card does not include ("JS: —").
 3. **"Product review rating" on the home page** needs `rating_product`. On a product page it reads the page's product. If a merchant places this section on a product template and also picks a different product, the picked product wins.
 4. **Long competitor names.** The other column's header wraps within `col_min`. Very long names make the column grow, and the table then scrolls on phones (by design).
-5. **Typed rating default.** `ours_rating` / `theirs_rating` default to 5, matching the shared `anvil-stars` block. They render only with a merchant-entered source link, and the `info` now says to type the rating exactly as the linked page shows it. A stricter option for the project is a default of 0 treated as "not set" (dash plus an editor hint, one new locale key), applied to `anvil-stars` and here together.
+5. ~~**Typed rating default.**~~ Closed by the honest-defaults pass (DECISIONS 124): `ours_rating` / `theirs_rating` default to 0, "not set", like `anvil-stars`. A stars cell with a source link but no rating shows its text or a dash; the editor hint for that case still needs its own locale key (see the pass below).
 6. **Legal wording.** The `info` texts say "can be unlawful" without naming a jurisdiction. Comparative-advertising rules differ by country (for example the EU's comparative advertising directive and the FTC's guidance in the US). This was left general on purpose.
 
 ## Integration pass (2026-10-15)
@@ -139,3 +139,8 @@ Existing keys reused: `anvil.a11y.new_window`, `anvil.editor.empty_section`, `an
 - Setting ids follow the theme-wide vocabulary (CONVENTIONS §5; DECISIONS 82–100); the tables above use the new ids: `value_align` → `text_align`. Saved templates were migrated.
 - Uses the shared pieces: eager or lazy media from `snippets/anvil-above-fold` (DECISIONS 85); the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87).
 - Availability: `disabled_on` groups ["header","custom.overlay"] (CONVENTIONS §4, DECISIONS 100).
+
+## Honest-defaults pass (2026-10-15)
+- Typed ratings default to 0, "not set" (DECISIONS 124). A `stars` cell draws stars only with a source link **and** a rating above 0; otherwise it shows its text or a dash, so a new row or a row whose rating was never typed claims nothing. Rows saved with the old default (5, never touched) lose their stars until the merchant types the rating again: that is intended.
+- Editor hint: `anvil.editor.compare_stars_no_source` still shows when the source link is missing. When the link is set but the rating is 0 there is no hint yet, because the locale file was not part of this pass. Proposed key: `anvil.editor.compare_stars_no_rating` = "Type the rating the linked page shows to draw these stars. Until then shoppers see the text or a dash."
+- Presets and templates are unchanged: they ship no `stars` row.

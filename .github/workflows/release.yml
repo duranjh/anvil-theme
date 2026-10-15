@@ -1,39 +1,100 @@
 name: Release
 
-# Tag a release with `git tag vX.Y.Z && git push --tags`. The tag must equal
-# theme_info.theme_version in config/settings_schema.json and CHANGELOG.md must
-# carry a `## [X.Y.Z]` section; the zip from `shopify theme package` is attached
-# to the GitHub Release with that section as its notes.
+# Publishes a GitHub Release when a version tag is pushed:
+#
+#   git tag v1.0.0-rc.1 && git push origin v1.0.0-rc.1   -> pre-release
+#   git tag v1.0.0      && git push origin v1.0.0        -> release
+#
+# Rules (the build job stops with an error when one fails, and nothing is published):
+#   - The tag is vX.Y.Z, or vX.Y.Z-<suffix> for a pre-release (rc.1, beta.2 ...).
+#   - Its base version (v1.0.0-rc.1 -> 1.0.0) equals theme_info.theme_version in
+#     config/settings_schema.json, the version Shopify shows merchants.
+#   - CHANGELOG.md has a "## [<tag without v>]" section with content; that
+#     section, up to the next "## " heading, is the release text.
+#   - `shopify theme check --fail-level warning` finds nothing.
+# The theme is packaged with `shopify theme package` (scripts/package.sh checks
+# the zip layout), renamed Anvil-<tag without v>.zip and attached to the release.
+# A tag with a "-" suffix is marked as a pre-release.
+#
+# The other gates (lints, block schemas, unit tests) run in ci.yml on the branch
+# push of the tagged commit; tag only a commit whose CI run is green.
+#
+# Two jobs keep the write token away from outside code. `build` has only
+# `contents: read`: it checks out without saving the token in git config
+# (persist-credentials: false), installs Shopify CLI from npm (third-party code
+# with install scripts), runs the checks and packaging, and uploads dist/ (the
+# zip and release-notes.md) as a workflow artifact. `release` has
+# `contents: write`, checks nothing out, installs nothing, downloads that
+# artifact and runs `gh release create`, which is preinstalled on GitHub-hosted
+# runners. A job's token and tools do not carry over to the next job, so nothing
+# npm installed can read the write token or replace `gh`.
+#
+# Versions checked on their official pages on 2026-10-15:
+#   actions/checkout v7 (latest release v7.0.1), actions/setup-node v7 (latest
+#   v7.1.0; automatic npm caching is switched off, there is no lockfile),
+#   actions/upload-artifact v7 (latest v7.0.2) and actions/download-artifact v8
+#   (latest v8.0.2), all published by GitHub. Shopify CLI is pinned to 4.9.3,
+#   the version the local gates ran.
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
-permissions:
-  contents: write
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   SHOPIFY_CLI_NO_ANALYTICS: "1"
   SHOPIFY_FLAG_NO_COLOR: "1"
+  SHOPIFY_CLI_VERSION: "4.9.3"
 
 jobs:
-  release:
-    name: Package and publish
+  build:
+    name: Check and package
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
+          package-manager-cache: false
 
-      - name: Install Shopify CLI
-        run: npm i -g @shopify/cli
-
-      - name: Assert theme_version equals the tag
+      - name: Read the tag
+        id: tag
         run: |
-          tag="${GITHUB_REF_NAME#v}"
-          version="$(python3 - <<'PY'
+          tag="$GITHUB_REF_NAME"
+          if ! printf '%s\n' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+            echo "::error::Tag '$tag' is not vX.Y.Z or vX.Y.Z-<suffix> (for example v1.0.0-rc.1)"
+            exit 1
+          fi
+          version="${tag#v}"
+          base="${version%%-*}"
+          if [ "$version" = "$base" ]; then prerelease=false; else prerelease=true; fi
+          echo "tag=$tag version=$version base=$base prerelease=$prerelease"
+          {
+            echo "version=$version"
+            echo "base=$base"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Assert the base version equals theme_version
+        env:
+          BASE: ${{ steps.tag.outputs.base }}
+        run: |
+          theme_version="$(python3 - <<'PY'
           import json, re
           text = open("config/settings_schema.json", encoding="utf-8").read()
           text = re.sub(r"^\s*/\*.*?\*/\s*", "", text, flags=re.S)
@@ -41,33 +102,89 @@ jobs:
           print(info.get("theme_version", ""))
           PY
           )"
-          echo "tag=$tag theme_version=$version"
-          if [ "$tag" != "$version" ]; then
-            echo "::error file=config/settings_schema.json::theme_version ($version) does not match tag ($tag)"
+          echo "tag base=$BASE theme_version=$theme_version"
+          if [ "$BASE" != "$theme_version" ]; then
+            echo "::error file=config/settings_schema.json::theme_version ($theme_version) does not match the tag's base version ($BASE)"
             exit 1
           fi
 
       - name: Extract the CHANGELOG section
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
         run: |
-          tag="${GITHUB_REF_NAME#v}"
-          python3 - "$tag" <<'PY'
-          import re, sys
-          version = sys.argv[1]
+          mkdir -p dist
+          python3 - <<'PY'
+          import os, re, sys
+          version = os.environ["VERSION"]
           text = open("CHANGELOG.md", encoding="utf-8").read()
-          m = re.search(r"^## \[" + re.escape(version) + r"\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.S | re.M)
+          m = re.search(r"^## \[" + re.escape(version) + r"\][^\n]*\n(.*?)(?=^## |\Z)", text, re.S | re.M)
           if not m or not m.group(1).strip():
-              sys.exit(f"CHANGELOG.md has no '## [{version}]' section with content")
-          open("release-notes.md", "w", encoding="utf-8").write(m.group(1).strip() + "\n")
+              print(f"::error file=CHANGELOG.md::no '## [{version}]' section with content")
+              sys.exit(1)
+          with open("dist/release-notes.md", "w", encoding="utf-8") as fh:
+              fh.write(m.group(1).strip() + "\n")
           PY
-          echo "--- release notes"; cat release-notes.md
+          echo "--- release notes"
+          cat dist/release-notes.md
 
-      - name: Theme check and package
-        run: bash scripts/package.sh
+      - name: Install Shopify CLI
+        run: npm install --global "@shopify/cli@${SHOPIFY_CLI_VERSION}"
+
+      - name: Theme check (fail on warnings)
+        run: shopify theme check --fail-level warning
+
+      - name: Package the theme
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          bash scripts/package.sh --skip-check
+          count="$(find dist -maxdepth 1 -name '*.zip' | wc -l | tr -d ' ')"
+          if [ "$count" != 1 ]; then
+            echo "::error::expected one zip in dist/, found $count"
+            exit 1
+          fi
+          src="$(find dist -maxdepth 1 -name '*.zip')"
+          asset="dist/Anvil-${VERSION}.zip"
+          if [ "$src" != "$asset" ]; then mv "$src" "$asset"; fi
+          ls -l dist
+
+      - name: Hand the zip and release notes to the release job
+        uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: |
+            dist/Anvil-${{ steps.tag.outputs.version }}.zip
+            dist/release-notes.md
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: dist
 
       - name: Create the GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Anvil ${{ github.ref_name }}
-          body_path: release-notes.md
-          files: dist/*.zip
-          fail_on_unmatched_files: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.build.outputs.version }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
+        run: |
+          asset="dist/Anvil-${VERSION}.zip"
+          ls -l dist
+          [ -f "$asset" ] && [ -s dist/release-notes.md ] || { echo "::error::artifact is missing $asset or release-notes.md"; exit 1; }
+          flags=""
+          if [ "$PRERELEASE" = true ]; then flags="--prerelease"; fi
+          # shellcheck disable=SC2086
+          gh release create "$GITHUB_REF_NAME" "$asset" \
+            --verify-tag \
+            --title "Anvil $VERSION" \
+            --notes-file dist/release-notes.md \
+            $flags

@@ -24,7 +24,7 @@
     assign tab_heading = 'anvil.editor.untitled_tab' | t
   endif
 
-  assign table_label = 'anvil.a11y.scroll_table' | t | escape
+  assign table_label = 'anvil.a11y.scroll_table' | t
   assign table_open = '<div class="av-prose__table" tabindex="0" role="region" aria-label="' | append: table_label | append: '"><table'
   assign page_body = ''
   if s.page != blank
@@ -40,7 +40,7 @@
         {%- if s.icon != blank and s.icon != 'none' -%}
           {%- render 'anvil-icon', name: s.icon, size: 20, class: 'av-pb-collapsible-tab__icon' -%}
         {%- endif -%}
-        <h2 class="av-pb-collapsible-tab__heading">{{ tab_heading | escape }}</h2>
+        <h2 class="av-pb-collapsible-tab__heading">{{ tab_heading | escape_once }}</h2>
         {%- render 'anvil-icon', name: 'chevron-down', size: 20, class: 'av-pb-collapsible-tab__chevron' -%}
       </summary>
       <div class="av-pb-collapsible-tab__body">

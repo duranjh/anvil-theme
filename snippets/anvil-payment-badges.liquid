@@ -19,7 +19,7 @@
   @param {object} [settings] - Settings object holding badge_image_N and badge_alt_N, N = 1–6 (custom source)
   @param {string} [size] - sm | md | lg (default md)
   @param {string} [align] - left | center | right (default left)
-  @param {string} [label] - Accessible name of the list (default "Payment methods")
+  @param {string} [label] - Accessible name of the list (default "Payment methods"; escaped here with escape_once)
   @param {string} [class] - Extra classes on the list
   @param {string} [uid] - Makes the icons' title ids unique on the page (for example the block id)
 
@@ -90,7 +90,7 @@
 -%}
 {%- if pay_items != blank -%}
   {{ 'anvil-pb-trust.css' | asset_url | stylesheet_tag }}
-  <ul class="av-payment-badges av-payment-badges--{{ pay_size }}{% if align == 'center' or align == 'right' %} av-payment-badges--{{ align }}{% endif %}{% if class != blank %} {{ class }}{% endif %}" role="list" aria-label="{{ pay_label | escape }}">
+  <ul class="av-payment-badges av-payment-badges--{{ pay_size }}{% if align == 'center' or align == 'right' %} av-payment-badges--{{ align }}{% endif %}{% if class != blank %} {{ class }}{% endif %}" role="list" aria-label="{{ pay_label | escape_once }}">
     {{- pay_items -}}
   </ul>
 {%- endif -%}

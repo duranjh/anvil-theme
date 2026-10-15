@@ -16,13 +16,15 @@
 {% enddoc %}
 {%- liquid
   assign s = block.settings
+  # anvil-button prints its label as markup, so the typed label is escaped here.
+  assign btn_label = s.label | escape
   assign icon_name = s.icon
   if icon_name == 'none'
     assign icon_name = ''
   endif
 -%}
 <div class="av-button-block av-button-block--{{ s.align }}" {{ block.shopify_attributes }}>
-  {%- render 'anvil-button', label: s.label, url: s.url, style: s.style, size: s.size, full: s.full, icon: icon_name, external: s.external -%}
+  {%- render 'anvil-button', label: btn_label, url: s.url, style: s.style, size: s.size, full: s.full, icon: icon_name, external: s.external -%}
 </div>
 {% stylesheet %}
 .av-button-block{display:flex;flex-wrap:wrap;gap:var(--av-space-3)}
