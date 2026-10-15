@@ -46,7 +46,7 @@
     { "type": "select", "id": "layout", "label": "Layout", "options": [ { "value": "stack", "label": "Stacked" }, { "value": "row", "label": "Side by side (wraps on phones)" } ], "default": "stack" },
     { "type": "select", "id": "width", "label": "Width", "options": [ { "value": "full", "label": "Container" }, { "value": "narrow", "label": "Narrow (720 px)" }, { "value": "compact", "label": "Compact (480 px)" } ], "default": "full" },
     { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" },
-    { "type": "range", "id": "gap", "label": "Gap between blocks", "min": 0, "max": 64, "step": 4, "unit": "px", "default": 16 },
+    { "type": "range", "id": "gap", "label": "Space between blocks", "min": 0, "max": 64, "step": 4, "unit": "px", "default": 16 },
     { "type": "range", "id": "pad", "label": "Padding", "min": 0, "max": 64, "step": 4, "unit": "px", "default": 24 },
     { "type": "checkbox", "id": "border", "label": "Border", "default": false },
     { "type": "checkbox", "id": "rounded", "label": "Rounded corners", "default": true }
@@ -56,7 +56,7 @@
     {
       "name": "Group",
       "blocks": [
-        { "type": "anvil-heading", "settings": { "heading": "Example group heading", "size": "sm" } },
+        { "type": "anvil-heading", "settings": { "heading": "Example group heading", "tag": "h3", "size": "sm" } },
         { "type": "anvil-text" },
         { "type": "anvil-button" }
       ]

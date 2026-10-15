@@ -1,7 +1,9 @@
 {% doc %}
   Product card: media with a hover second image, sale / sold-out badges, vendor, title, rating stars from the
   reviews.rating metafield, price and an optional quick-add form that posts the first available variant without
-  JavaScript (products with options link to the product instead). The title link covers the whole card.
+  JavaScript (products with options link to the product instead); the form loads assets/anvil-product.js itself
+  (one fetch per page, module URLs dedupe), whose <anvil-product-form form-id> adds through the cart drawer.
+  The title link covers the whole card.
   A blank product renders a placeholder card. Sections load assets/anvil-card.css once (media, price and stars styles
   are in anvil-base.css). The hover image is only displayed, and so only downloaded, on devices that can hover.
 
@@ -11,6 +13,8 @@
   @param {boolean} [quick_add] - Show the add-to-cart form, or a "Choose options" link when options exist
   @param {string} [image_ratio] - adapt | 1:1 | 4:5 | 3:4 | 16:9 (default settings.card_image_ratio, then 4:5)
   @param {string} [sizes] - sizes attribute for the card image
+  @param {string} [widths] - srcset widths, the last one the largest file (default '300, 450, 600'; a card shown
+    wider than about 600 px, such as a collage's big tile, may pass up to 1100)
   @param {string} [loading] - lazy | eager (default lazy); pass eager for cards in the first visible row
   @param {boolean} [priority] - First card on the page: eager plus fetchpriority high (it is usually the LCP image)
   @param {string} [heading_tag] - h2 | h3 | h4 for the title (default h3); keep the page outline without gaps
@@ -26,6 +30,8 @@
 {%- liquid
   assign card_ratio = image_ratio | default: settings.card_image_ratio | default: '4:5'
   assign card_sizes = sizes | default: '(min-width: 990px) 25vw, (min-width: 750px) 33vw, 50vw'
+  assign card_widths = widths | default: '300, 450, 600'
+  assign card_max = card_widths | split: ',' | last | strip | plus: 0
   assign card_style = settings.card_style | default: 'flat'
   assign card_align = settings.card_text_align | default: 'left'
   assign badge_pos = settings.badge_position | default: 'top_left'
@@ -99,12 +105,12 @@
     {%- if product != blank -%}
       {%- if main_image != blank -%}
         {%- if priority -%}
-          {{ main_image | image_url: width: 600 | image_tag: widths: '300, 450, 600', sizes: card_sizes, loading: 'eager', fetchpriority: 'high', alt: main_alt, class: 'av-media__img av-card__img' }}
+          {{ main_image | image_url: width: card_max | image_tag: widths: card_widths, sizes: card_sizes, loading: 'eager', fetchpriority: 'high', alt: main_alt, class: 'av-media__img av-card__img' }}
         {%- else -%}
-          {{ main_image | image_url: width: 600 | image_tag: widths: '300, 450, 600', sizes: card_sizes, loading: card_loading, alt: main_alt, class: 'av-media__img av-card__img' }}
+          {{ main_image | image_url: width: card_max | image_tag: widths: card_widths, sizes: card_sizes, loading: card_loading, alt: main_alt, class: 'av-media__img av-card__img' }}
         {%- endif -%}
         {%- if hover_image != blank -%}
-          {{ hover_image | image_url: width: 600 | image_tag: widths: '300, 450, 600', sizes: card_sizes, loading: 'lazy', alt: '', class: 'av-media__img av-card__img av-card__img--hover' }}
+          {{ hover_image | image_url: width: card_max | image_tag: widths: card_widths, sizes: card_sizes, loading: 'lazy', alt: '', class: 'av-media__img av-card__img av-card__img--hover' }}
         {%- endif -%}
       {%- else -%}
         {{ ph_name | placeholder_svg_tag: 'av-media__placeholder' }}
@@ -152,7 +158,7 @@
         {%- elsif sold_out -%}
           <button class="av-btn av-btn--secondary av-btn--sm av-btn--full" type="button" disabled>{{ 'anvil.card.sold_out' | t }}</button>
         {%- elsif single_variant -%}
-          <anvil-product-form>
+          <anvil-product-form form-id="{{ form_id }}">
             {%- form 'product', product, id: form_id, class: 'av-card__form', data-anvil-quick-add: '' -%}
               <input type="hidden" name="id" value="{{ target.id }}">
               <input type="hidden" name="quantity" value="1">
@@ -160,6 +166,7 @@
               <p class="av-card__form-status" role="status" aria-live="polite" data-anvil-form-status></p>
             {%- endform -%}
           </anvil-product-form>
+          <script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>
         {%- else -%}
           <a class="av-btn av-btn--secondary av-btn--sm av-btn--full" href="{{ product.url }}">{{ 'anvil.card.choose_options' | t }}</a>
         {%- endif -%}

@@ -1,0 +1,288 @@
+{%- liquid
+  assign s = section.settings
+
+  # Plans are private theme blocks (blocks/_anvil-pricing-plan.liquid), so the section only lays out the row they
+  # sit in. Each plan reads the highlight, card style and button settings from section.settings itself.
+  # Columns come from the shared grid (.av-grid: tablets up to 3, 4 become 2); a short last row is centred.
+  assign plan_count = section.blocks.size
+  if s.cols_desktop == blank or s.cols_desktop == 'auto'
+    assign cols_desktop = plan_count | at_least: 1 | at_most: 4
+  else
+    assign cols_desktop = s.cols_desktop | plus: 0
+  endif
+
+  assign card_align = s.text_align | default: 'left'
+  assign grid_class = 'av-pricing av-grid av-grid--flex av-grid--center av-grid--c' | append: cols_desktop | append: ' av-pricing--' | append: card_align
+
+  # Swipe row on phones: <anvil-slider> with one plan in view and the next one peeking; from 750 px the track wraps
+  # into the grid, so the slider is told every plan fits there.
+  assign swipe = false
+  if s.mobile_layout == 'swipe' and plan_count > 1
+    assign swipe = true
+    assign grid_class = grid_class | append: ' av-pricing--swipe'
+  endif
+  assign list_label = 'anvil.pricing.heading' | t
+-%}
+{%- if plan_count > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-pricing' %}>
+  <div class="av-section__inner">
+    {%- if plan_count > 0 -%}
+      {% render 'anvil-section-head', section: section, fallback: list_label %}
+    {%- else -%}
+      {% render 'anvil-section-head', section: section %}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+    {%- if swipe -%}
+      {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      <anvil-slider {% render 'anvil-slider-attrs', count: plan_count, per_view: 1, per_view_tablet: plan_count, per_view_desktop: plan_count, peek: 'auto', dots: true, label: list_label, class: 'av-pricing__slider' %}>
+        <div class="{{ grid_class }}" data-slider-track>
+          {%- content_for 'blocks' -%}
+        </div>
+        <div class="av-slider__dots" data-slider-dots></div>
+      </anvil-slider>
+      <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+    {%- else -%}
+      <div class="{{ grid_class }}" role="list">
+        {%- content_for 'blocks' -%}
+      </div>
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Columns and the centred last row from the shared .av-grid; the swipe row is <anvil-slider> on phones. */
+.av-pricing>*{max-width:30rem}
+.av-pricing:not(:has(>*)){display:none}
+.av-pricing--swipe{flex-wrap:nowrap;justify-content:flex-start;padding-block:var(--av-space-1)}
+@media (min-width: 750px){
+.av-pricing__slider > .av-pricing--swipe{flex-wrap:wrap;justify-content:center;overflow:visible;scroll-snap-type:none}
+.av-pricing__slider > .av-pricing--swipe > *{flex:0 0 calc((100% - (var(--av-grid-n) - 1) * var(--av-grid-space,var(--av-grid-gap))) / var(--av-grid-n))}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Pricing table",
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Pricing table" },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "auto", "label": "Match item count" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "auto",
+      "info": "Match item count puts up to 4 plans in one row. Tablets show up to 3; 4 columns become 2. A short last row is centred."
+    },
+    {
+      "type": "select",
+      "id": "mobile_layout",
+      "label": "Layout on phones",
+      "options": [
+        { "value": "grid", "label": "Grid" },
+        { "value": "swipe", "label": "Swipe row" }
+      ],
+      "default": "grid",
+      "info": "Swipe row puts the plans in one row that shoppers swipe through, with dots below. Tablets and desktop always show the grid."
+    },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "Card style",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "flat", "label": "No box" },
+        { "value": "outlined", "label": "Outlined" },
+        { "value": "tinted", "label": "Tinted" },
+        { "value": "raised", "label": "Shadow" }
+      ],
+      "default": "outlined",
+      "info": "\"Same as theme cards\" follows Theme settings > Cards."
+    },
+    {
+      "type": "select",
+      "id": "text_align",
+      "label": "Card text alignment",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Centre" }
+      ],
+      "default": "left",
+      "info": "Aligns the plan name, price and button. Feature rows stay left-aligned so their marks line up; other blocks keep their own alignment setting."
+    },
+    { "type": "header", "content": "Highlighted plan" },
+    {
+      "type": "select",
+      "id": "highlight",
+      "label": "Highlighted plan",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "1", "label": "1st plan" },
+        { "value": "2", "label": "2nd plan" },
+        { "value": "3", "label": "3rd plan" },
+        { "value": "4", "label": "4th plan" },
+        { "value": "5", "label": "5th plan" },
+        { "value": "6", "label": "6th plan" }
+      ],
+      "default": "2",
+      "info": "Marks one of the first six plans with an accent border and the colours below. It adds no wording: a claim such as Most popular needs that plan's badge and its sales-data box."
+    },
+    {
+      "type": "color_scheme",
+      "id": "highlight_scheme",
+      "label": "Highlighted plan colour scheme",
+      "default": "scheme-1",
+      "info": "Pick the section's own scheme to mark the plan with the border only."
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "auto", "label": "Solid on the highlighted plan, outline on others" },
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" }
+      ],
+      "default": "auto"
+    }
+  ],
+  "blocks": [
+    { "type": "_anvil-pricing-plan" }
+  ],
+  "presets": [
+    {
+      "name": "Pricing table",
+      "settings": {
+        "heading": "Choose your <strong>plan</strong>",
+        "subheading": "<p>Example: say what every plan includes and whether prices include tax. Replace the plans below with your real ones, or link each plan to a product so Shopify supplies its price.</p>",
+        "highlight": "2"
+      },
+      "blocks": [
+        {
+          "type": "_anvil-pricing-plan",
+          "settings": {
+            "title": "Example: Starter",
+            "summary": "Example: say in one line who this plan is for",
+            "price": "$19",
+            "price_note": "per month (example price)",
+            "button_label": "Choose Starter",
+            "button_url": "/collections/all"
+          },
+          "blocks": [
+            {
+              "type": "_anvil-pricing-feature",
+              "settings": {
+                "text": "Example: one thing this plan includes",
+                "state": "included"
+              }
+            },
+            {
+              "type": "_anvil-pricing-feature",
+              "settings": {
+                "text": "Example: another thing it includes",
+                "state": "included"
+              }
+            },
+            {
+              "type": "_anvil-pricing-feature",
+              "settings": {
+                "text": "Example: something only higher plans include",
+                "state": "excluded"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-pricing-plan",
+          "settings": {
+            "title": "Example: Plus",
+            "summary": "Example: say in one line who this plan is for",
+            "price": "$39",
+            "price_note": "per month (example price)",
+            "badge": "Most popular",
+            "badge_backed_by_sales": false,
+            "button_label": "Choose Plus",
+            "button_url": "/collections/all"
+          },
+          "blocks": [
+            {
+              "type": "_anvil-pricing-feature",
+              "settings": {
+                "text": "Example: everything in Starter",
+                "state": "included"
+              }
+            },
+            {
+              "type": "_anvil-pricing-feature",
+              "settings": {
+                "text": "Example: one thing this plan adds",
+                "state": "included"
+              }
+            },
+            {
+              "type": "_anvil-pricing-feature",
+              "settings": {
+                "text": "Example: another thing it adds",
+                "state": "included"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-pricing-plan",
+          "settings": {
+            "title": "Example: Pro",
+            "summary": "Example: say in one line who this plan is for",
+            "price": "$79",
+            "price_note": "per month (example price)",
+            "button_label": "Choose Pro",
+            "button_url": "/collections/all"
+          },
+          "blocks": [
+            {
+              "type": "_anvil-pricing-feature",
+              "settings": {
+                "text": "Example: everything in Plus",
+                "state": "included"
+              }
+            },
+            {
+              "type": "_anvil-pricing-feature",
+              "settings": {
+                "text": "Example: one thing this plan adds",
+                "state": "included"
+              }
+            },
+            {
+              "type": "_anvil-pricing-feature",
+              "settings": {
+                "text": "Example: another thing it adds",
+                "state": "included"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

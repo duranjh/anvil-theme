@@ -5,10 +5,14 @@
   if s.show_filters and collection.filters.size > 0
     assign show_filters = true
   endif
+  assign card_ratio = s.image_ratio
+  if card_ratio == blank or card_ratio == 'theme'
+    assign card_ratio = settings.card_image_ratio
+  endif
   assign card_sizes = '(min-width: 990px) 25vw, (min-width: 750px) 33vw, 50vw'
-  if s.columns_desktop == '3'
+  if s.cols_desktop == '3'
     assign card_sizes = '(min-width: 750px) 33vw, 50vw'
-  elsif s.columns_desktop == '2'
+  elsif s.cols_desktop == '2'
     assign card_sizes = '(min-width: 990px) 50vw, (min-width: 750px) 33vw, 50vw'
   endif
   assign above_fold = false
@@ -137,7 +141,7 @@
           <h2 class="av-visually-hidden">{{ 'anvil.collection.products_heading' | t }}</h2>
           <p class="av-collection__summary av-muted" tabindex="-1" data-anvil-facets-count>{{ 'anvil.collection.product_count' | t: count: paginate.items }}</p>
           {%- if collection.products.size > 0 -%}
-            <ul class="av-collection__grid av-collection__grid--{{ s.columns_desktop }} av-list-reset">
+            <ul class="av-collection__grid av-collection__grid--{{ s.cols_desktop }} av-list-reset">
               {%- for product in collection.products -%}
                 {%- liquid
                   assign card_loading = 'lazy'
@@ -150,7 +154,7 @@
                   endif
                 -%}
                 <li class="av-collection__cell">
-                  {% render 'anvil-product-card', product: product, show_vendor: s.show_vendor, show_rating: s.show_rating, quick_add: s.quick_add, image_ratio: s.image_ratio, sizes: card_sizes, loading: card_loading, priority: card_priority %}
+                  {% render 'anvil-product-card', product: product, show_vendor: s.show_vendor, show_rating: s.show_rating, quick_add: s.quick_add, image_ratio: card_ratio, sizes: card_sizes, loading: card_loading, priority: card_priority %}
                 </li>
               {%- endfor -%}
             </ul>
@@ -169,103 +173,31 @@
 </div>
 <script type="module" src="{{ 'anvil-facets.js' | asset_url }}"></script>
 {% stylesheet %}
-  .av-collection {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--av-space-5);
-  }
-  .av-collection__facets,
-  .av-collection__facets-body,
-  .av-collection__filters {
-    display: flex;
-    flex-direction: column;
-    gap: var(--av-space-3);
-  }
-  .av-collection__filters {
-    gap: var(--av-space-2);
-  }
-  .av-collection__active-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--av-space-2);
-    margin-bottom: var(--av-space-2);
-  }
-  .av-collection__active {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--av-space-1);
-    min-height: 28px;
-    padding: 0 var(--av-space-3);
-    font-size: var(--av-text-xs);
-    text-decoration: none;
-    border: 1px solid var(--av-border);
-    border-radius: var(--av-radius-pill);
-  }
-  .av-collection__clear {
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    font-size: var(--av-text-xs);
-  }
-  .av-collection__filter {
-    border-top: 1px solid var(--av-border);
-  }
-  .av-collection__filter-summary {
-    padding: var(--av-space-3) 0;
-    font-weight: 600;
-  }
-  .av-collection__filter-body {
-    padding-bottom: var(--av-space-3);
-  }
-  .av-collection__values {
-    display: flex;
-    flex-direction: column;
-    gap: var(--av-space-2);
-  }
-  .av-collection__count {
-    font-size: var(--av-text-xs);
-  }
-  .av-collection__price {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--av-space-2);
-  }
-  .av-collection__results[aria-busy="true"] {
-    opacity: 0.6;
-  }
-  .av-collection__summary {
-    margin-bottom: var(--av-space-3);
-    font-size: var(--av-text-sm);
-  }
-  .av-collection__grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--av-grid-gap, var(--av-space-4));
-  }
-  .av-collection__empty {
-    padding: var(--av-space-8) 0;
-    text-align: center;
-  }
-  @media (min-width: 750px) {
-    .av-collection__grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  @media (min-width: 990px) {
-    .av-collection--has-filters {
-      grid-template-columns: 260px minmax(0, 1fr);
-      align-items: start;
-    }
-    .av-collection__grid--2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .av-collection__grid--3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .av-collection__grid--4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
+.av-collection{display:grid;grid-template-columns:1fr;gap:var(--av-space-5)}
+.av-collection__facets,.av-collection__facets-body,.av-collection__filters{display:flex;flex-direction:column;gap:var(--av-space-3)}
+.av-collection__filters{gap:var(--av-space-2)}
+.av-collection__active-list{display:flex;flex-wrap:wrap;gap:var(--av-space-2);margin-bottom:var(--av-space-2)}
+.av-collection__active{display:inline-flex;align-items:center;gap:var(--av-space-1);min-height:28px;padding:0 var(--av-space-3);font-size:var(--av-text-xs);text-decoration:none;border:1px solid var(--av-border);border-radius:var(--av-radius-pill)}
+.av-collection__clear{display:inline-flex;align-items:center;min-height:28px;font-size:var(--av-text-xs)}
+.av-collection__filter{border-top:1px solid var(--av-border)}
+.av-collection__filter-summary{padding:var(--av-space-3) 0;font-weight:600}
+.av-collection__filter-body{padding-bottom:var(--av-space-3)}
+.av-collection__values{display:flex;flex-direction:column;gap:var(--av-space-2)}
+.av-collection__count{font-size:var(--av-text-xs)}
+.av-collection__price{display:grid;grid-template-columns:1fr 1fr;gap:var(--av-space-2)}
+.av-collection__results[aria-busy="true"]{opacity:0.6}
+.av-collection__summary{margin-bottom:var(--av-space-3);font-size:var(--av-text-sm)}
+.av-collection__grid{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:var(--av-grid-gap, var(--av-space-4))}
+.av-collection__empty{padding:var(--av-space-8) 0;text-align:center}
+@media (min-width: 750px){
+.av-collection__grid{grid-template-columns:repeat(3, minmax(0, 1fr))}
+}
+@media (min-width: 990px){
+.av-collection--has-filters{grid-template-columns:260px minmax(0, 1fr);align-items:start}
+.av-collection__grid--2{grid-template-columns:repeat(2, minmax(0, 1fr))}
+.av-collection__grid--3{grid-template-columns:repeat(3, minmax(0, 1fr))}
+.av-collection__grid--4{grid-template-columns:repeat(4, minmax(0, 1fr))}
+}
 {% endstylesheet %}
 {% schema %}
 {
@@ -289,7 +221,7 @@
     },
     {
       "type": "select",
-      "id": "columns_desktop",
+      "id": "cols_desktop",
       "label": "Columns on desktop",
       "options": [
         { "value": "2", "label": "2" },
@@ -301,14 +233,15 @@
     {
       "type": "select",
       "id": "image_ratio",
-      "label": "Card image ratio",
+      "label": "Image shape",
       "options": [
-        { "value": "adapt", "label": "Adapt to image" },
-        { "value": "1:1", "label": "Square" },
-        { "value": "4:5", "label": "Portrait" },
-        { "value": "3:4", "label": "Tall" }
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" }
       ],
-      "default": "1:1"
+      "default": "theme"
     },
     {
       "type": "checkbox",

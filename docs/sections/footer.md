@@ -12,3 +12,6 @@ Column headings are `<h2>` so the page outline has no gap.
 
 ## Honesty notes
 No platform logos ship; payment icons come from `payment_type_svg_tag`; the image block's info text covers uploaded badges.
+
+## Fix pass (2026-10-15)
+- Availability: `enabled_on` "groups": ["footer"] (CONVENTIONS §4).

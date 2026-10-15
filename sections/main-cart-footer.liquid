@@ -1,14 +1,18 @@
 {%- comment -%}
   Cart page summary: order note, discount field (enhanced only, DECISIONS 37), the shared totals
   (snippets/anvil-cart-totals.liquid: subtotal, order discounts, savings from Shopify discounts and compare-at prices,
-  estimated total, taxes note) and the checkout button. Fields point at the cart form in the items section with
-  form="anvil-cart-form", so the note and checkout post with the line quantities without JavaScript. Totals styles
-  come from assets/anvil-cart-drawer.css (shared with the drawer).
+  estimated total, taxes note), the optional policies checkbox and the checkout button. Fields point at the cart form
+  in the items section with form="anvil-cart-form", so the note, the box and checkout post with the line quantities
+  without JavaScript. The box is `required`, so checkout waits for the tick (the items section's Update button skips
+  validation); it is the cart attribute anvil_terms_accepted, the same one the cart drawer's Policies checkbox block
+  writes, and assets/anvil-cart.js saves it on change so a re-render keeps the tick. Totals styles come from
+  assets/anvil-cart-drawer.css (shared with the drawer).
 {%- endcomment -%}
 {%- liquid
   assign s = section.settings
   assign checkout_label = 'anvil.cart.checkout' | t
   assign apply_label = 'anvil.cart.apply' | t
+  assign terms_default = 'anvil.cart.terms_default' | t
 -%}
 {{ 'anvil-cart-drawer.css' | asset_url | stylesheet_tag }}
 <div {% render 'anvil-section-attrs', section: section, type: 'main-cart-footer' %}>
@@ -56,6 +60,21 @@
             </div>
           {%- endif -%}
           {% render 'anvil-cart-totals', show_compare_savings: settings.cart_show_savings, show_tax_note: s.show_tax_note %}
+          {%- if s.show_terms -%}
+            <div class="av-cart-footer__terms">
+              <div class="av-check">
+                <input type="checkbox" id="anvil-cart-terms" name="attributes[anvil_terms_accepted]" value="yes" form="anvil-cart-form" required{% if cart.attributes['anvil_terms_accepted'] != blank %} checked{% endif %} data-anvil-cart-terms data-anvil-focus-key="terms">
+                <label for="anvil-cart-terms">{{ s.terms_text | default: terms_default }}</label>
+              </div>
+              {%- if s.show_policy_links and shop.policies.size > 0 -%}
+                <ul class="av-cart-footer__policies av-list-reset" role="list">
+                  {%- for policy in shop.policies -%}
+                    <li><a class="av-link" href="{{ policy.url }}">{{ policy.title | escape }}</a></li>
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
           <div class="av-cart-footer__checkout">
             {% render 'anvil-button', label: checkout_label, style: 'primary', size: 'lg', full: true, type: 'submit', attrs: 'name="checkout" form="anvil-cart-form"' %}
           </div>
@@ -66,58 +85,21 @@
   </div>
 </div>
 {% stylesheet %}
-  .av-s-main-cart-footer:not(:has(.av-cart-footer)) {
-    padding-block: 0;
-  }
-  .av-cart-footer {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--av-space-5);
-  }
-  .av-cart-footer__note .av-field {
-    max-width: 480px;
-  }
-  .av-cart-footer__summary {
-    display: flex;
-    flex-direction: column;
-    gap: var(--av-space-3);
-  }
-  .av-cart-footer__codes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--av-space-2);
-    margin: 0;
-  }
-  .av-cart-footer__code {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--av-space-1);
-    padding-inline-start: var(--av-space-3);
-    font-size: var(--av-text-xs);
-    font-weight: 600;
-    border: 1px solid var(--av-border);
-    border-radius: var(--av-radius-pill);
-  }
-  .av-cart-footer__code-remove {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    color: inherit;
-  }
-  .av-cart-footer .av-cart-totals__row--total {
-    font-size: var(--av-text-lg);
-  }
-  .av-cart-footer__checkout {
-    margin-top: var(--av-space-2);
-  }
-  @media (min-width: 750px) {
-    .av-cart-footer {
-      grid-template-columns: minmax(0, 1fr) 360px;
-      justify-content: space-between;
-      align-items: start;
-    }
-  }
+.av-s-main-cart-footer:not(:has(.av-cart-footer)){padding-block:0}
+.av-cart-footer{display:grid;grid-template-columns:1fr;gap:var(--av-space-5)}
+.av-cart-footer__note .av-field{max-width:480px}
+.av-cart-footer__summary{display:flex;flex-direction:column;gap:var(--av-space-3)}
+.av-cart-footer__codes{display:flex;flex-wrap:wrap;gap:var(--av-space-2);margin:0}
+.av-cart-footer__code{display:inline-flex;align-items:center;gap:var(--av-space-1);padding-inline-start:var(--av-space-3);font-size:var(--av-text-xs);font-weight:600;border:1px solid var(--av-border);border-radius:var(--av-radius-pill)}
+.av-cart-footer__code-remove{display:grid;place-items:center;width:28px;height:28px;color:inherit}
+.av-cart-footer .av-cart-totals__row--total{font-size:var(--av-text-lg)}
+.av-cart-footer__terms{display:grid;gap:var(--av-space-2);font-size:var(--av-text-sm)}
+.av-cart-footer__terms a{color:inherit;text-decoration:underline}
+.av-cart-footer__policies{display:flex;flex-wrap:wrap;gap:var(--av-space-1) var(--av-space-3);margin:0}
+.av-cart-footer__checkout{margin-top:var(--av-space-2)}
+@media (min-width: 750px){
+.av-cart-footer{grid-template-columns:minmax(0, 1fr) 360px;justify-content:space-between;align-items:start}
+}
 {% endstylesheet %}
 {% schema %}
 {
@@ -139,6 +121,29 @@
       "id": "show_tax_note",
       "label": "Show shipping and taxes note",
       "default": true
+    },
+    { "type": "header", "content": "Policies checkbox" },
+    {
+      "type": "checkbox",
+      "id": "show_terms",
+      "label": "Show policies checkbox",
+      "info": "Checkout waits until the box is ticked. The answer is saved on the order as the cart attribute anvil_terms_accepted. The cart drawer has its own Policies checkbox block.",
+      "default": false
+    },
+    {
+      "type": "inline_richtext",
+      "id": "terms_text",
+      "label": "Checkbox text",
+      "default": "I have read and agree to the store policies",
+      "visible_if": "{{ section.settings.show_terms }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_policy_links",
+      "label": "Link the store policies",
+      "info": "Lists the policies written under Settings > Policies.",
+      "default": true,
+      "visible_if": "{{ section.settings.show_terms }}"
     }
   ]
 }

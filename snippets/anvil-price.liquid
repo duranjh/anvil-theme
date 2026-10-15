@@ -65,7 +65,8 @@
           endif
           assign badge_text = 'anvil.price.save_amount' | t: amount: saved_money
         else
-          assign saved_pct = saved | times: 100.0 | divided_by: compare | round
+          # Rounded down like the price block and offer cards (DECISIONS 43): integer division floors.
+          assign saved_pct = saved | times: 100 | divided_by: compare
           assign badge_text = 'anvil.price.save_percent' | t: percent: saved_pct
       endcase
     endif

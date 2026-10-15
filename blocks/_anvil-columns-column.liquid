@@ -1,0 +1,95 @@
+{% doc %}
+  Private theme block for sections/anvil-columns.liquid: one column that stacks theme blocks (@theme) and app blocks
+  with the section's block spacing. Column count, card style and vertical alignment come from the section; the column
+  can take its own colour scheme, which always draws it as a padded box. With the section's card style "Same as theme
+  cards" and a boxed theme card style, the column uses Theme settings > Cards > colour scheme unless it has its own.
+  An empty column shows a note in the editor; on the storefront it keeps a blank slot from tablets up (no box) and is
+  dropped on phones. Styles live in the section's stylesheet.
+
+  Settings (id · type · values · default):
+  - own_scheme · checkbox · default false
+  - color_scheme · color_scheme · default "scheme-2" (shown when own_scheme is on)
+  Accepts child blocks: @theme, @app
+
+  @example
+  {"type": "_anvil-columns-column"}
+{% enddoc %}
+{%- liquid
+  assign b = block.settings
+
+  assign scheme_id = ''
+  if b.own_scheme and b.color_scheme != blank
+    assign scheme_id = b.color_scheme.id
+  elsif section.settings.card_style == 'theme' and settings.card_color_scheme != blank
+    if settings.card_style == 'outlined' or settings.card_style == 'raised'
+      assign scheme_id = settings.card_color_scheme.id
+    endif
+  endif
+
+  # The section's card style, from the shared surface utility (assets/anvil-base.css .av-surface).
+  capture col_surface
+    render 'anvil-surface', style: section.settings.card_style
+  endcapture
+  assign col_class = 'av-columns__col ' | append: col_surface | strip
+  if scheme_id != ''
+    assign col_class = col_class | append: ' av-columns__col--scheme av-scheme av-scheme--' | append: scheme_id
+  endif
+-%}
+{%- capture col_content -%}{% content_for 'blocks' %}{%- endcapture -%}
+{%- liquid
+  assign col_trimmed = col_content | strip
+  if col_trimmed == '' and request.design_mode != true
+    assign col_class = col_class | append: ' av-columns__col--empty'
+  endif
+-%}
+<div class="{{ col_class }}" {{ block.shopify_attributes }}>
+  {%- if col_trimmed != '' -%}
+    {{ col_content }}
+  {%- else -%}
+    {% render 'anvil-editor-empty' %}
+  {%- endif -%}
+</div>
+{% schema %}
+{
+  "name": "Column",
+  "tag": null,
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "own_scheme",
+      "label": "Use its own colour scheme",
+      "default": false,
+      "info": "Draws this column as a padded box in the scheme below, for example to set one column apart."
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Column colour scheme",
+      "default": "scheme-2",
+      "visible_if": "{{ block.settings.own_scheme }}"
+    }
+  ],
+  "blocks": [{ "type": "@theme" }, { "type": "@app" }],
+  "presets": [
+    {
+      "name": "Column",
+      "blocks": [
+        {
+          "type": "anvil-heading",
+          "settings": {
+            "heading": "Example column heading",
+            "tag": "h3",
+            "size": "sm"
+          }
+        },
+        {
+          "type": "anvil-text",
+          "settings": {
+            "text": "<p>Example: describe one benefit, product or step in a sentence or two. Only state things that are true for your store.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

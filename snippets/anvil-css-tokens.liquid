@@ -95,6 +95,7 @@
       {%- assign level = settings[parts[1]] -%}
       --av-shadow-{{ parts[0] }}:{% if level == blank or level == 'none' %}none{% else %}var(--av-shadow-{{ level }}){% endif %};
     {%- endfor -%}
+    --av-surface-shadow:{% if settings.card_shadow == blank or settings.card_shadow == 'none' %}var(--av-shadow-md){% else %}var(--av-shadow-{{ settings.card_shadow }}){% endif %};
     --av-badge-sale-bg:{{ settings.badge_sale_bg }};--av-badge-sale-fg:{{ settings.badge_sale_text }};--av-badge-soldout-bg:{{ settings.badge_soldout_bg }};--av-badge-soldout-fg:{{ settings.badge_soldout_text }};--av-badge-custom-bg:{{ settings.badge_custom_bg }};--av-badge-custom-fg:{{ settings.badge_custom_text }};--av-success:{{ settings.color_success }};--av-error:{{ settings.color_error }};--av-rating:{{ settings.color_rating }};--av-scrollbar-color:{{ settings.scrollbar_color }};
     --av-swatch-size:{{ settings.swatch_size }}px;--av-slider-arrow:{{ settings.slider_arrow_size }}px;--av-slider-dot:{{ settings.slider_dot_size }}px;--av-slider-dot-gap:{{ settings.slider_dot_gap }}px;--av-btn-case:{{ settings.button_text_case }};
     --av-dur:{% if settings.animations_enabled %}{{ settings.animations_duration }}ms{% else %}0ms{% endif %}

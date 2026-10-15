@@ -1,0 +1,498 @@
+{%- liquid
+  assign s = section.settings
+  assign total = section.blocks.size
+
+  # Thumbnail size: the setting is the desktop size; phones get 80 % of it (never under 56 px), set in CSS.
+  # Avatar-sized images stop at 200 px wide (CONVENTIONS §11).
+  assign size = s.thumb_size | default: 76
+  assign size_2x = size | times: 2 | at_most: 200
+  assign thumb_widths = size | append: ', ' | append: size_2x
+  assign thumb_sizes = size | append: 'px'
+  assign ring_w = s.ring_width | default: 3
+
+  # Ring paint: a gradient wins over a colour; both empty = the colour scheme's accent.
+  assign ring = 'var(--av-accent)'
+  if s.ring_gradient != blank
+    assign ring = s.ring_gradient
+  elsif s.ring_color != blank and s.ring_color.alpha != 0
+    assign ring = s.ring_color
+  endif
+
+  assign root_class = 'av-stories av-stories--' | append: s.text_align
+  if s.wrap_desktop
+    assign root_class = root_class | append: ' av-stories--wrap'
+  endif
+  assign label_class = 'av-stories__label'
+  unless s.show_labels
+    assign label_class = 'av-visually-hidden'
+  endunless
+
+  assign viewer_class = 'av-stories__viewer av-scheme av-scheme--' | append: s.viewer_scheme.id
+  if s.viewer_fit == 'contain'
+    assign viewer_class = viewer_class | append: ' av-stories__viewer--contain'
+  endif
+
+  # First two template sections (snippets/anvil-above-fold): the first thumbnails load eagerly.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign eager_ok = true
+  if fold contains 'lazy'
+    assign eager_ok = false
+  endif
+
+  # Printed with escape_once: strip_html keeps the heading's entities (&amp;) and t output is already escaped.
+  assign viewer_label = s.heading | strip_html | strip
+  if viewer_label == blank
+    assign viewer_label = 'anvil.stories.viewer' | t
+  endif
+  assign ph_names = 'lifestyle-1,product-1,lifestyle-2,product-2,collection-1,product-3' | split: ','
+
+  # The viewer's slides are captured in the one loop that renders the thumbnails, so every block prints
+  # shopify_attributes exactly once (on its thumbnail) and the chassis lint sees a single blocks loop.
+  assign slides_html = ''
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-stories' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if total > 0 -%}
+      {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+      <anvil-stories class="{{ root_class }}"{% if s.auto_advance %} auto{% endif %} style="--av-stories-d: {{ size }}px; --av-stories-ring: {{ ring }}; --av-stories-ring-w: {{ ring_w }}px;">
+        <ul class="av-stories__list" role="list">
+          {%- for block in section.blocks -%}
+            {%- liquid
+              assign b = block.settings
+              assign n = forloop.index
+              assign ph_index = forloop.index0 | modulo: 6
+              assign ph_name = ph_names[ph_index]
+
+              # Merchant text is escaped here; t output arrives escaped, so label, slide_label and cta print raw.
+              assign label = b.label | strip | escape
+              if label == blank
+                assign label = 'anvil.stories.story' | t: index: n
+              endif
+              assign count_label = 'anvil.stories.count' | t: index: n, total: total
+              assign slide_label = count_label | append: ': ' | append: label
+
+              assign thumb = b.thumb | default: b.image
+              if thumb == blank and b.video != blank
+                assign thumb = b.video.preview_image
+              endif
+
+              # Without JavaScript the thumbnail opens the story's media itself (or its link); the module turns
+              # the click into the viewer. A story with nothing to open renders a button the module wires up.
+              assign href = ''
+              if b.video != blank
+                assign mp4 = b.video.sources | where: 'format', 'mp4' | first
+                assign href = mp4.url
+              elsif b.image != blank
+                assign href = b.image | image_url: width: 1080
+              elsif b.button_link != blank
+                assign href = b.button_link
+              endif
+
+              assign load = 'lazy'
+              if eager_ok and n <= 8
+                assign load = 'eager'
+              endif
+
+              assign seconds = b.duration | default: 6
+              assign cta = b.button_label | strip | escape
+              if cta == blank
+                assign cta = 'anvil.a11y.learn_more' | t
+              endif
+
+              # Paid / gifted disclosure: its own unclamped line in the viewer, whatever the label or "Show labels" say.
+              assign note = ''
+              if b.disclosure == 'paid'
+                assign note = 'anvil.stories.paid' | t
+              elsif b.disclosure == 'gifted'
+                assign note = 'anvil.stories.gifted' | t
+              endif
+            -%}
+            <li class="av-stories__item" {{ block.shopify_attributes }}>
+              {%- if href != blank -%}
+                <a class="av-stories__open" href="{{ href }}" data-anvil-story="{{ forloop.index0 }}">
+              {%- else -%}
+                <button class="av-stories__open" type="button" data-anvil-story="{{ forloop.index0 }}">
+              {%- endif -%}
+                <span class="av-stories__ring">
+                  <span class="av-stories__thumb">
+                    {%- if thumb != blank -%}
+                      {{ thumb | image_url: width: size_2x | image_tag: widths: thumb_widths, sizes: thumb_sizes, loading: load, alt: '' }}
+                    {%- else -%}
+                      {{ ph_name | placeholder_svg_tag: 'av-stories__ph' }}
+                    {%- endif -%}
+                  </span>
+                </span>
+                <span class="{{ label_class }}">{{ label }}</span>
+              {%- if href != blank -%}
+                </a>
+              {%- else -%}
+                </button>
+              {%- endif -%}
+            </li>
+            {%- capture slide -%}
+              <div class="av-stories__slide" role="group" aria-label="{{ slide_label }}" data-anvil-slide data-anvil-seconds="{{ seconds }}" hidden>
+                <div class="av-stories__media">
+                  {%- if b.video != blank -%}
+                    {%- comment -%}
+                      Hand-written, not video_tag: video_tag always writes poster="…" and a fallback image, which the
+                      browser fetches inside the closed dialog. The module copies data-anvil-poster into poster for
+                      the open story and the next one.
+                    {%- endcomment -%}
+                    <video class="av-stories__video" playsinline muted preload="none"
+                      {%- if b.video.alt != blank %} aria-label="{{ b.video.alt | escape }}"{% endif -%}
+                      {%- if b.video.preview_image %} data-anvil-poster="{{ b.video.preview_image | image_url: width: 1080 }}"{% endif -%}
+                    >
+                      {%- for src in b.video.sources -%}
+                        {%- if src.format == 'mp4' -%}<source src="{{ src.url }}" type="{{ src.mime_type }}">{%- endif -%}
+                      {%- endfor -%}
+                    </video>
+                  {%- elsif b.image != blank -%}
+                    {{ b.image | image_url: width: 1080 | image_tag: widths: '375, 540, 720, 900, 1080', sizes: '(min-width: 750px) 56vh, 100vw', loading: 'lazy', alt: b.image.alt, class: 'av-stories__img' }}
+                  {%- elsif b.thumb != blank -%}
+                    {{ b.thumb | image_url: width: 1080 | image_tag: widths: '375, 540, 720, 900, 1080', sizes: '(min-width: 750px) 56vh, 100vw', loading: 'lazy', alt: b.thumb.alt, class: 'av-stories__img' }}
+                  {%- else -%}
+                    {{ ph_name | placeholder_svg_tag: 'av-stories__ph' }}
+                  {%- endif -%}
+                </div>
+                <p class="av-stories__name"><span>{{ label }}</span></p>
+                {%- if note != blank or b.button_link != blank -%}
+                  <div class="av-stories__foot">
+                    {%- if note != blank -%}
+                      <p class="av-stories__note">{{ note }}</p>
+                    {%- endif -%}
+                    {%- if b.button_link != blank -%}
+                      {%- render 'anvil-button', label: cta, url: b.button_link, style: 'primary', size: 'md', class: 'av-stories__cta' -%}
+                    {%- endif -%}
+                  </div>
+                {%- endif -%}
+              </div>
+            {%- endcapture -%}
+            {%- assign slides_html = slides_html | append: slide -%}
+          {%- endfor -%}
+        </ul>
+
+        <anvil-dialog id="anvil-stories-{{ section.id }}">
+          <dialog class="{{ viewer_class }}" aria-label="{{ viewer_label | escape_once }}">
+            <div class="av-stories__frame">
+              <div class="av-stories__bars" aria-hidden="true">
+                {%- for i in (1..total) -%}
+                  <span class="av-stories__bar"><span class="av-stories__fill" data-anvil-bar></span></span>
+                {%- endfor -%}
+              </div>
+              <div class="av-stories__controls">
+                <button class="av-stories__btn" type="button" aria-pressed="false" aria-label="{{ 'anvil.stories.pause' | t }}" data-anvil-toggle>
+                  <span class="av-stories__i-off">{% render 'anvil-icon', name: 'pause', size: 20 %}</span>
+                  <span class="av-stories__i-on">{% render 'anvil-icon', name: 'play', size: 20 %}</span>
+                </button>
+                <button class="av-stories__btn" type="button" aria-pressed="true" aria-label="{{ 'anvil.media.mute' | t }}" data-anvil-mute hidden>
+                  <span class="av-stories__i-off">{% render 'anvil-icon', name: 'volume-2', size: 20 %}</span>
+                  <span class="av-stories__i-on">{% render 'anvil-icon', name: 'volume-x', size: 20 %}</span>
+                </button>
+                <button class="av-stories__btn" type="button" aria-label="{{ 'anvil.a11y.close' | t }}" data-anvil-close>
+                  {%- render 'anvil-icon', name: 'x', size: 20 -%}
+                </button>
+              </div>
+              <div class="av-stories__stage" role="region" aria-roledescription="{{ 'anvil.a11y.carousel' | t }}" aria-label="{{ viewer_label | escape_once }}" aria-live="off" data-anvil-stage>
+                {{- slides_html -}}
+              </div>
+              <button class="av-stories__zone av-stories__zone--prev" type="button" aria-label="{{ 'anvil.stories.previous' | t }}" data-anvil-go="-1">
+                <span class="av-stories__arrow">{% render 'anvil-icon', name: 'chevron-left', size: 20 %}</span>
+              </button>
+              <button class="av-stories__zone av-stories__zone--next" type="button" aria-label="{{ 'anvil.stories.next' | t }}" data-anvil-go="1">
+                <span class="av-stories__arrow">{% render 'anvil-icon', name: 'chevron-right', size: 20 %}</span>
+              </button>
+            </div>
+          </dialog>
+        </anvil-dialog>
+      </anvil-stories>
+      <script type="module" src="{{ 'anvil-stories.js' | asset_url }}"></script>
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{% stylesheet %}
+.av-stories{--av-stories-size:max(56px,calc(var(--av-stories-d,76px) * .8));display:block}
+.av-stories__list{display:flex;gap:var(--av-space-4);margin:0 calc(-1 * var(--av-gutter));padding:var(--av-space-2) var(--av-gutter);list-style:none;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:var(--av-gutter);scrollbar-width:thin}
+.av-stories--center .av-stories__item:first-child{margin-inline-start:auto}
+.av-stories--center .av-stories__item:last-child{margin-inline-end:auto}
+.av-stories__item{flex:none;width:calc(var(--av-stories-size) + var(--av-space-3));scroll-snap-align:start}
+.av-stories__open{display:flex;flex-direction:column;align-items:center;gap:var(--av-space-2);width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-decoration:none;cursor:pointer}
+.av-stories__ring{display:block;width:var(--av-stories-size);aspect-ratio:1;padding:var(--av-stories-ring-w);border-radius:50%;background:var(--av-stories-ring)}
+.av-stories__thumb{display:block;width:100%;height:100%;overflow:hidden;border:min(2px,var(--av-stories-ring-w)) solid var(--av-bg);border-radius:50%;background:rgb(var(--av-fg-rgb) / .06)}
+.av-stories__thumb > *{display:block;width:100%;height:100%;object-fit:cover}
+.av-stories__ph{box-sizing:border-box;padding:14%;color:rgb(var(--av-fg-rgb) / .4);fill:currentColor}
+.av-stories__label,.av-stories__name span{display:-webkit-box;overflow:hidden;overflow-wrap:anywhere;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.av-stories__label{max-width:100%;font-size:var(--av-text-sm);line-height:1.3;text-align:center}
+.av-stories__open:hover .av-stories__label{text-decoration:underline;text-underline-offset:.15em}
+@media (min-width:750px){
+.av-stories{--av-stories-size:var(--av-stories-d,76px)}
+.av-stories__list{margin-inline:calc(-1 * var(--av-space-2));padding-inline:var(--av-space-2);scroll-padding-inline:var(--av-space-2)}
+.av-stories--wrap .av-stories__list{flex-wrap:wrap;row-gap:var(--av-space-5);overflow:visible}
+.av-stories--wrap.av-stories--center .av-stories__list{justify-content:center}
+.av-stories--wrap .av-stories__item:nth-child(n){margin-inline:0}
+}
+.av-stories__viewer{width:100%;height:100%;max-width:100%;max-height:100%;margin:0;padding:0;border:0;overflow:hidden}
+.av-stories__viewer[open]{display:grid;place-items:center}
+.av-stories__frame{position:relative;width:100%;height:100%;overflow:hidden;background:rgb(var(--av-fg-rgb) / .08)}
+.av-stories__slide,.av-stories__media{position:absolute;inset:0}
+.av-stories__media > *{display:block;width:100%;height:100%;object-fit:cover}
+.av-stories__viewer--contain .av-stories__media > *{object-fit:contain}
+.av-stories__frame::before{content:"";position:absolute;z-index:2;inset:0 0 auto;height:96px;background:linear-gradient(rgb(var(--av-bg-rgb) / .6),transparent);pointer-events:none}
+.av-stories__bars{position:absolute;z-index:3;inset:calc(var(--av-space-3) + env(safe-area-inset-top)) var(--av-space-3) auto;display:flex;gap:4px}
+.av-stories__bar{flex:1;height:3px;overflow:hidden;border-radius:var(--av-radius-pill);background:rgb(var(--av-fg-rgb) / .35)}
+.av-stories__fill{display:block;height:100%;background:var(--av-fg);transform:scaleX(0);transform-origin:0 50%}
+.av-stories__fill:dir(rtl){transform-origin:100% 50%}
+.av-stories__controls,.av-stories__name{position:absolute;z-index:3;top:calc(var(--av-space-5) + env(safe-area-inset-top))}
+.av-stories__controls{inset-inline-end:var(--av-space-2);display:flex;gap:var(--av-space-1)}
+.av-stories__btn,.av-stories__arrow{display:grid;place-items:center}
+.av-stories__btn{width:44px;height:44px;padding:0;border:0;border-radius:var(--av-radius-pill);background:rgb(var(--av-bg-rgb) / .35);color:var(--av-fg);cursor:pointer}
+.av-stories__btn[aria-pressed=true] .av-stories__i-off,.av-stories__btn[aria-pressed=false] .av-stories__i-on{display:none}
+.av-stories__name,.av-stories__note{margin:0;border-radius:var(--av-radius-badge);background:rgb(var(--av-bg-rgb) / .75);font-weight:600}
+.av-stories__name{inset-inline-start:var(--av-space-4);max-width:calc(100% - 3 * 44px - 3 * var(--av-space-4));padding:calc(22px - .625em) var(--av-space-3);line-height:1.25;pointer-events:none}
+.av-stories__zone{position:absolute;z-index:1;inset-block:0;display:flex;align-items:center;width:34%;padding:0 var(--av-space-2);border:0;background:none;color:var(--av-fg);cursor:pointer}
+.av-stories__zone--prev{inset-inline-start:0}
+.av-stories__zone--next{inset-inline-end:0;justify-content:flex-end;width:66%}
+.av-stories__zone:focus-visible{outline-offset:-6px}
+.av-stories__arrow{width:40px;height:40px;border-radius:50%;background:rgb(var(--av-bg-rgb) / .5);opacity:0}
+.av-stories__arrow svg:dir(rtl){scale:-1 1}
+.av-stories__zone:focus-visible .av-stories__arrow{opacity:1}
+.av-stories__foot{position:absolute;z-index:2;inset:auto var(--av-space-4) calc(var(--av-space-6) + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:var(--av-space-3);pointer-events:none}
+.av-stories__note{padding:var(--av-space-1) var(--av-space-3);font-size:var(--av-text-sm);text-align:center}
+.av-stories__cta{pointer-events:auto}
+@media (hover:hover){.av-stories__zone:hover .av-stories__arrow{opacity:1}}
+@media (min-width:750px) and (min-height:600px){
+.av-stories__frame{width:auto;height:calc(100% - 2 * var(--av-space-6));max-height:960px;aspect-ratio:9 / 16;border-radius:var(--av-radius-media)}
+}
+@media (orientation:landscape) and (max-height:599px){.av-stories__media > *{object-fit:contain}}
+@media (prefers-reduced-motion:no-preference){
+html:not([data-animations="off"]) .av-stories__ring{transition:transform var(--av-dur) var(--av-ease)}
+html:not([data-animations="off"]) .av-stories__open:hover .av-stories__ring{transform:scale(1.04)}
+html:not([data-animations="off"]) .av-stories__viewer[open]{animation:av-stories-in var(--av-dur) var(--av-ease)}
+html:not([data-animations="off"]) .av-stories__fill{transition:transform .25s linear}
+}
+@keyframes av-stories-in{from{opacity:0;transform:scale(.98)}}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Stories",
+  "max_blocks": 20,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Stories" },
+    {
+      "type": "range",
+      "id": "thumb_size",
+      "label": "Circle size on desktop",
+      "min": 56,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 76,
+      "info": "Phones show the circles at 80 % of this size, never smaller than 56 px."
+    },
+    {
+      "type": "select",
+      "id": "text_align",
+      "label": "Row alignment",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Centre" }
+      ],
+      "default": "center",
+      "info": "A row with more circles than fit scrolls sideways."
+    },
+    {
+      "type": "checkbox",
+      "id": "wrap_desktop",
+      "label": "Wrap onto more rows on desktop",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_labels",
+      "label": "Show labels under the circles",
+      "default": true,
+      "info": "Hidden labels are still read by screen readers."
+    },
+    { "type": "header", "content": "Ring" },
+    {
+      "type": "range",
+      "id": "ring_width",
+      "label": "Ring thickness",
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "unit": "px",
+      "default": 3,
+      "info": "0 hides the ring."
+    },
+    {
+      "type": "color",
+      "id": "ring_color",
+      "label": "Ring colour",
+      "info": "Leave empty to use the colour scheme's accent colour."
+    },
+    {
+      "type": "color_background",
+      "id": "ring_gradient",
+      "label": "Ring gradient",
+      "info": "Optional. A gradient here replaces the ring colour."
+    },
+    { "type": "header", "content": "Viewer" },
+    {
+      "type": "color_scheme",
+      "id": "viewer_scheme",
+      "label": "Viewer colour scheme",
+      "default": "scheme-4",
+      "info": "The full-screen viewer's background, buttons and progress bars. A dark scheme suits most photos and videos."
+    },
+    {
+      "type": "select",
+      "id": "viewer_fit",
+      "label": "Media in the viewer",
+      "options": [
+        { "value": "cover", "label": "Fill the screen (crops the edges)" },
+        { "value": "contain", "label": "Show the whole image or video" }
+      ],
+      "default": "cover",
+      "info": "Upright 9:16 images and videos fill the viewer either way."
+    },
+    {
+      "type": "checkbox",
+      "id": "auto_advance",
+      "label": "Move to the next story automatically",
+      "default": true,
+      "info": "Each image story stays for its own number of seconds and each video plays to its end. Shoppers can always pause, and the viewer starts paused for shoppers who ask their device for reduced motion."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "story",
+      "name": "Story",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Example story",
+          "info": "A short name under the circle. Avoid words like \"live\" or \"today only\": these stories are saved media that never expire."
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Story image",
+          "info": "Shown full screen. Upright 9:16 images work best, for example 1080 × 1920 px. Write alt text for it under Content > Files."
+        },
+        {
+          "type": "video",
+          "id": "video",
+          "label": "Story video",
+          "info": "Replaces the image. Plays muted with a sound button. Show products as they really are. If people speak in it, burn captions into the video: the viewer starts muted and has no caption button."
+        },
+        {
+          "type": "select",
+          "id": "disclosure",
+          "label": "Paid or gifted content",
+          "options": [
+            { "value": "none", "label": "Neither" },
+            { "value": "paid", "label": "Creator was paid" },
+            { "value": "gifted", "label": "Creator got the product free" }
+          ],
+          "default": "none",
+          "info": "The story then shows \"Paid partnership\" or \"Gifted product\" on a line of its own in the viewer, even when labels are hidden."
+        },
+        {
+          "type": "image_picker",
+          "id": "thumb",
+          "label": "Circle image",
+          "info": "Optional. Leave empty to use the story image or the video's cover. A story with no image or video shows this image in the viewer."
+        },
+        {
+          "type": "range",
+          "id": "duration",
+          "label": "Seconds on screen",
+          "min": 3,
+          "max": 15,
+          "step": 1,
+          "unit": "s",
+          "default": 6,
+          "info": "For image stories when stories move on automatically. Videos play to their end."
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "Button link",
+          "info": "Optional. Adds a button at the bottom of the story."
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Button label",
+          "default": "Shop now",
+          "info": "Name what the linked page offers. Only promise prices or discounts that page really shows."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Stories",
+      "settings": {
+        "heading": "<strong>Stories</strong>",
+        "head_size": "md"
+      },
+      "blocks": [
+        {
+          "type": "story",
+          "settings": {
+            "label": "Example: new in"
+          }
+        },
+        {
+          "type": "story",
+          "settings": {
+            "label": "Example: how to"
+          }
+        },
+        {
+          "type": "story",
+          "settings": {
+            "label": "Example: in use"
+          }
+        },
+        {
+          "type": "story",
+          "settings": {
+            "label": "Example: making of"
+          }
+        },
+        {
+          "type": "story",
+          "settings": {
+            "label": "Example: gift ideas"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

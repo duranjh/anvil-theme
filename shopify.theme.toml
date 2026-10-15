@@ -6,10 +6,14 @@
 # First push (creates the dev theme; copy its id into `theme` below):
 #   shopify theme push --unpublished --theme "ANVIL dev - DO NOT PUBLISH" --store ftsegk-n1.myshopify.com
 #
+# 2026-10-15: `shopify theme list` on the store shows no Anvil theme (the id that
+# was here, 189166714959, does not exist), so the id is a placeholder until the
+# owner runs the first push above. The live theme is #189067624527; never push to it.
+#
 # Never add `live = true` or `allow-live = true` here. The gate scripts use
 # DEV_THEME_ID / STORE / THEME_TOKEN env vars instead of this file so a token
 # never lands in git.
 
 [environments.voreau-dev]
 store = "ftsegk-n1.myshopify.com"
-theme = "REPLACE_WITH_DEV_THEME_ID"
+theme = "189166714959"

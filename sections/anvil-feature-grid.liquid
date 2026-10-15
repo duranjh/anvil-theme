@@ -1,0 +1,473 @@
+{%- liquid
+  assign s = section.settings
+
+  # Columns: the shared grid (assets/anvil-base.css .av-grid) owns the column rule for phones, tablets and desktop.
+  assign cols_mobile = s.cols_mobile | default: '1' | plus: 0
+  assign cols_desktop = s.cols_desktop | default: '3' | plus: 0
+  assign cols_tablet = cols_desktop | at_most: 3
+  if cols_desktop == 4
+    assign cols_tablet = 2
+  endif
+
+  # Card surface (outlined, tinted, shadow or the theme's cards) from the shared utility; blank = no box.
+  capture surface
+    render 'anvil-surface', style: s.card_style
+  endcapture
+  assign surface = surface | strip
+  assign boxed = false
+  if surface != blank
+    assign boxed = true
+  endif
+
+  assign card_align = s.text_align | default: 'left'
+  assign title_size = s.title_size | default: 'md'
+
+  assign grid_class = 'av-feature-grid av-grid av-grid--flex av-grid--c' | append: cols_desktop | append: ' av-grid--m' | append: cols_mobile
+  assign grid_class = grid_class | append: ' av-feature-grid--m' | append: cols_mobile
+  assign grid_class = grid_class | append: ' av-feature-grid--align-' | append: card_align
+  assign grid_class = grid_class | append: ' av-feature-grid--title-' | append: title_size
+  if boxed
+    assign grid_class = grid_class | append: ' av-feature-grid--boxed'
+    if s.show_media and s.media_inset != true
+      assign grid_class = grid_class | append: ' av-feature-grid--bleed'
+    endif
+  endif
+  if s.center_cards
+    assign grid_class = grid_class | append: ' av-grid--center'
+  endif
+
+  # Button look (button_style: primary | secondary | link | link_arrow; only link_arrow draws the arrow).
+  assign btn_icon = ''
+  assign btn_style = s.button_style | default: 'link_arrow'
+  if btn_style == 'link_arrow'
+    assign btn_style = 'link'
+    assign btn_icon = 'arrow-right'
+  endif
+
+  # Image shape; "Same as theme cards" follows Theme settings > Product cards.
+  assign img_ratio = s.image_ratio | default: '1:1'
+  if img_ratio == 'theme'
+    assign img_ratio = settings.card_image_ratio | default: '4:5'
+  endif
+
+  # Image sizes: the inner width is capped by the page (or narrow) width unless the section is full width.
+  assign img_widths = '300, 450, 600, 750, 900, 1100'
+  assign vw_desktop = 100 | divided_by: cols_desktop
+  assign vw_tablet = 100 | divided_by: cols_tablet
+  assign vw_mobile = 100 | divided_by: cols_mobile
+  if s.width == 'full'
+    assign img_sizes = '(min-width: 990px) ' | append: vw_desktop | append: 'vw, (min-width: 750px) ' | append: vw_tablet | append: 'vw, ' | append: vw_mobile | append: 'vw'
+  else
+    assign max_inner = settings.page_width | default: 1400
+    if s.width == 'narrow'
+      assign max_inner = settings.narrow_width | default: 800
+    endif
+    assign cap_bp = max_inner | at_least: 990
+    assign px_desktop = max_inner | divided_by: cols_desktop
+    assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: px_desktop | append: 'px, (min-width: 990px) ' | append: vw_desktop | append: 'vw, (min-width: 750px) ' | append: vw_tablet | append: 'vw, ' | append: vw_mobile | append: 'vw'
+  endif
+
+  # First two template sections (snippets/anvil-above-fold): the cards in the phone's first row load eagerly (the
+  # only ones in view on every device), and in the first section the first card is the likely LCP image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign shown = 0
+-%}
+{%- capture cards_html -%}
+  {%- for block in section.blocks -%}
+    {%- liquid
+      assign b = block.settings
+      assign title = b.heading | strip
+      assign label = b.button_label | strip
+      assign label_html = label | escape
+      assign url = b.button_link
+
+      assign has_body = false
+      if title != blank or b.text != blank
+        assign has_body = true
+      elsif label != blank and url != blank
+        assign has_body = true
+      endif
+      assign has_media = false
+      if s.show_media and b.image != blank
+        assign has_media = true
+      endif
+      # A card with nothing of its own (no heading, text, button or image) is skipped on the storefront.
+      # The editor keeps it, outlined and with a note, so it stays visible and selectable.
+      assign is_empty = true
+      if has_body or has_media
+        assign is_empty = false
+      endif
+      if is_empty
+        unless request.design_mode
+          continue
+        endunless
+      endif
+      unless is_empty
+        assign shown = shown | plus: 1
+      endunless
+
+      # Link target. "cover": the heading link stretches over the card (needs a heading for its name);
+      # "button": a real button link; "title": the heading is the link; "none": nothing to name a link.
+      assign link_mode = 'none'
+      if url != blank
+        if s.card_link and title != blank
+          assign link_mode = 'cover'
+        elsif label != blank
+          assign link_mode = 'button'
+        elsif title != blank
+          assign link_mode = 'title'
+        endif
+      endif
+
+      # A button's name is its label plus the card heading ("Learn more Example feature"), so three
+      # "Learn more" links read apart in a links list. The visible label stays first (WCAG 2.5.3).
+      assign title_id = 'FeatureGridTitle-' | append: section.id | append: '-' | append: block.id
+      assign btn_attrs = ''
+      if link_mode == 'button' and title != blank
+        assign btn_id = 'FeatureGridLink-' | append: section.id | append: '-' | append: block.id
+        assign btn_attrs = 'id="' | append: btn_id | append: '" aria-labelledby="' | append: btn_id | append: ' ' | append: title_id | append: '"'
+      endif
+
+      # Editor only: say why a card's link is not drawn, or that the card is empty.
+      assign editor_note = ''
+      if request.design_mode
+        if url != blank and link_mode == 'none'
+          assign editor_note = 'anvil.editor.feature_grid_link_hidden' | t
+        elsif is_empty
+          assign editor_note = 'anvil.editor.block_empty' | t
+        endif
+      endif
+
+      assign img_loading = 'lazy'
+      assign img_priority = false
+      if fold != 'lazy' and shown <= cols_mobile
+        assign img_loading = 'eager'
+      endif
+      if fold == 'lcp' and shown == 1
+        assign img_priority = true
+      endif
+      assign ph_index = forloop.index0 | modulo: 6 | plus: 1
+      assign ph_name = 'product-' | append: ph_index
+    -%}
+    <li class="av-feature-grid__item" {{ block.shopify_attributes }}>
+      <div class="av-feature-grid__card {{ surface }}{% if link_mode == 'cover' %} av-feature-grid__card--linked av-lift{% endif %}{% if is_empty %} av-feature-grid__card--empty{% endif %}">
+        {%- if s.show_media and is_empty == false -%}
+          {%- render 'anvil-media', image: b.image, ratio: img_ratio, fit: s.image_fit, widths: img_widths, sizes: img_sizes, loading: img_loading, priority: img_priority, placeholder: ph_name, class: 'av-feature-grid__media' -%}
+        {%- endif -%}
+        {%- if has_body or editor_note != blank -%}
+          <div class="av-feature-grid__body">
+            {%- if title != blank -%}
+              <h3 class="av-feature-grid__title" id="{{ title_id }}">
+                {%- if link_mode == 'cover' or link_mode == 'title' -%}
+                  <a class="av-feature-grid__link" href="{{ url | escape }}">{{ title | escape }}</a>
+                {%- else -%}
+                  {{ title | escape }}
+                {%- endif -%}
+              </h3>
+            {%- endif -%}
+            {%- if b.text != blank -%}
+              <div class="av-feature-grid__text av-rte">{{ b.text }}</div>
+            {%- endif -%}
+            {%- if label != blank and url != blank -%}
+              <div class="av-feature-grid__action">
+                {%- if link_mode == 'cover' -%}
+                  <span class="av-btn av-btn--{{ btn_style }} av-btn--md{% if btn_icon != blank %} av-btn--has-icon{% endif %} av-feature-grid__cta" aria-hidden="true">
+                    <span class="av-btn__label">{{ label_html }}</span>
+                    {%- if btn_icon != blank -%}{% render 'anvil-icon', name: btn_icon, size: 18, class: 'av-btn__icon' %}{%- endif -%}
+                  </span>
+                {%- else -%}
+                  {%- render 'anvil-button', label: label_html, url: url, style: btn_style, size: 'md', icon: btn_icon, attrs: btn_attrs -%}
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+            {%- if editor_note != blank -%}
+              <p class="av-feature-grid__note av-example-note">{{ editor_note }}</p>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+    </li>
+  {%- endfor -%}
+{%- endcapture -%}
+{%- assign cards_html = cards_html | strip -%}
+{%- if cards_html != blank or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-feature-grid' %}>
+  <div class="av-section__inner">
+    {%- if cards_html != blank -%}
+      {%- assign fallback = 'anvil.feature_grid.heading' | t -%}
+      {% render 'anvil-section-head', section: section, fallback: fallback %}
+      <ul class="{{ grid_class }}" role="list">
+        {{- cards_html -}}
+      </ul>
+    {%- else -%}
+      {% render 'anvil-section-head', section: section %}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Columns, gap and the centred last row come from the shared .av-grid (anvil-base.css); card boxes from .av-surface.
+   role="list" keeps list semantics in WebKit; anvil-base.css resets list-style and padding for ul[role="list"]. */
+.av-feature-grid--m2{--av-grid-space:var(--av-space-3)}
+.av-feature-grid__item{display:flex;margin:0}
+.av-feature-grid__card{position:relative;display:flex;flex-direction:column;width:100%;min-width:0;color:var(--av-fg);border-radius:var(--av-radius-card)}
+.av-feature-grid--boxed .av-feature-grid__card{padding:var(--av-space-4)}
+/* Bleed: the image reaches the card edges; the card clips it to its own radius. */
+.av-feature-grid--bleed .av-feature-grid__card{padding:0;overflow:hidden}
+.av-feature-grid--bleed .av-feature-grid__media{border-radius:0}
+.av-feature-grid__body{display:flex;flex:1 1 auto;flex-direction:column;gap:var(--av-space-3);min-width:0}
+.av-feature-grid__media + .av-feature-grid__body{margin-top:var(--av-space-4)}
+.av-feature-grid--bleed .av-feature-grid__body{margin-top:0;padding:var(--av-space-4)}
+.av-feature-grid__title{margin:0;font-size:var(--av-text-lg);line-height:1.25;overflow-wrap:anywhere}
+.av-feature-grid--title-sm .av-feature-grid__title{font-size:var(--av-text-md)}
+.av-feature-grid--title-lg .av-feature-grid__title{font-size:var(--av-text-xl)}
+.av-feature-grid__text{min-width:0;overflow-wrap:break-word}
+.av-feature-grid--m2 .av-feature-grid__text{font-size:var(--av-text-sm)}
+.av-feature-grid__action{display:flex;flex-wrap:wrap;margin-top:auto;padding-top:var(--av-space-1)}
+.av-feature-grid--align-center .av-feature-grid__body{text-align:center}
+.av-feature-grid--align-center .av-feature-grid__action{justify-content:center}
+.av-feature-grid--align-right .av-feature-grid__body{text-align:right}
+.av-feature-grid--align-right .av-feature-grid__action{justify-content:flex-end}
+/* A heading that is the card's only link stays underlined, so it reads as a link without hover. The whole-card
+   link shows its underline on hover only: the card itself is the cue. */
+.av-feature-grid__link{color:inherit;text-decoration:underline;text-decoration-thickness:0.06em;text-underline-offset:0.15em}
+.av-feature-grid__link:hover{text-decoration-thickness:0.12em}
+.av-feature-grid__card--linked .av-feature-grid__link{text-decoration-line:none}
+.av-feature-grid__card--linked:hover .av-feature-grid__link{text-decoration-line:underline}
+/* Whole-card link: the heading link's ::after covers the card. Links in the text stay on top; the button cue lets clicks through. */
+.av-feature-grid__card--linked .av-feature-grid__link::after{content:"";position:absolute;inset:0}
+.av-feature-grid__card--linked .av-feature-grid__text a{position:relative}
+.av-feature-grid__cta{pointer-events:none}
+.av-feature-grid__card--linked:has(.av-feature-grid__link:focus-visible){outline:2px solid var(--av-accent);outline-offset:3px}
+@supports selector(:has(*)){.av-feature-grid__card--linked .av-feature-grid__link:focus-visible{outline-color:transparent}}
+/* Editor only: an empty card keeps a visible, clickable box. */
+.av-feature-grid__card--empty{min-height:var(--av-space-9);outline:1px dashed var(--av-border);outline-offset:-1px}
+.av-feature-grid:not(.av-feature-grid--boxed) .av-feature-grid__card--empty{padding:var(--av-space-3)}
+.av-feature-grid__note{margin:0}
+@media (min-width: 750px){
+.av-feature-grid--m2{--av-grid-space:initial}
+.av-feature-grid--m2 .av-feature-grid__text{font-size:var(--av-text-md)}
+.av-feature-grid--boxed .av-feature-grid__card{padding:var(--av-space-5)}
+.av-feature-grid--bleed .av-feature-grid__card{padding:0}
+.av-feature-grid--bleed .av-feature-grid__body{padding:var(--av-space-5)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Feature grid",
+  "max_blocks": 12,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Feature grid" },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "3",
+      "info": "Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "checkbox",
+      "id": "center_cards",
+      "label": "Centre an unfinished last row",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "Card style",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "flat", "label": "No box" },
+        { "value": "outlined", "label": "Outlined" },
+        { "value": "tinted", "label": "Tinted" },
+        { "value": "raised", "label": "Shadow" }
+      ],
+      "default": "theme",
+      "info": "\"Same as theme cards\" follows Theme settings > Cards."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Card text alignment",
+      "default": "left"
+    },
+    { "type": "header", "content": "Images" },
+    {
+      "type": "checkbox",
+      "id": "show_media",
+      "label": "Show images",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" },
+        { "value": "21:9", "label": "Wide (21:9)" }
+      ],
+      "default": "1:1"
+    },
+    {
+      "type": "select",
+      "id": "image_fit",
+      "label": "Image fit",
+      "options": [
+        { "value": "cover", "label": "Fill the shape (crop)" },
+        { "value": "contain", "label": "Fit inside the shape" }
+      ],
+      "default": "cover"
+    },
+    {
+      "type": "checkbox",
+      "id": "media_inset",
+      "label": "Inset images inside the card",
+      "default": false,
+      "info": "Outlined, tinted and shadow cards only. Off: images reach the card edges."
+    },
+    { "type": "header", "content": "Text and button" },
+    {
+      "type": "select",
+      "id": "title_size",
+      "label": "Card heading size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" },
+        { "value": "link", "label": "Text link" },
+        { "value": "link_arrow", "label": "Text link with arrow" }
+      ],
+      "default": "link_arrow"
+    },
+    {
+      "type": "checkbox",
+      "id": "card_link",
+      "label": "Make the whole card clickable",
+      "default": false,
+      "info": "For cards with a heading and a link: the heading becomes the link and covers the card, and the button stays as a visual cue."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "card",
+      "name": "Card",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Show the real product or result. Upload only images you are entitled to use; the image's alt text is read to screen readers."
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Example: one real feature",
+          "info": "State only what is true for your product. Claims such as \"best-selling\" or \"clinically proven\" need evidence you can show."
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "<p>Example: describe one real benefit in a sentence or two.</p>",
+          "info": "Describe what the product actually does. Results, guarantees and delivery promises must match your policies."
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Button label",
+          "default": "Learn more",
+          "info": "Shows only when the card has a link."
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "Link",
+          "info": "Shows on the card's button, or on its heading when the button label is empty. A card with neither shows no link."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Feature grid",
+      "settings": {
+        "heading": "What makes it <strong>different</strong>"
+      },
+      "blocks": [
+        {
+          "type": "card",
+          "settings": {
+            "heading": "Example: first benefit",
+            "text": "<p>Example: replace with one real benefit and the detail that proves it, such as a material or a measurement.</p>"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "heading": "Example: second benefit",
+            "text": "<p>Example: say what the shopper gets, in plain words. Only state what is true for your product.</p>"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "heading": "Example: third benefit",
+            "text": "<p>Example: add a link below if a page explains this feature in more depth.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

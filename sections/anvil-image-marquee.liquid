@@ -1,0 +1,420 @@
+{%- liquid
+  assign s = section.settings
+  assign total = section.blocks.size
+
+  # Two rows split the images in order: the first half (rounded up) on top.
+  # One image cannot fill two rows, so it always stays a single row.
+  assign rows = 1
+  if s.rows == '2' and total > 1
+    assign rows = 2
+  endif
+  assign row1_size = total
+  if rows == 2
+    assign row1_size = total | plus: 1 | divided_by: 2
+  endif
+
+  assign h_d = s.height | default: 240
+  assign h_m = s.height_mobile | default: 160
+  assign gap = 16
+  if s.gap != nil
+    assign gap = s.gap
+  endif
+  assign speed = s.speed | default: 40
+
+  assign dir_1 = s.direction | default: 'left'
+  assign dir_2 = dir_1
+  if s.reverse_second
+    if dir_1 == 'left'
+      assign dir_2 = 'right'
+    else
+      assign dir_2 = 'left'
+    endif
+  endif
+
+  # A fixed shape gives every image the same box (cover crop); adapt keeps
+  # each image's own proportions at the chosen height.
+  assign shape = s.image_ratio | default: 'adapt'
+  assign shape_ar = nil
+  case shape
+    when '1:1'
+      assign shape_ar = 1.0
+    when '3:4'
+      assign shape_ar = 0.75
+    when '4:3'
+      assign shape_ar = 1.3333
+  endcase
+
+  # First two template sections (snippets/anvil-above-fold): the first visible images of each row load eagerly, and
+  # in the first section the first image is the likely LCP; elsewhere all are lazy.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign eager_ok = true
+  if fold == 'lazy'
+    assign eager_ok = false
+  endif
+
+  assign wrap_class = 'av-image-marquee'
+  if shape_ar != nil
+    assign wrap_class = wrap_class | append: ' av-image-marquee--shaped'
+  endif
+  if s.rounded
+    assign wrap_class = wrap_class | append: ' av-image-marquee--rounded'
+  endif
+  # Full width lets the moving strip run edge to edge. A static strip (animations off in Theme settings, reduced
+  # motion) keeps the gutter: the stylesheet decides, so one render serves both.
+  if s.width == 'full'
+    assign wrap_class = wrap_class | append: ' av-image-marquee--bleed'
+  endif
+
+  # The shared <anvil-marquee> stops the strip at its start on keyboard focus and scrolls the focused image into
+  # view (WCAG 2.4.7 / 2.4.11), and stops under the pointer whenever the strip holds links, so linked images work in
+  # a moving strip too.
+  assign dropped_alt = 0
+
+  assign wrap_style = '--av-image-marquee-h-d: ' | append: h_d | append: 'px; --av-image-marquee-h-m: ' | append: h_m | append: 'px; --av-image-marquee-gap: ' | append: gap | append: 'px;'
+  if shape_ar != nil
+    assign wrap_style = wrap_style | append: ' --av-image-marquee-ar: ' | append: shape_ar | append: ';'
+  endif
+
+  assign ph_names = 'lifestyle-1,product-1,collection-1,lifestyle-2,product-2,collection-2,product-3,collection-3,product-4,collection-4' | split: ','
+  assign ph_ratios = '1.3333,0.75,1.0' | split: ','
+  assign width_steps = '160,240,320,480,640,800,960' | split: ','
+
+  assign row_1 = ''
+  assign row_2 = ''
+-%}
+{%- if total > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-image-marquee' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if total > 0 -%}
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign b = block.settings
+          assign idx0 = forloop.index0
+
+          assign in_row_2 = false
+          assign pos = forloop.index
+          if forloop.index > row1_size
+            assign in_row_2 = true
+            assign pos = forloop.index | minus: row1_size
+          endif
+
+          assign loading = 'lazy'
+          if eager_ok and pos <= 5
+            assign loading = 'eager'
+          endif
+          assign priority = false
+          assign fetch = 'auto'
+          if fold == 'lcp' and forloop.first
+            assign priority = true
+            assign fetch = 'high'
+          endif
+
+          assign alt = b.alt | strip
+          if alt == blank and b.image != blank
+            assign alt = b.image.alt | strip
+          endif
+
+          # A link needs a name, so the image becomes a link only when it has
+          # alt text. The editor note below counts the links left out.
+          assign tag = 'div'
+          if b.link != blank and b.image != blank
+            if alt == blank
+              assign dropped_alt = dropped_alt | plus: 1
+            else
+              assign tag = 'a'
+            endif
+          endif
+
+          if b.image != blank
+            # The source must cover the painted width. A fixed shape crops with
+            # object-fit: cover, which paints the image at
+            # height × max(own ratio, box ratio), so a photo wider than the box
+            # is drawn wider than the box.
+            assign img_ar = b.image.aspect_ratio | default: 1
+            if shape_ar != nil
+              assign img_ar = img_ar | at_least: shape_ar
+            endif
+            assign w_d = h_d | times: img_ar | round
+            assign w_m = h_m | times: img_ar | round
+            assign w_m2 = w_m | times: 2
+            assign max_w = w_d | times: 2 | at_least: w_m2 | at_most: 1100
+            if b.image.width != blank
+              assign max_w = max_w | at_most: b.image.width
+            endif
+            assign widths = ''
+            for step in width_steps
+              assign step_n = step | plus: 0
+              if step_n < max_w
+                assign widths = widths | append: step_n | append: ', '
+              endif
+            endfor
+            assign widths = widths | append: max_w
+            assign sizes = '(min-width: 750px) ' | append: w_d | append: 'px, ' | append: w_m | append: 'px'
+          else
+            assign ph_index = idx0 | modulo: ph_names.size
+            assign ph_name = ph_names[ph_index]
+            assign ph_ratio_index = idx0 | modulo: ph_ratios.size
+            assign ph_ratio = ph_ratios[ph_ratio_index]
+          endif
+        -%}
+        {%- capture item -%}
+          <li class="av-image-marquee__item" {{ block.shopify_attributes }}>
+            {%- if b.image != blank -%}
+              <{{ tag }} class="av-image-marquee__media"{% if tag == 'a' %} href="{{ b.link }}"{% endif %}>
+                {{- b.image | image_url: width: max_w | image_tag: widths: widths, sizes: sizes, loading: loading, fetchpriority: fetch, preload: priority, alt: alt, class: 'av-image-marquee__img' -}}
+              </{{ tag }}>
+            {%- else -%}
+              <div class="av-image-marquee__media av-image-marquee__media--ph"{% if shape_ar == nil %} style="--av-image-marquee-ar: {{ ph_ratio }};"{% endif %} aria-hidden="true">
+                {{- ph_name | placeholder_svg_tag: 'av-image-marquee__ph' -}}
+              </div>
+            {%- endif -%}
+          </li>
+        {%- endcapture -%}
+        {%- liquid
+          if in_row_2
+            assign row_2 = row_2 | append: item
+          else
+            assign row_1 = row_1 | append: item
+          endif
+        -%}
+      {%- endfor -%}
+      {%- liquid
+        # Each row is a named group, so each row's pause button is announced
+        # with the row it controls ("Scrolling images, row 1 … Pause").
+        if rows == 2
+          assign label_1 = 'anvil.image_marquee.row' | t: number: 1
+          assign label_2 = 'anvil.image_marquee.row' | t: number: 2
+        else
+          assign label_1 = 'anvil.image_marquee.label' | t
+        endif
+      -%}
+      {{ 'anvil-marquee.css' | asset_url | stylesheet_tag }}
+      <div class="{{ wrap_class }}" style="{{ wrap_style }}">
+        <anvil-marquee class="av-image-marquee__row" role="group" aria-label="{{ label_1 }}" speed="{{ speed }}" direction="{{ dir_1 }}"{% if s.pause_hover %} pause-on-hover{% endif %} style="--av-marquee-gap: {{ gap }}px;">
+          <ul class="av-image-marquee__track" role="list" data-marquee-track>
+            {{- row_1 -}}
+          </ul>
+        </anvil-marquee>
+        {%- if rows == 2 -%}
+          <anvil-marquee class="av-image-marquee__row" role="group" aria-label="{{ label_2 }}" speed="{{ speed }}" direction="{{ dir_2 }}"{% if s.pause_hover %} pause-on-hover{% endif %} style="--av-marquee-gap: {{ gap }}px;">
+            <ul class="av-image-marquee__track" role="list" data-marquee-track>
+              {{- row_2 -}}
+            </ul>
+          </anvil-marquee>
+        {%- endif -%}
+      </div>
+      {%- if request.design_mode -%}
+        {%- if dropped_alt > 0 -%}
+          <p class="av-image-marquee__note av-example-note">{{ 'anvil.editor.image_marquee_link_needs_alt' | t: count: dropped_alt }}</p>
+        {%- endif -%}
+      {%- endif -%}
+      <script type="module" src="{{ 'anvil-marquee.js' | asset_url }}"></script>
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+.av-image-marquee{--av-image-marquee-h:var(--av-image-marquee-h-m,160px);display:grid;grid-template-columns:minmax(0,1fr);row-gap:var(--av-image-marquee-gap,16px)}
+.av-image-marquee--bleed{margin-inline:calc(var(--av-gutter) * -1)}
+/* Room for the focus ring of a linked image: the strip clips at its padding box. */
+.av-image-marquee .av-image-marquee__row{padding-block:var(--av-space-2);margin-block:calc(var(--av-space-2) * -1)}
+.av-image-marquee__track{margin:0;padding:0;list-style:none}
+.av-image-marquee__item{flex:none;margin:0}
+.av-image-marquee__media{display:block;height:var(--av-image-marquee-h);overflow:hidden;background:rgb(var(--av-fg-rgb) / 0.06);color:inherit;text-decoration:none}
+.av-image-marquee--rounded .av-image-marquee__media{border-radius:var(--av-radius-media)}
+.av-image-marquee__img{width:auto;max-width:none;height:100%}
+.av-image-marquee--shaped .av-image-marquee__media,.av-image-marquee__media--ph{width:calc(var(--av-image-marquee-h) * var(--av-image-marquee-ar, 1.3333))}
+.av-image-marquee--shaped .av-image-marquee__img{width:100%;object-fit:cover}
+.av-image-marquee__ph{width:100%;height:100%;box-sizing:border-box;padding:12%;color:rgb(var(--av-fg-rgb) / 0.4);fill:currentColor}
+.av-image-marquee__media[href]:hover .av-image-marquee__img{opacity:0.85}
+.av-image-marquee__note{margin:var(--av-space-3) 0 0;text-align:center}
+/* A static wrapped row (reduced motion, animations off): the strip keeps the gutter, and an image wider than the
+   content box is cropped to fit instead of being cut off on both sides. */
+@media (prefers-reduced-motion: reduce){
+.av-image-marquee--bleed{margin-inline:0}
+.av-image-marquee__item,.av-image-marquee__media{max-width:100%}
+.av-image-marquee__img{max-width:100%;object-fit:cover}
+}
+html[data-animations="off"] .av-image-marquee--bleed{margin-inline:0}
+html[data-animations="off"] .av-image-marquee :is(.av-image-marquee__item,.av-image-marquee__media){max-width:100%}
+html[data-animations="off"] .av-image-marquee__img{max-width:100%;object-fit:cover}
+@media (prefers-reduced-motion: no-preference){
+html:not([data-animations="off"]) .av-image-marquee__img{transition:opacity var(--av-dur) var(--av-ease)}
+}
+@media (min-width: 750px){
+.av-image-marquee{--av-image-marquee-h:var(--av-image-marquee-h-d,240px)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Scrolling images",
+  "max_blocks": 20,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Scrolling images" },
+    {
+      "type": "select",
+      "id": "rows",
+      "label": "Rows",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1",
+      "info": "Two rows split the images in order: the first half on top, the rest below."
+    },
+    {
+      "type": "checkbox",
+      "id": "reverse_second",
+      "label": "Second row moves the other way",
+      "default": true,
+      "visible_if": "{{ section.settings.rows == '2' }}"
+    },
+    {
+      "type": "select",
+      "id": "direction",
+      "label": "Direction",
+      "options": [
+        { "value": "left", "label": "Right to left" },
+        { "value": "right", "label": "Left to right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "Speed",
+      "min": 10,
+      "max": 150,
+      "step": 10,
+      "unit": "px",
+      "default": 40,
+      "info": "Pixels per second. Shoppers can always pause the strip, and it stays still for anyone whose device asks for less motion."
+    },
+    {
+      "type": "checkbox",
+      "id": "pause_hover",
+      "label": "Pause on hover",
+      "default": true,
+      "info": "A strip with linked images always pauses under the pointer, so shoppers can click them."
+    },
+    { "type": "header", "content": "Images" },
+    {
+      "type": "range",
+      "id": "height",
+      "label": "Image height",
+      "min": 80,
+      "max": 480,
+      "step": 10,
+      "unit": "px",
+      "default": 240
+    },
+    {
+      "type": "range",
+      "id": "height_mobile",
+      "label": "Image height on phones",
+      "min": 60,
+      "max": 360,
+      "step": 10,
+      "unit": "px",
+      "default": 160
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "4:3", "label": "Landscape (4:3)" }
+      ],
+      "default": "adapt",
+      "info": "A fixed shape crops every image to the same box."
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between images",
+      "min": 0,
+      "max": 64,
+      "step": 4,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "checkbox",
+      "id": "rounded",
+      "label": "Rounded corners",
+      "default": true,
+      "info": "Uses the media corner radius from Theme settings."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "image",
+      "name": "Image",
+      "limit": 20,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Use photos you own or have permission to use. Do not present staged or stock photos as customer photos."
+        },
+        {
+          "type": "text",
+          "id": "alt",
+          "label": "Alt text",
+          "info": "Describes the image for screen readers. Leave blank to use the alt text saved with the image."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link",
+          "info": "Optional. Needs alt text, so the link has a name. Keyboard focus stops the strip and brings the image into view."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Scrolling images",
+      "settings": {
+        "width": "full"
+      },
+      "blocks": [
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" }
+      ]
+    }
+  ]
+}
+{% endschema %}

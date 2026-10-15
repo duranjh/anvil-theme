@@ -24,7 +24,7 @@
         },
         {
           "value": "info",
-          "label": "Information"
+          "label": "Info"
         },
         {
           "value": "truck",
@@ -40,7 +40,7 @@
         },
         {
           "value": "shield-check",
-          "label": "Shield"
+          "label": "Shield check"
         },
         {
           "value": "ruler",
@@ -56,7 +56,7 @@
         },
         {
           "value": "droplet",
-          "label": "Drop"
+          "label": "Droplet"
         },
         {
           "value": "leaf",
@@ -84,7 +84,7 @@
         },
         {
           "value": "credit-card",
-          "label": "Card"
+          "label": "Credit card"
         },
         {
           "value": "clock",
@@ -96,11 +96,11 @@
         },
         {
           "value": "help-circle",
-          "label": "Question"
+          "label": "Question mark"
         },
         {
           "value": "message-circle",
-          "label": "Chat"
+          "label": "Chat bubble"
         },
         {
           "value": "mail",
@@ -128,11 +128,11 @@
         },
         {
           "value": "book-open",
-          "label": "Book"
+          "label": "Open book"
         },
         {
           "value": "check-circle",
-          "label": "Check"
+          "label": "Check in circle"
         }
       ],
       "default": "none"

@@ -1,0 +1,131 @@
+{%- liquid
+  assign s = section.settings
+
+  # A column of theme blocks (and app blocks) rendered by content_for. The
+  # section owns the column: its width, where it sits, the space between
+  # blocks and the alignment that blocks without their own alignment follow
+  # (text-align plus --av-justify for flex rows). The chassis heading sits in
+  # the column so it shares its width and position.
+  assign content_w = s.content_width | default: 800
+  assign align = s.text_align | default: 'center'
+
+  assign gap = 24
+  if s.gap != nil
+    assign gap = s.gap
+  endif
+
+  # An empty section (no blocks, no heading, no subheading) renders nothing on
+  # the storefront instead of an empty coloured band. The editor keeps it so
+  # the empty-section note shows.
+  assign has_content = false
+  if section.blocks.size > 0 or s.heading != blank or s.subheading != blank or request.design_mode
+    assign has_content = true
+  endif
+-%}
+{%- if has_content -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-rich-text' %}>
+  <div class="av-section__inner">
+    <div class="av-rich-text av-rich-text--{{ align }}" style="--av-rich-text-w: {{ content_w }}px;">
+      {% render 'anvil-section-head', section: section %}
+      <div class="av-rich-text__blocks" style="--av-rich-text-gap: {{ gap }}px;">
+        {%- if section.blocks.size == 0 -%}
+          {% render 'anvil-editor-empty' %}
+        {%- endif -%}
+        {% content_for 'blocks' %}
+      </div>
+    </div>
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+.av-rich-text{max-width:var(--av-rich-text-w,800px);margin-inline:auto;text-align:center;--av-justify:center}
+.av-rich-text--left{margin-left:0;text-align:left;--av-justify:flex-start}
+.av-rich-text--right{margin-right:0;text-align:right;--av-justify:flex-end}
+.av-rich-text__blocks{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-rich-text-gap,24px)}
+.av-rich-text__blocks>*{min-width:0}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Rich text",
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Rich text" },
+    {
+      "type": "range",
+      "id": "content_width",
+      "label": "Content width on desktop",
+      "min": 400,
+      "max": 1600,
+      "step": 40,
+      "unit": "px",
+      "default": 800,
+      "info": "Never wider than the section's own width. 800 px keeps lines easy to read."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Content alignment",
+      "default": "center",
+      "info": "Places and aligns the content. A block follows it unless the block's own Alignment is set to Left, Centre or Right."
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between blocks",
+      "min": 0,
+      "max": 64,
+      "step": 4,
+      "unit": "px",
+      "default": 24
+    }
+  ],
+  "blocks": [
+    { "type": "@theme" },
+    { "type": "@app" }
+  ],
+  "presets": [
+    {
+      "name": "Rich text",
+      "settings": {
+        "heading": "Say what <strong>matters</strong> to your shoppers",
+        "head_align": "center"
+      },
+      "blocks": [
+        {
+          "type": "anvil-text",
+          "settings": {
+            "text": "<p>Example: replace it with a few sentences about your store, your product or this page. Only state things that are true for your store.</p>",
+            "size": "md",
+            "align": "center",
+            "width": "full"
+          }
+        },
+        {
+          "type": "anvil-button",
+          "settings": {
+            "label": "Shop all products",
+            "url": "/collections/all",
+            "style": "primary",
+            "align": "center"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

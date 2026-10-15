@@ -97,7 +97,15 @@
   <div class="av-section__inner">
     {%- if multi -%}
       {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
-      <anvil-slider class="av-announcement-bar__bar av-announcement-bar--size-{{ s.text_size }} av-announcement-bar--multi{% if s.autoplay > 0 %} av-announcement-bar--autoplay{% endif %}" per-view="1" per-view-desktop="1" peek="0" autoplay="{{ s.autoplay }}" loop{% if s.show_arrows %} arrows{% endif %} aria-label="{{ 'anvil.announcement.label' | t }}" style="--av-slider-per-view: 1; --av-slider-per-view-desktop: 1; --av-slider-peek: 0px;">
+      {%- liquid
+        assign bar_class = 'av-announcement-bar__bar av-announcement-bar--size-' | append: s.text_size | append: ' av-announcement-bar--multi av-slider--inline'
+        assign arrows = 'none'
+        if s.show_arrows
+          assign arrows = 'all'
+        endif
+        assign bar_label = 'anvil.announcement.label' | t
+      -%}
+      <anvil-slider {% render 'anvil-slider-attrs', count: section.blocks.size, per_view: 1, arrows: arrows, autoplay: s.autoplay, loop: true, label: bar_label, class: bar_class %}>
         <div class="av-announcement-bar__track" data-slider-track>
           {{ items }}
         </div>
@@ -120,111 +128,19 @@
 </div>
 {%- endif -%}
 {% stylesheet %}
-  .av-announcement-bar__bar {
-    display: block;
-    text-align: center;
-    font-size: var(--av-text-sm);
-    line-height: 1.4;
-  }
-  .av-announcement-bar--size-md {
-    font-size: var(--av-text-md);
-  }
-  .av-announcement-bar__track {
-    display: flex;
-    gap: var(--av-space-4);
-  }
-  .av-announcement-bar--multi .av-announcement-bar__track {
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-  }
-  .av-announcement-bar--multi .av-announcement-bar__track::-webkit-scrollbar {
-    display: none;
-  }
-  .av-announcement-bar--multi {
-    --av-slider-arrow: 28px;
-    padding-inline: 40px;
-  }
-  .av-announcement-bar--autoplay {
-    padding-inline-end: 76px;
-  }
-  .av-announcement-bar--multi.av-is-static {
-    padding-inline: 0;
-  }
-  .av-announcement-bar--multi .av-slider__arrow,
-  .av-announcement-bar--multi .av-slider__pause {
-    border: 0;
-    background: none;
-    box-shadow: none;
-    color: inherit;
-  }
-  .av-announcement-bar--multi .av-slider__pause {
-    top: 50%;
-    inset-block-end: auto;
-    inset-inline-end: 40px;
-    width: 28px;
-    height: 28px;
-    translate: 0 -50%;
-  }
-  .av-announcement-bar__item {
-    flex: 0 0 100%;
-    scroll-snap-align: start;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--av-space-2);
-    min-height: 1.5em;
-    padding-inline: var(--av-space-2);
-  }
-  .av-announcement-bar__text p {
-    margin: 0;
-    white-space: normal;
-    text-wrap: balance;
-  }
-  .av-announcement-bar__link {
-    text-decoration: underline;
-    text-underline-offset: 0.15em;
-  }
-  .av-announcement-bar__offer,
-  .av-announcement-bar__socials {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: var(--av-space-2);
-  }
-  .av-announcement-bar__code {
-    font-family: inherit;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 0.1em var(--av-space-2);
-    border: var(--av-border-w-button) solid var(--av-border);
-    border-radius: var(--av-radius-badge);
-  }
-  .av-announcement-bar__copy {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    padding: 0.2em var(--av-space-3);
-    font-size: var(--av-text-xs);
-    text-decoration: none;
-    background: var(--av-btn-bg);
-    color: var(--av-btn-fg);
-    border: var(--av-border-w-button) solid var(--av-btn-border);
-    border-radius: var(--av-radius-pill);
-  }
-  .av-announcement-bar__copy.av-is-copied {
-    background: var(--av-accent);
-    color: var(--av-on-accent);
-    border-color: var(--av-accent);
-  }
-  .av-announcement-bar__social-list .av-social__pill {
-    min-height: 24px;
-  }
-  .av-announcement-bar__note {
-    margin-top: var(--av-space-1);
-    text-align: center;
-  }
+.av-announcement-bar__bar{display:block;text-align:center;font-size:var(--av-text-sm);line-height:1.4}
+.av-announcement-bar--size-md{font-size:var(--av-text-md)}
+.av-announcement-bar__track{display:flex;gap:var(--av-space-4)}
+/* The rotating bar is <anvil-slider> with its inline controls (av-slider--inline, assets/anvil-slider.css). */
+.av-announcement-bar__item{flex:0 0 100%;display:flex;align-items:center;justify-content:center;gap:var(--av-space-2);min-height:1.5em;padding-inline:var(--av-space-2)}
+.av-announcement-bar__text p{margin:0;white-space:normal;text-wrap:balance}
+.av-announcement-bar__link{text-decoration:underline;text-underline-offset:0.15em}
+.av-announcement-bar__offer,.av-announcement-bar__socials{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--av-space-2)}
+.av-announcement-bar__code{font-family:inherit;font-weight:700;letter-spacing:0.04em;padding:0.1em var(--av-space-2);border:var(--av-border-w-button) solid var(--av-border);border-radius:var(--av-radius-badge)}
+.av-announcement-bar__copy{display:inline-flex;align-items:center;min-height:24px;padding:0.2em var(--av-space-3);font-size:var(--av-text-xs);text-decoration:none;background:var(--av-btn-bg);color:var(--av-btn-fg);border:var(--av-border-w-button) solid var(--av-btn-border);border-radius:var(--av-radius-pill)}
+.av-announcement-bar__copy.av-is-copied{background:var(--av-accent);color:var(--av-on-accent);border-color:var(--av-accent)}
+.av-announcement-bar__social-list .av-social__pill{min-height:24px}
+.av-announcement-bar__note{margin-top:var(--av-space-1);text-align:center}
 {% endstylesheet %}
 {% schema %}
 {
@@ -272,13 +188,13 @@
     {
       "type": "range",
       "id": "autoplay",
-      "label": "Rotate every",
-      "info": "Only applies with two or more bars. 0 turns rotation off. Shoppers can pause it, and it starts paused for those who prefer reduced motion.",
+      "label": "Auto-advance every",
       "min": 0,
       "max": 10,
       "step": 1,
       "unit": "s",
-      "default": 5
+      "default": 5,
+      "info": "Only applies with two or more bars. 0 turns it off. It pauses on hover and focus, starts paused when the shopper prefers reduced motion, and always shows a pause button."
     },
     {
       "type": "checkbox",
@@ -298,7 +214,7 @@
           "id": "text",
           "label": "Text",
           "info": "Only announce offers and deadlines that are real; a sale that ends tonight must end tonight.",
-          "default": "<p>Example announcement — replace this with your own message</p>"
+          "default": "<p>Example: replace this with your own message</p>"
         },
         {
           "type": "url",
@@ -373,9 +289,7 @@
       ]
     }
   ],
-  "enabled_on": {
-    "groups": ["header"]
-  },
+  "enabled_on": { "groups": ["header"] },
   "presets": [
     {
       "name": "Announcement bar",

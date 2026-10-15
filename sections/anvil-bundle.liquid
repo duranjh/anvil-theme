@@ -1,0 +1,738 @@
+{%- liquid
+  assign s = section.settings
+
+  comment
+    Bundle deals: a pick-N box. Up to 6 slots, from slot blocks (each picks a product, or the product of the page)
+    or from a product list. Shoppers tick the products they want; one button adds every ticked variant in a single
+    cartAdd (assets/anvil-bundle.js, <anvil-bundle>). The total is always the sum of the real prices of the
+    ticked variants; the struck total comes only from compare-at prices; a merchant's savings text is printed with
+    "Discount applied at checkout" and never lowers a price (docs/HONEST.md).
+    Class names are .av-bundle*, and the element is <anvil-bundle>, because .av-bundle* and <anvil-bundle>
+    already belong to the product page's Bundle offer block (assets/anvil-pb-commerce.css, assets/anvil-commerce.js).
+  endcomment
+  assign use_list = false
+  if s.source == 'list'
+    assign use_list = true
+  endif
+  assign list_examples = false
+  if use_list
+    if s.products == blank
+      assign list_examples = true
+      assign slot_total = 4
+    else
+      assign slot_total = s.products.size | at_most: 6
+    endif
+  else
+    assign slot_total = section.blocks.size | at_most: 6
+  endif
+
+  assign pick_count = s.pick_count | default: 3 | at_least: 1 | at_most: 6
+  assign layout = s.layout | default: 'cards'
+  assign box_pos = s.box_position | default: 'side'
+  assign uid = 'av-bd-' | append: section.id
+
+  comment
+    Cards follow the theme's card shape unless the merchant picks one; rows use small square images.
+  endcomment
+  assign ratio = s.image_ratio
+  if ratio == blank or ratio == 'theme'
+    assign ratio = settings.card_image_ratio | default: '1:1'
+  endif
+  if layout == 'rows'
+    assign ratio = '1:1'
+    assign img_widths = '96, 192'
+    assign img_sizes = '96px'
+  else
+    assign img_widths = '300, 450, 600'
+    assign img_sizes = '(min-width: 990px) 340px, (min-width: 750px) 33vw, 50vw'
+  endif
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign above_fold = true
+  if fold contains 'lazy'
+    assign above_fold = false
+  endif
+  comment
+    Eager images: the whole first visible row (4 cards at the widest container, 3 rows).
+  endcomment
+  assign eager_n = 4
+  if layout == 'rows'
+    assign eager_n = 3
+  endif
+
+  assign sold_out_label = 'anvil.product.sold_out' | t
+  assign unavailable_label = 'anvil.product.unavailable' | t
+  assign pick_label = 'anvil.bundle.add_to_bundle' | t
+  assign price_label = 'anvil.price.price' | t
+  assign sale_label = 'anvil.price.sale_price' | t
+  assign regular_label = 'anvil.price.regular_price' | t
+  assign unit_label = 'anvil.price.unit_price' | t
+  assign per_label = 'anvil.price.per' | t
+
+  comment
+    On the live store an empty slot block is skipped once any slot shows a real product, so a half-filled section
+    never publishes an "Example product" card beside real ones. With no real product at all, every slot stays an
+    example (CONVENTIONS §12); the editor always shows every slot.
+  endcomment
+  assign has_real = false
+  unless use_list
+    for block in section.blocks limit: 6
+      if block.settings.product != blank
+        assign has_real = true
+      endif
+      if block.settings.page_product and product != blank
+        assign has_real = true
+      endif
+    endfor
+  endunless
+
+  comment
+    Counters filled while the slots render: real products, products that can be bought now, preselected picks and
+    their totals. Preselect ticks the first available products up to the number to pick.
+  endcomment
+  assign real_count = 0
+  assign pickable = 0
+  assign sold_count = 0
+  assign shown = 0
+  assign picked = 0
+  assign total = 0
+  assign was_total = 0
+  assign thumbs_html = ''
+-%}
+{%- capture slots_html -%}
+  {%- for n in (1..slot_total) -%}
+    {%- liquid
+      assign i0 = forloop.index0
+      assign p = nil
+      assign caption = ''
+      assign attrs = ''
+    -%}
+    {%- if use_list -%}
+      {%- unless list_examples -%}
+        {%- for item in s.products offset: i0 limit: 1 -%}
+          {%- assign p = item -%}
+        {%- endfor -%}
+      {%- endunless -%}
+    {%- else -%}
+      {%- for block in section.blocks offset: i0 limit: 1 -%}
+        {%- liquid
+          assign attrs = block.shopify_attributes
+          assign caption = block.settings.caption | strip
+          assign p = block.settings.product
+          if block.settings.page_product and product != blank
+            assign p = product
+          endif
+        -%}
+      {%- endfor -%}
+    {%- endif -%}
+    {%- liquid
+      if p == blank and has_real and request.design_mode == false
+        continue
+      endif
+      assign shown = shown | plus: 1
+      assign slot_id = uid | append: '-' | append: n
+      assign ph_index = i0 | modulo: 6 | plus: 1
+      assign ph = 'product-' | append: ph_index
+      assign v = nil
+      assign can_pick = false
+      assign checked = false
+      assign img = nil
+      assign has_select = false
+      if p != blank
+        assign real_count = real_count | plus: 1
+        assign v = p.selected_or_first_available_variant
+        comment
+          On the product's own page ?variant= can select a sold-out variant; the slot then opens on one that sells.
+        endcomment
+        if v.available == false and p.available
+          assign v = p.first_available_variant
+        endif
+        assign img = p.featured_media.preview_image
+        comment
+          Picks are added without a selling plan, so a subscription-only product cannot be picked (it reads
+          "Unavailable"): Shopify would reject the whole add.
+        endcomment
+        if p.available and v.available
+          if p.requires_selling_plan != true
+            assign can_pick = true
+            assign pickable = pickable | plus: 1
+          endif
+        else
+          assign sold_count = sold_count | plus: 1
+        endif
+        if can_pick and p.has_only_default_variant == false
+          assign has_select = true
+        endif
+      endif
+      if can_pick and s.preselect and picked < pick_count
+        assign checked = true
+        assign picked = picked | plus: 1
+        assign total = total | plus: v.price
+        assign cmp = v.compare_at_price | default: 0
+        if cmp < v.price
+          assign cmp = v.price
+        endif
+        assign was_total = was_total | plus: cmp
+      endif
+      assign img_loading = 'lazy'
+      if above_fold and shown <= eager_n
+        assign img_loading = 'eager'
+      endif
+      assign on_sale = false
+      if v.compare_at_price != blank
+        if v.compare_at_price > v.price
+          assign on_sale = true
+        endif
+      endif
+    -%}
+    <li class="av-bundle__slot{% if p == blank %} av-bundle__slot--example{% endif %}" data-anvil-bundle-slot="{{ n }}" {{ attrs }}>
+      {%- if p != blank -%}
+        <a class="av-bundle__media" href="{{ p.url }}" tabindex="-1" aria-hidden="true">
+          {%- render 'anvil-media', image: img, ratio: ratio, widths: img_widths, sizes: img_sizes, loading: img_loading, alt: '', placeholder: ph -%}
+        </a>
+      {%- else -%}
+        <div class="av-bundle__media">
+          {%- render 'anvil-media', ratio: ratio, placeholder: ph -%}
+        </div>
+      {%- endif -%}
+      <div class="av-bundle__info">
+        {%- if caption != blank -%}
+          <p class="av-bundle__caption">{{ caption | escape }}</p>
+        {%- endif -%}
+        <h3 class="av-bundle__title">
+          {%- if p != blank -%}
+            <a href="{{ p.url }}">{{ p.title | escape }}</a>
+          {%- else -%}
+            {{ 'anvil.card.example_product' | t }}
+          {%- endif -%}
+        </h3>
+        {%- if p != blank -%}
+          {%- comment -%}
+            Same parts as snippets/anvil-price: the hidden label follows .av-price--sale (CSS, so it tracks the
+            dropdown), and each variant's unit price is printed, hidden unless that variant is selected.
+          {%- endcomment -%}
+          <p class="av-price av-price--sm{% if on_sale %} av-price--sale{% endif %}{% unless can_pick %} av-price--sold-out{% endunless %}">
+            <span class="av-price__current">
+              <span class="av-visually-hidden av-bundle__lr">{{ price_label }}</span>
+              <span class="av-visually-hidden av-bundle__ls">{{ sale_label }}</span>
+              <span data-anvil-bundle-price>{% render 'anvil-money', amount: v.price %}</span>
+            </span>
+            {%- if s.show_compare -%}
+              <s class="av-price__compare" data-anvil-bundle-compare{% unless on_sale %} hidden{% endunless %}>
+                <span class="av-visually-hidden">{{ regular_label }}</span>
+                <span data-anvil-bundle-amount>{% render 'anvil-money', amount: v.compare_at_price %}</span>
+              </s>
+            {%- endif -%}
+            {%- for variant in p.variants -%}
+              {%- assign unit = variant.unit_price_measurement -%}
+              {%- if unit != blank and variant.unit_price != blank -%}
+                {%- if has_select or variant.id == v.id -%}
+                  <span class="av-price__unit" data-anvil-bundle-unit="{{ variant.id }}"{% if variant.id != v.id %} hidden{% endif %}>
+                    <span class="av-visually-hidden">{{ unit_label }}</span>
+                    {% render 'anvil-money', amount: variant.unit_price %}
+                    <span aria-hidden="true">/</span><span class="av-visually-hidden">{{ per_label }}</span>
+                    {% if unit.reference_value != 1 %}{{ unit.reference_value }}{% endif %}{{ unit.reference_unit }}
+                  </span>
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+          </p>
+          {%- if has_select -%}
+            <span class="av-field__select av-dropdown av-dropdown--{{ settings.dropdown_style }} av-bundle__variant">
+              <label class="av-visually-hidden" for="{{ slot_id }}-variant">{{ 'anvil.product.choose_variant' | t }}: {{ p.title | escape }}</label>
+              <select class="av-field__input av-bundle__select" id="{{ slot_id }}-variant">
+                {%- for variant in p.variants -%}
+                  <option
+                    value="{{ variant.id }}"
+                    data-anvil-price="{{ variant.price }}"
+                    data-anvil-compare="{{ variant.compare_at_price }}"
+                    {% if variant.id == v.id %}
+                      selected
+                    {% endif %}
+                    {% unless variant.available %}
+                      disabled
+                    {% endunless %}
+                  >
+                    {{ variant.title | escape }}
+                    {%- unless variant.available %} ({{ sold_out_label }}){% endunless -%}
+                  </option>
+                {%- endfor -%}
+              </select>
+            </span>
+          {%- endif -%}
+        {%- elsif request.design_mode and use_list == false -%}
+          <p class="av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+        {%- endif -%}
+      </div>
+      <label class="av-check av-bundle__pick">
+        <input
+          class="av-bundle__check"
+          type="checkbox"
+          data-anvil-bundle-pick
+          {% if v != blank %}
+            value="{{ v.id }}" data-anvil-price="{{ v.price }}" data-anvil-compare="{{ v.compare_at_price }}"
+          {% endif %}
+          {% if checked %}
+            checked
+          {% endif %}
+          {% unless can_pick %}
+            disabled
+          {% endunless %}
+        >
+        <span>
+          {%- if p != blank and can_pick == false -%}
+            {%- if p.available and v.available -%}
+              {{ unavailable_label }}
+            {%- else -%}
+              {{ sold_out_label }}
+            {%- endif -%}
+          {%- else -%}
+            {{ pick_label }}
+          {%- endif -%}
+          <span class="av-visually-hidden">: {% if p != blank %}{{ p.title | escape }}{% else %}{{ 'anvil.card.example_product' | t }}{% endif %}</span>
+        </span>
+      </label>
+    </li>
+    {%- if can_pick and s.show_tray -%}
+      {%- capture thumb -%}
+        <li class="av-bundle__thumb" data-anvil-bundle-thumb="{{ n }}"{% unless checked %} hidden{% endunless %}>
+          {%- if img != blank -%}
+            {{ img | image_url: width: 112 | image_tag: widths: '56, 112', sizes: '56px', loading: 'lazy', alt: '', class: 'av-bundle__thumb-img' }}
+          {%- else -%}
+            {{ ph | placeholder_svg_tag: 'av-bundle__thumb-img' }}
+          {%- endif -%}
+        </li>
+      {%- endcapture -%}
+      {%- assign thumbs_html = thumbs_html | append: thumb -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endcapture -%}
+{%- liquid
+  comment
+    When fewer products can be bought than the number to pick (sold out, or too few slots), shoppers can still add
+    the ones left together, but the savings text is hidden: the cart could not meet the discount's terms. Example
+    slots alone (nothing picked yet) keep the merchant's number.
+  endcomment
+  assign need = pick_count
+  assign short = false
+  if real_count > 0 and pickable < pick_count
+    assign short = true
+    assign need = pickable | at_least: 1
+  endif
+
+  assign show_was = false
+  if s.show_compare and was_total > total
+    assign show_was = true
+  endif
+
+  comment
+    Nothing can be bought: the legend and the progress line say why (sold out, or unavailable for subscription-only
+    products), and the tray draws no empty squares, so no one is told to pick what cannot be picked.
+  endcomment
+  assign none_left = false
+  if real_count > 0 and pickable == 0
+    assign none_left = true
+    if sold_count == real_count
+      assign progress = 'anvil.bundle.sold_out' | t
+    else
+      assign progress = unavailable_label
+    endif
+    assign legend = progress
+  else
+    comment
+      The count variable is "total", not "count": the JS template passes the text "[total]", which must never be
+      read as a plural count.
+    endcomment
+    assign progress = 'anvil.bundle.progress' | t: picked: picked, total: need
+    if s.pick_exact
+      assign legend = 'anvil.bundle.pick_exact' | t: count: need
+    else
+      assign legend = 'anvil.bundle.pick_min' | t: count: need
+    endif
+  endif
+
+  assign box_heading = s.box_heading | strip
+  comment
+    The badge is free text, so it reaches shoppers only behind "Badge is backed by sales data" (docs/HONEST.md);
+    the editor says when it is hidden.
+  endcomment
+  assign badge = s.badge | strip
+  assign badge_hidden = false
+  if badge != blank and s.badge_backed_by_sales != true
+    assign badge = ''
+    assign badge_hidden = true
+  endif
+  assign savings = s.savings_text | strip
+  assign add_label = s.button_label | strip
+  if add_label == blank
+    assign add_label = 'anvil.product.bundle_add' | t
+  endif
+  assign add_label = add_label | escape
+  assign add_attrs = 'data-anvil-bundle-add aria-describedby="' | append: uid | append: '-progress"'
+
+  comment
+    Slot titles and the box title are h3, so a section without a visible heading gets a visually hidden h2.
+  endcomment
+  assign visible_heading = s.heading | strip_html | strip
+  assign hidden_heading = box_heading
+  if hidden_heading == blank
+    assign hidden_heading = 'anvil.bundle.label' | t
+  endif
+-%}
+{%- if slot_total > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-bundle' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if visible_heading == blank -%}
+      <h2 class="av-visually-hidden">{{ hidden_heading | escape }}</h2>
+    {%- endif -%}
+    {%- if slot_total > 0 -%}
+      <anvil-bundle
+        class="av-bundle av-bundle--{{ layout }} av-bundle--{{ box_pos }}"
+        data-anvil-pick="{{ need }}"
+        {% if s.pick_exact %}
+          data-anvil-exact
+        {% endif %}
+        data-anvil-progress="{{ 'anvil.bundle.progress' | t: picked: '[picked]', total: '[total]' | escape }}"
+        data-anvil-picked="{{ 'anvil.bundle.picked' | t: picked: '[picked]' | escape }}"
+        data-anvil-limit="{{ 'anvil.bundle.limit' | t: count: need | escape }}"
+      >
+        <div class="av-bundle__picker">
+          <fieldset class="av-bundle__set">
+            <legend class="av-bundle__legend">{{ legend }}</legend>
+            <ul class="av-bundle__slots av-list-reset" role="list">
+              {{- slots_html -}}
+            </ul>
+          </fieldset>
+        </div>
+        <div class="av-bundle__box">
+          <div class="av-bundle__summary">
+            {%- if box_heading != blank or badge != blank -%}
+              <div class="av-bundle__box-head">
+                {%- if box_heading != blank -%}
+                  <h3 class="av-bundle__box-title">{{ box_heading | escape }}</h3>
+                {%- endif -%}
+                {%- if badge != blank -%}
+                  <span class="av-badge av-badge--accent">{{ badge | escape }}</span>
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+            {%- if s.show_tray -%}
+              <ul class="av-bundle__tray av-list-reset" aria-hidden="true">
+                {{- thumbs_html -}}
+                {%- unless none_left -%}
+                  {%- for i in (1..need) -%}
+                    <li class="av-bundle__empty" data-anvil-bundle-empty{% if i <= picked %} hidden{% endif %}>
+                      {%- render 'anvil-icon', name: 'plus', size: 20 -%}
+                    </li>
+                  {%- endfor -%}
+                {%- endunless -%}
+              </ul>
+            {%- endif -%}
+            <p class="av-bundle__progress" id="{{ uid }}-progress" aria-live="polite" data-anvil-bundle-progress>
+              {{- progress -}}
+            </p>
+          </div>
+          <div class="av-bundle__checkout">
+            <p class="av-bundle__total">
+              <span>{{ 'anvil.product.bundle_total' | t }}</span>
+              <span class="av-price av-bundle__sum">
+                <span class="av-price__current" data-anvil-bundle-total>{% render 'anvil-money', amount: total %}</span>
+                {%- if s.show_compare -%}
+                  <s class="av-price__compare" data-anvil-bundle-was{% unless show_was %} hidden{% endunless %}>
+                    <span class="av-visually-hidden">{{ regular_label }}</span>
+                    <span data-anvil-bundle-amount>{% render 'anvil-money', amount: was_total %}</span>
+                  </s>
+                {%- endif -%}
+              </span>
+            </p>
+            {%- if savings != blank and short == false -%}
+              <p class="av-bundle__savings">
+                {%- render 'anvil-icon', name: 'tag', size: 16 -%}
+                <span>{{ savings | escape }} &middot; {{ 'anvil.cart.applied_at_checkout' | t }}</span>
+              </p>
+            {%- endif -%}
+            {%- render 'anvil-button', label: add_label, size: 'lg', full: true, disabled: true, class: 'av-bundle__add', attrs: add_attrs -%}
+            <p class="av-bundle__nojs">{{ 'anvil.bundle.no_js' | t }}</p>
+            <p class="av-bundle__status" role="status" data-anvil-status></p>
+            {%- if request.design_mode -%}
+              {%- if use_list and section.blocks.size > 0 -%}
+                <p class="av-example-note">{{ 'anvil.editor.bundle_list_mode' | t }}</p>
+              {%- endif -%}
+              {%- if list_examples -%}
+                <p class="av-example-note">{{ 'anvil.editor.choose_product' | t }}</p>
+              {%- endif -%}
+              {%- if short -%}
+                <p class="av-example-note">{{ 'anvil.editor.bundle_short' | t: available: pickable, count: pick_count }}</p>
+              {%- elsif real_count == 0 and pick_count > slot_total -%}
+                <p class="av-example-note">{{ 'anvil.editor.bundle_short' | t: available: slot_total, count: pick_count }}</p>
+              {%- endif -%}
+              {%- if badge_hidden -%}
+                <p class="av-example-note">{{ 'anvil.editor.bundle_badge_hidden' | t }}</p>
+              {%- endif -%}
+            {%- endif -%}
+          </div>
+        </div>
+      </anvil-bundle>
+      {%- if pickable > 0 -%}
+        <script type="module" src="{{ 'anvil-bundle.js' | asset_url }}"></script>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+.av-bundle{display:grid;gap:var(--av-space-6);align-items:start}
+.av-bundle__picker{min-width:0;container-type:inline-size}
+.av-bundle__set{min-width:0;margin:0;padding:0;border:0}
+.av-bundle__legend{float:left;width:100%;margin:0 0 var(--av-space-4);padding:0;font-size:var(--av-text-sm);font-weight:600;color:var(--av-fg-muted)}
+.av-bundle__slots{clear:both;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--av-space-3)}
+.av-bundle__slot{display:flex;flex-direction:column;gap:var(--av-space-3);min-width:0;padding:var(--av-space-3);border:max(1px,var(--av-border-w-card)) solid var(--av-border);border-radius:var(--av-radius-card);background:var(--av-bg)}
+.av-bundle__slot:has(.av-bundle__check:checked){border-color:var(--av-accent);box-shadow:inset 0 0 0 1px var(--av-accent)}
+.av-bundle__media{display:block;overflow:hidden;border-radius:var(--av-radius-media)}
+.av-bundle__info{display:grid;align-content:start;gap:var(--av-space-2);min-width:0}
+.av-bundle__caption{margin:0;font-size:var(--av-text-xs);letter-spacing:0.04em;color:var(--av-fg-muted)}
+.av-bundle__title{margin:0;font-family:var(--av-font-body);font-size:var(--av-text-sm);font-weight:600;line-height:1.35;letter-spacing:normal;text-transform:none;overflow-wrap:anywhere}
+.av-bundle__title a{color:inherit;text-decoration:none}
+.av-bundle__title a:hover{text-decoration:underline;text-underline-offset:0.15em}
+.av-bundle__info .av-price{margin:0}
+.av-bundle__slot .av-price:not(.av-price--sale) .av-bundle__ls,.av-bundle__slot .av-price--sale .av-bundle__lr{display:none}
+.av-bundle__variant{display:block}
+.av-bundle__select{min-height:var(--av-control-h-sm);padding-block:var(--av-space-1);font-size:var(--av-text-sm)}
+.av-bundle .av-bundle__pick{align-items:center;gap:var(--av-space-2);min-height:44px;margin-top:auto;padding:var(--av-space-2) var(--av-space-3);font-weight:600;line-height:1.3;border-radius:var(--av-radius-button);background:rgb(var(--av-fg-rgb) / 0.05)}
+.av-bundle .av-bundle__check{margin:0}
+.av-bundle__slot:has(.av-bundle__check:checked) .av-bundle__pick{background:rgb(var(--av-accent-rgb) / 0.12)}
+.av-bundle .av-bundle__pick:has(:disabled),.av-bundle .av-bundle__pick:has([aria-disabled="true"]){color:var(--av-fg-muted);cursor:not-allowed}
+.av-bundle__slot--example .av-bundle__media{opacity:0.7}
+/* Rows: the pick control ends the row from 520px. */
+.av-bundle--rows .av-bundle__slots{grid-template-columns:minmax(0,1fr)}
+.av-bundle--rows .av-bundle__slot{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:var(--av-space-3) var(--av-space-4)}
+.av-bundle--rows .av-bundle__media{grid-row:span 2;align-self:start}
+.av-bundle--rows .av-bundle__pick{margin-top:0}
+.av-bundle--rows .av-bundle__variant{max-width:20rem}
+.av-bundle__box{display:grid;gap:var(--av-space-4);padding:var(--av-space-5);border:var(--av-border-w-card) solid var(--av-border);border-radius:var(--av-radius-card);background:rgb(var(--av-fg-rgb) / 0.03);box-shadow:var(--av-shadow-sm)}
+.av-bundle__summary,.av-bundle__checkout{display:grid;gap:var(--av-space-3);min-width:0}
+.av-bundle__box-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--av-space-2)}
+.av-bundle__box-title{margin:0;font-size:var(--av-text-lg);line-height:1.2}
+.av-bundle__tray{display:flex;flex-wrap:wrap;gap:var(--av-space-2)}
+.av-bundle__thumb,.av-bundle__empty{display:flex;align-items:center;justify-content:center;width:56px;height:56px;overflow:hidden;border-radius:var(--av-radius-media);background:var(--av-bg)}
+.av-bundle__empty{border:1px dashed var(--av-input-border);color:var(--av-fg-muted)}
+.av-bundle__thumb[hidden],.av-bundle__empty[hidden]{display:none}
+.av-bundle__thumb-img{display:block;width:100%;height:100%;object-fit:cover}
+.av-bundle__progress{margin:0;font-size:var(--av-text-sm);font-weight:600}
+.av-bundle__total{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--av-space-2);margin:0;padding-top:var(--av-space-3);border-top:1px solid var(--av-border)}
+.av-bundle .av-bundle__sum{justify-content:flex-end;font-size:var(--av-text-xl)}
+.av-bundle__sum .av-price__compare{font-size:var(--av-text-md)}
+.av-bundle__savings{display:flex;align-items:flex-start;gap:var(--av-space-2);margin:0;font-size:var(--av-text-sm);color:var(--av-success)}
+.av-bundle__savings svg{flex:none;margin-top:0.15em}
+.av-bundle__status,.av-bundle__nojs{margin:0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
+.av-bundle__nojs{display:none}
+.av-bundle__nojs:where(.no-js *){display:block}
+.av-bundle :is(.av-bundle__pick,.av-bundle__variant,.av-bundle__legend,.av-bundle__tray,.av-bundle__progress,.av-bundle__total,.av-bundle__add):where(.no-js *){display:none}
+@container (min-width: 520px){
+.av-bundle--cards .av-bundle__slots{grid-template-columns:repeat(3,minmax(0,1fr))}
+.av-bundle--rows .av-bundle__slot{grid-template-columns:96px minmax(0,1fr) auto}
+.av-bundle--rows .av-bundle__media{grid-row:auto}
+}
+@container (min-width: 820px){
+.av-bundle--cards .av-bundle__slots{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (min-width: 750px){
+.av-bundle--below .av-bundle__box{grid-template-columns:minmax(0,1fr) minmax(16rem,24rem);align-items:center;column-gap:var(--av-space-7)}
+}
+@media (min-width: 990px){
+.av-bundle--side{grid-template-columns:minmax(0,1fr) minmax(18rem,23rem)}
+.av-bundle--side .av-bundle__box{position:sticky;top:calc(var(--av-header-h, 0px) + var(--av-space-4))}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Bundle deals",
+  "max_blocks": 6,
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Bundle deals" },
+    {
+      "type": "select",
+      "id": "source",
+      "label": "Products from",
+      "options": [
+        { "value": "slots", "label": "Product slot blocks" },
+        { "value": "list", "label": "Product list" }
+      ],
+      "default": "slots",
+      "info": "Slot blocks can each use the product of the page and carry a caption. A list is quicker to fill."
+    },
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "Products",
+      "limit": 6,
+      "info": "Used when products come from a product list."
+    },
+    {
+      "type": "range",
+      "id": "pick_count",
+      "label": "Products to pick",
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "default": 3,
+      "info": "Match the minimum quantity of the automatic discount behind your savings text, if there is one."
+    },
+    {
+      "type": "checkbox",
+      "id": "pick_exact",
+      "label": "Stop at that number",
+      "default": true,
+      "info": "On: shoppers pick exactly that many. Off: they pick at least that many."
+    },
+    {
+      "type": "checkbox",
+      "id": "preselect",
+      "label": "Preselect available products",
+      "default": false,
+      "info": "Ticks the first available products, up to the number to pick."
+    },
+    { "type": "header", "content": "Products" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Product style",
+      "options": [
+        { "value": "cards", "label": "Cards" },
+        { "value": "rows", "label": "Rows" }
+      ],
+      "default": "cards"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" }
+      ],
+      "default": "theme",
+      "info": "Rows always use small square images."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_compare",
+      "label": "Show compare-at prices",
+      "default": true,
+      "info": "Struck-through prices come from each variant's compare-at price in your admin, never from a typed number."
+    },
+    { "type": "header", "content": "Bundle box" },
+    {
+      "type": "select",
+      "id": "box_position",
+      "label": "Box position on desktop",
+      "options": [
+        { "value": "side", "label": "Beside the products" },
+        { "value": "below", "label": "Below the products" }
+      ],
+      "default": "side"
+    },
+    {
+      "type": "text",
+      "id": "box_heading",
+      "label": "Box heading",
+      "default": "Your bundle"
+    },
+    {
+      "type": "text",
+      "id": "badge",
+      "label": "Badge",
+      "info": "A short label on the box, never a saving or discount amount. It shows only when the box below is ticked."
+    },
+    {
+      "type": "checkbox",
+      "id": "badge_backed_by_sales",
+      "label": "Badge is backed by sales data",
+      "default": false,
+      "info": "Only tick if sales data supports this badge. Shoppers never see it otherwise."
+    },
+    {
+      "type": "text",
+      "id": "savings_text",
+      "label": "Savings text",
+      "info": "Describe only an automatic discount you have set up for these products under Discounts; it shows with “Discount applied at checkout” and the theme never lowers a price itself."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Add bundle to cart"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_tray",
+      "label": "Show picked products in the box",
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "slot",
+      "name": "Product slot",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product"
+        },
+        {
+          "type": "checkbox",
+          "id": "page_product",
+          "label": "Use the product of the page",
+          "default": false,
+          "info": "On product pages this slot shows the product being viewed; elsewhere it uses the product above."
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "Caption",
+          "info": "Optional short line above the title that describes the product; never a saving or popularity you cannot back up."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Bundle deals",
+      "settings": {
+        "heading": "Build your <strong>bundle</strong>",
+        "subheading": "<p>Example: pick any three — replace with the real terms of your offer.</p>"
+      },
+      "blocks": [
+        { "type": "slot" },
+        { "type": "slot" },
+        { "type": "slot" },
+        { "type": "slot" }
+      ]
+    }
+  ],
+  "disabled_on": { "groups": ["*"] }
+}
+{% endschema %}

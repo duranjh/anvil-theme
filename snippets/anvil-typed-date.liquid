@@ -1,0 +1,27 @@
+{% doc %}
+  A date the merchant typed as YYYY-MM-DD, as a <time> element (DECISIONS 88). The value is read at noon and ignored
+  unless it reads back as the same date. The element is built from the typed date rather than with time_tag, which
+  writes its datetime attribute in UTC (shopify.dev time_tag) and so could move a date by a day in a UTC+13/+14
+  store. The text uses the theme date format (`date_formats.anvil_date`). Prints nothing for a blank or invalid date.
+
+  @param {string} date - The typed date
+  @param {string} [class] - Class on the <time> element
+
+  @example
+  {%- capture date_html -%}{% render 'anvil-typed-date', date: block.settings.date %}{%- endcapture -%}
+{% enddoc %}
+{%- liquid
+  assign typed_date = date | strip
+  if typed_date != blank
+    assign typed_noon = typed_date | append: ' 12:00'
+    assign typed_check = typed_noon | date: '%Y-%m-%d'
+    if typed_check == typed_date
+      assign typed_text = typed_noon | date: format: 'anvil_date'
+      if class != blank
+        echo '<time class="' | append: class | append: '" datetime="' | append: typed_date | append: '">' | append: typed_text | append: '</time>'
+      else
+        echo '<time datetime="' | append: typed_date | append: '">' | append: typed_text | append: '</time>'
+      endif
+    endif
+  endif
+-%}

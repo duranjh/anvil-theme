@@ -81,11 +81,11 @@
         },
         {
           "value": "arrow-right",
-          "label": "Arrow"
+          "label": "Arrow right"
         },
         {
           "value": "chevron-right",
-          "label": "Chevron"
+          "label": "Chevron right"
         },
         {
           "value": "external-link",
@@ -101,7 +101,7 @@
         },
         {
           "value": "info",
-          "label": "Information"
+          "label": "Info"
         }
       ],
       "default": "none"

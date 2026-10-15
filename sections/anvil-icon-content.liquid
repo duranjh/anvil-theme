@@ -1,0 +1,601 @@
+{%- liquid
+  assign s = section.settings
+
+  assign position = s.icon_position | default: 'top'
+  assign cols_mobile = s.cols_mobile | default: '1' | plus: 0 | at_least: 1 | at_most: 2
+  assign cols_desktop = s.cols_desktop | default: '3' | plus: 0 | at_least: 1 | at_most: 4
+
+  # Columns: the shared grid (.av-grid) sets phones, tablets (up to 3; 4 becomes 2) and desktop. With the icon beside
+  # the text, tablets stop at 2 and 4 desktop columns wait for 1200 px (rules below), since the text needs the room.
+  assign cols_tablet = cols_desktop | at_most: 3
+  if cols_desktop == 4 or position == 'start'
+    assign cols_tablet = cols_tablet | at_most: 2
+  endif
+
+  # Card surface from the shared utility (blank = no box).
+  capture surface
+    render 'anvil-surface', style: s.card_style
+  endcapture
+  assign surface = surface | strip
+
+  assign icon_px = s.icon_size | default: 32
+  assign title_size = s.title_size | default: 'md'
+  assign img_px = s.image_size | default: 64
+  assign img_px_2x = img_px | times: 2
+  assign img_widths = img_px | append: ', ' | append: img_px_2x
+
+  # sizes: never wider than the set width, nor than its column (the CSS caps the image at 40% of the
+  # card beside the text or the heading, 100% above the heading and on 2-column phones beside the text).
+  assign img_f = 100
+  if position != 'top'
+    assign img_f = 40
+  endif
+  assign img_f_m = img_f
+  if position == 'start' and cols_mobile == 2
+    assign img_f_m = 100
+  endif
+  assign img_min = 'min(' | append: img_px | append: 'px, calc('
+  assign img_sizes = '(max-width: 749px) ' | append: img_min | append: img_f_m | append: 'vw / ' | append: cols_mobile | append: ')), '
+  assign img_sizes = img_sizes | append: '(max-width: 989px) ' | append: img_min | append: img_f | append: 'vw / ' | append: cols_tablet | append: ')), '
+  if position == 'start' and cols_desktop == 4
+    assign img_sizes = img_sizes | append: '(max-width: 1199px) ' | append: img_min | append: '40vw / 3)), '
+  endif
+  assign img_sizes = img_sizes | append: img_min | append: img_f | append: 'vw / ' | append: cols_desktop | append: '))'
+
+  assign list_class = 'av-icon-content av-grid av-grid--flex av-grid--c' | append: cols_desktop | append: ' av-grid--m' | append: cols_mobile
+  assign list_class = list_class | append: ' av-icon-content--' | append: position
+  assign list_class = list_class | append: ' av-icon-content--m' | append: cols_mobile
+  assign list_class = list_class | append: ' av-icon-content--title-' | append: title_size
+  if surface != blank
+    assign list_class = list_class | append: ' av-icon-content--boxed'
+  endif
+  if s.center_cards
+    assign list_class = list_class | append: ' av-grid--center'
+  endif
+  # Alignment applies when the icon sits above or beside the heading; beside the whole text it starts the line.
+  if position != 'start' and s.text_align != blank and s.text_align != 'left'
+    assign list_class = list_class | append: ' av-icon-content--align-' | append: s.text_align
+  endif
+
+  # Icon frame from the shared utility (plain | circle | square | ring | solid).
+  assign icon_frame = 'av-icon-frame av-icon-frame--' | append: s.icon_style
+  if s.icon_color == 'text'
+    assign icon_frame = icon_frame | append: ' av-icon-frame--text'
+  endif
+
+  assign list_style = '--av-icon-size: ' | append: icon_px | append: 'px; --av-icon-content-img: ' | append: img_px | append: 'px;'
+
+  # Button look (only link_arrow draws the arrow).
+  assign btn_icon = ''
+  assign btn_style = s.button_style | default: 'link_arrow'
+  if btn_style == 'link_arrow'
+    assign btn_style = 'link'
+    assign btn_icon = 'arrow-right'
+  endif
+
+  # First two template sections (snippets/anvil-above-fold): the first row of uploaded images loads eagerly. They are
+  # small, so none of them is marked as the LCP image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign shown = 0
+
+  # Does any item have something to show? Shoppers get no hidden heading and no empty list otherwise;
+  # the editor keeps empty items so they stay selectable (each shows a hint).
+  assign renderable = 0
+  for block in section.blocks
+    assign pre_title = block.settings.heading | strip
+    assign pre_label = block.settings.button_label | strip
+    if block.settings.icon_image != blank
+      assign renderable = 1
+    elsif block.settings.icon != blank and block.settings.icon != 'none'
+      assign renderable = 1
+    elsif pre_title != blank or block.settings.text != blank
+      assign renderable = 1
+    elsif pre_label != blank and block.settings.button_link != blank
+      assign renderable = 1
+    endif
+    if renderable > 0
+      break
+    endif
+  endfor
+  assign show_list = false
+  if renderable > 0
+    assign show_list = true
+  elsif request.design_mode and section.blocks.size > 0
+    assign show_list = true
+  endif
+-%}
+{%- if show_list or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-icon-content' %}>
+  <div class="av-section__inner">
+    {%- if show_list -%}
+      {%- assign fallback = 'anvil.a11y.highlights' | t -%}
+      {% render 'anvil-section-head', section: section, fallback: fallback %}
+      <ul class="{{ list_class }}" role="list" style="{{ list_style }}">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign b = block.settings
+            assign title = b.heading | strip
+            assign label = b.button_label | strip
+            assign label_html = label | escape
+            assign url = b.button_link
+
+            assign has_icon = false
+            if b.icon_image != blank
+              assign has_icon = true
+            elsif b.icon != blank and b.icon != 'none'
+              assign has_icon = true
+            endif
+
+            assign has_body = false
+            if title != blank or b.text != blank
+              assign has_body = true
+            elsif label != blank and url != blank
+              assign has_body = true
+            endif
+
+            # An item with nothing to show is skipped on the storefront; the editor keeps it selectable.
+            unless has_icon or has_body or request.design_mode
+              continue
+            endunless
+            assign shown = shown | plus: 1
+
+            # Link target. cover: the heading link stretches over the card (the heading names it);
+            # button: a real button link; title: the heading is the link; none: nothing could name a link.
+            assign link_mode = 'none'
+            if url != blank
+              if s.card_link and title != blank
+                assign link_mode = 'cover'
+              elsif label != blank
+                assign link_mode = 'button'
+              elsif title != blank
+                assign link_mode = 'title'
+              endif
+            endif
+
+            assign title_id = 'av-icon-content-' | append: section.id | append: '-' | append: block.id
+            assign btn_attrs = ''
+            if title != blank
+              assign btn_attrs = 'aria-describedby="' | append: title_id | append: '"'
+            endif
+
+            # The image is decorative next to a heading or text; alone it speaks with its own alt text.
+            assign img_alt = ''
+            unless has_body
+              assign img_alt = b.icon_image.alt | default: ''
+            endunless
+            assign img_loading = 'lazy'
+            if fold != 'lazy' and shown <= cols_desktop
+              assign img_loading = 'eager'
+            endif
+          -%}
+          {%- capture media -%}
+            {%- if b.icon_image != blank -%}
+              <span class="av-icon-content__image">
+                {{- b.icon_image | image_url: width: img_px_2x | image_tag: widths: img_widths, sizes: img_sizes, loading: img_loading, alt: img_alt -}}
+              </span>
+            {%- elsif has_icon -%}
+              <span class="av-icon-content__icon {{ icon_frame }}">{% render 'anvil-icon', name: b.icon, size: icon_px %}</span>
+            {%- endif -%}
+          {%- endcapture -%}
+          {%- capture heading_html -%}
+            {%- if title != blank -%}
+              <h3 class="av-icon-content__title" id="{{ title_id }}">
+                {%- if link_mode == 'cover' or link_mode == 'title' -%}
+                  <a class="av-icon-content__link" href="{{ url | escape }}">{{ title | escape }}</a>
+                {%- else -%}
+                  {{ title | escape }}
+                {%- endif -%}
+              </h3>
+            {%- endif -%}
+          {%- endcapture -%}
+          <li class="av-icon-content__item" {{ block.shopify_attributes }}>
+            <div class="av-icon-content__card {{ surface }}{% if link_mode == 'cover' %} av-icon-content__card--linked av-lift{% endif %}">
+              {%- unless has_icon or has_body -%}
+                <p class="av-icon-content__note av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+              {%- endunless -%}
+              {%- if position != 'heading' -%}{{ media }}{%- endif -%}
+              {%- if has_body or position == 'heading' and has_icon -%}
+                <div class="av-icon-content__body">
+                  {%- if position == 'heading' and has_icon -%}
+                    <div class="av-icon-content__head">{{ media }}{{ heading_html }}</div>
+                  {%- else -%}
+                    {{ heading_html }}
+                  {%- endif -%}
+                  {%- if b.text != blank -%}
+                    <div class="av-icon-content__text av-rte">{{ b.text }}</div>
+                  {%- endif -%}
+                  {%- if label != blank and url != blank -%}
+                    <div class="av-icon-content__action">
+                      {%- if link_mode == 'cover' -%}
+                        <span class="av-btn av-btn--{{ btn_style }} av-btn--md{% if btn_icon != blank %} av-btn--has-icon{% endif %} av-icon-content__cue" aria-hidden="true">
+                          <span class="av-btn__label">{{ label_html }}</span>
+                          {%- if btn_icon != blank -%}{% render 'anvil-icon', name: btn_icon, size: 18, class: 'av-btn__icon' %}{%- endif -%}
+                        </span>
+                      {%- else -%}
+                        {%- render 'anvil-button', label: label_html, url: url, style: btn_style, size: 'md', icon: btn_icon, attrs: btn_attrs -%}
+                      {%- endif -%}
+                    </div>
+                  {%- endif -%}
+                </div>
+              {%- endif -%}
+            </div>
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- else -%}
+      {% render 'anvil-section-head', section: section %}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Columns, gap and the centred last row come from the shared .av-grid; boxes from .av-surface; icon frames from
+   .av-icon-frame (anvil-base.css). role="list" keeps list semantics in WebKit. */
+.av-icon-content{list-style:none;padding:0}
+.av-icon-content__item{display:flex;margin:0}
+.av-icon-content__card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:var(--av-space-4);width:100%;min-width:0;color:var(--av-fg);border-radius:var(--av-radius-card)}
+.av-icon-content--start .av-icon-content__card{flex-direction:row}
+.av-icon-content--boxed .av-icon-content__card{padding:var(--av-space-5)}
+.av-icon-content__note{margin:0;align-self:stretch}
+.av-icon-content__icon{max-width:100%}
+.av-icon-content__icon > svg{max-width:100%}
+/* Image: fixed width, height from its ratio. */
+.av-icon-content__image{flex:none;display:block;width:var(--av-icon-content-img,64px);max-width:100%}
+.av-icon-content--start .av-icon-content__image,.av-icon-content__head .av-icon-content__image{max-width:40%}
+.av-icon-content__image img{display:block;width:100%;height:auto;border-radius:var(--av-radius-media)}
+.av-icon-content__body{display:flex;flex:1 1 auto;flex-direction:column;align-self:stretch;gap:var(--av-space-3);min-width:0}
+.av-icon-content--start .av-icon-content__body{flex-basis:0}
+.av-icon-content__head{display:flex;align-items:center;gap:var(--av-space-3);min-width:0}
+.av-icon-content__title{margin:0;font-size:var(--av-text-lg);line-height:1.25;overflow-wrap:anywhere}
+.av-icon-content--title-sm .av-icon-content__title{font-size:var(--av-text-md)}
+.av-icon-content--title-lg .av-icon-content__title{font-size:var(--av-text-xl)}
+.av-icon-content__text{min-width:0;overflow-wrap:break-word}
+.av-icon-content__action{display:flex;flex-wrap:wrap;margin-top:auto;padding-top:var(--av-space-1)}
+/* Centre and right are physical (also in right-to-left stores). */
+.av-icon-content--align-center .av-icon-content__card{text-align:center}
+.av-icon-content--align-right .av-icon-content__card{text-align:right}
+.av-icon-content--top.av-icon-content--align-center .av-icon-content__card{align-items:center}
+.av-icon-content--top.av-icon-content--align-right :is(.av-icon-content__icon,.av-icon-content__image){margin-left:auto}
+.av-icon-content--align-center :is(.av-icon-content__head,.av-icon-content__action){justify-content:center}
+.av-icon-content--align-right :is(.av-icon-content__head,.av-icon-content__action){justify-content:right}
+.av-icon-content__link{color:inherit;text-decoration:none}
+.av-icon-content__link:hover,.av-icon-content__card--linked:hover .av-icon-content__link{text-decoration:underline;text-decoration-thickness:0.06em;text-underline-offset:0.15em}
+/* Whole-card link: the heading link covers the card; text links stay on top. */
+.av-icon-content__card--linked .av-icon-content__link::after{content:"";position:absolute;inset:0}
+.av-icon-content__card--linked .av-icon-content__text a{position:relative}
+.av-icon-content__cue{pointer-events:none}
+.av-icon-content__card--linked:has(.av-icon-content__link:focus-visible){outline:2px solid var(--av-accent);outline-offset:3px}
+@supports selector(:has(*)){.av-icon-content__card--linked .av-icon-content__link:focus-visible{outline-color:transparent}}
+@media (max-width:749px){
+.av-icon-content--m2{--av-grid-space:var(--av-space-3)}
+.av-icon-content--m2.av-icon-content--boxed .av-icon-content__card{padding:var(--av-space-4) var(--av-space-3)}
+.av-icon-content--m2 .av-icon-content__text{font-size:var(--av-text-sm)}
+.av-icon-content--m2.av-icon-content--start .av-icon-content__card{flex-direction:column}
+.av-icon-content--m2.av-icon-content--start .av-icon-content__image{max-width:100%}
+}
+@media (min-width:750px){
+.av-icon-content--boxed .av-icon-content__card{padding:var(--av-space-6) var(--av-space-5)}
+.av-icon-content--start.av-grid--c3{--av-cols-tablet:2}
+}
+/* Beside the text, 4 columns wait for 1200 px: below it the text column would be too narrow. */
+@media (min-width:990px) and (max-width:1199px){.av-icon-content--start.av-grid--c4{--av-cols:3}}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Icons with content",
+  "max_blocks": 12,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Icons with content" },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "3",
+      "info": "Tablets show up to 3; 4 columns become 2. With the icon beside the text, tablets show 2 and 4 columns start at 1200 px."
+    },
+    {
+      "type": "checkbox",
+      "id": "center_cards",
+      "label": "Centre an unfinished last row",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "Card style",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "flat", "label": "No box" },
+        { "value": "outlined", "label": "Outlined" },
+        { "value": "tinted", "label": "Tinted" },
+        { "value": "raised", "label": "Shadow" }
+      ],
+      "default": "theme",
+      "info": "\"Same as theme cards\" follows Theme settings > Cards."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Card text alignment",
+      "default": "center",
+      "info": "Used when the icon sits above or beside the heading. With the icon beside the whole text, lines start next to it."
+    },
+    { "type": "header", "content": "Icon" },
+    {
+      "type": "select",
+      "id": "icon_position",
+      "label": "Icon position",
+      "options": [
+        { "value": "top", "label": "Above the heading" },
+        { "value": "heading", "label": "Beside the heading" },
+        { "value": "start", "label": "Beside the text" }
+      ],
+      "default": "top",
+      "info": "With 2 columns on phones, an icon beside the text moves above it below 750 px."
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon size",
+      "min": 16,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "select",
+      "id": "icon_style",
+      "label": "Icon style",
+      "options": [
+        { "value": "plain", "label": "Plain" },
+        { "value": "circle", "label": "Tinted circle" },
+        { "value": "square", "label": "Tinted square" },
+        { "value": "ring", "label": "Ring" },
+        { "value": "solid", "label": "Solid circle" }
+      ],
+      "default": "circle"
+    },
+    {
+      "type": "select",
+      "id": "icon_color",
+      "label": "Icon colour",
+      "options": [
+        { "value": "accent", "label": "Accent" },
+        { "value": "text", "label": "Text colour" }
+      ],
+      "default": "accent"
+    },
+    {
+      "type": "range",
+      "id": "image_size",
+      "label": "Uploaded image width",
+      "min": 24,
+      "max": 240,
+      "step": 8,
+      "unit": "px",
+      "default": 64,
+      "info": "For items that use an image instead of an icon. The height follows the image's own shape."
+    },
+    { "type": "header", "content": "Text and button" },
+    {
+      "type": "select",
+      "id": "title_size",
+      "label": "Item heading size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" },
+        { "value": "link", "label": "Text link" },
+        { "value": "link_arrow", "label": "Text link with arrow" }
+      ],
+      "default": "link_arrow"
+    },
+    {
+      "type": "checkbox",
+      "id": "card_link",
+      "label": "Make the whole card clickable",
+      "default": false,
+      "info": "For items with a heading and a link: the heading becomes the link and covers the card, and the button stays as a visual cue."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Card",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "check", "label": "Check" },
+            { "value": "check-circle", "label": "Check in circle" },
+            { "value": "badge-check", "label": "Badge check" },
+            { "value": "sparkles", "label": "Sparkles" },
+            { "value": "star", "label": "Star" },
+            { "value": "heart", "label": "Heart" },
+            { "value": "hand-heart", "label": "Hand with heart" },
+            { "value": "thumbs-up", "label": "Thumbs up" },
+            { "value": "award", "label": "Award" },
+            { "value": "medal", "label": "Medal" },
+            { "value": "trophy", "label": "Trophy" },
+            { "value": "crown", "label": "Crown" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "tag", "label": "Tag" },
+            { "value": "percent", "label": "Percent" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "package", "label": "Package" },
+            { "value": "package-check", "label": "Package checked" },
+            { "value": "plane", "label": "Plane" },
+            { "value": "globe", "label": "Globe" },
+            { "value": "map-pin", "label": "Map pin" },
+            { "value": "rotate-ccw", "label": "Return arrow" },
+            { "value": "refresh-cw", "label": "Refresh" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "shield-check", "label": "Shield check" },
+            { "value": "lock", "label": "Lock" },
+            { "value": "key", "label": "Key" },
+            { "value": "credit-card", "label": "Credit card" },
+            { "value": "wallet", "label": "Wallet" },
+            { "value": "receipt", "label": "Receipt" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "calendar", "label": "Calendar" },
+            { "value": "hourglass", "label": "Hourglass" },
+            { "value": "zap", "label": "Lightning" },
+            { "value": "flame", "label": "Flame" },
+            { "value": "lightbulb", "label": "Light bulb" },
+            { "value": "rocket", "label": "Rocket" },
+            { "value": "target", "label": "Target" },
+            { "value": "trending-up", "label": "Trending up" },
+            { "value": "bar-chart", "label": "Bar chart" },
+            { "value": "layers", "label": "Layers" },
+            { "value": "infinity", "label": "Infinity" },
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "recycle", "label": "Recycle" },
+            { "value": "trees", "label": "Trees" },
+            { "value": "droplet", "label": "Droplet" },
+            { "value": "sun", "label": "Sun" },
+            { "value": "snowflake", "label": "Snowflake" },
+            { "value": "feather", "label": "Feather" },
+            { "value": "ruler", "label": "Ruler" },
+            { "value": "scale", "label": "Scale" },
+            { "value": "wrench", "label": "Wrench" },
+            { "value": "hammer", "label": "Hammer" },
+            { "value": "settings", "label": "Gear" },
+            { "value": "home", "label": "Home" },
+            { "value": "store", "label": "Store" },
+            { "value": "users", "label": "People" },
+            { "value": "user-check", "label": "Person checked" },
+            { "value": "message-circle", "label": "Chat bubble" },
+            { "value": "headphones", "label": "Headphones" },
+            { "value": "mail", "label": "Mail" },
+            { "value": "phone", "label": "Phone" },
+            { "value": "smartphone", "label": "Phone device" },
+            { "value": "book-open", "label": "Open book" },
+            { "value": "file-text", "label": "Document" },
+            { "value": "help-circle", "label": "Question mark" },
+            { "value": "info", "label": "Info" }
+          ],
+          "default": "check-circle",
+          "info": "Award, medal, trophy and badge icons suggest an award or certification: use them only for ones you hold."
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "Image instead of the icon",
+          "info": "Upload only artwork, photos or logos you are entitled to use, never a seal or badge for a certification you do not hold. Its alt text is read only when the item has no heading or text."
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Example: a real feature",
+          "info": "State only what is true for your product. Claims such as \"best-selling\" or \"eco-friendly\" need evidence you can show."
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "<p>Example: explain one real benefit in plain words.</p>",
+          "info": "Results, ratings, review or customer counts, guarantees and delivery or return promises must match your product, your real reviews and your store policies."
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Button label",
+          "default": "Learn more",
+          "info": "Shows only when the item has a link."
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "Link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Icons with content",
+      "settings": {
+        "heading": "What to <strong>expect</strong>"
+      },
+      "blocks": [
+        {
+          "type": "item",
+          "settings": {
+            "icon": "sparkles",
+            "heading": "Example: the main benefit",
+            "text": "<p>Example: replace with what the product does for the shopper, in one or two sentences.</p>"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "icon": "leaf",
+            "heading": "Example: what it is made of",
+            "text": "<p>Example: replace with the real materials or ingredients. Claim only what your supplier documents.</p>"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "icon": "message-circle",
+            "heading": "Example: how to reach you",
+            "text": "<p>Example: replace with your real support hours and channels. Add a link to show the button.</p>",
+            "button_label": "Contact us"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

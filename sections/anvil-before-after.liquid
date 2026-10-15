@@ -1,0 +1,363 @@
+{%- liquid
+  assign s = section.settings
+
+  # Divider start, 0-100. The same value goes on the range input and, inline, on
+  # the component as --av-compare-pos, so the first paint already shows the
+  # divider where the script will put it: nothing moves when the module runs.
+  assign start = 50
+  if s.start != nil
+    assign start = s.start
+  endif
+
+  # Labels. A blank label hides its tag on the image. The tags are aria-hidden
+  # because each image's alt text starts with the same word ("Before: <alt>"),
+  # so screen readers hear it once, in the image order.
+  assign label_before = s.before_label | strip_html | strip
+  assign label_after = s.after_label | strip_html | strip
+  assign name_before = label_before
+  if name_before == blank
+    assign name_before = 'anvil.before_after.before' | t
+  endif
+  assign name_after = label_after
+  if name_after == blank
+    assign name_after = 'anvil.before_after.after' | t
+  endif
+  # image_tag escapes the alt attribute itself (shopify.dev), so the text goes in raw.
+  assign alt_before = name_before
+  assign own_alt = s.before_image.alt | strip
+  if own_alt != blank
+    assign alt_before = name_before | append: ': ' | append: own_alt
+  endif
+  assign alt_after = name_after
+  assign own_alt = s.after_image.alt | strip
+  if own_alt != blank
+    assign alt_after = name_after | append: ': ' | append: own_alt
+  endif
+
+  # Shape as a plain number (width / height): CSS uses it for aspect-ratio and
+  # to cap the width so the whole slider fits in the screen height. Adapt takes
+  # the before image's own shape (the after image's when only that one is set),
+  # 4:3 while both are placeholders. Shapes are floats (1.0, not 1) so the
+  # divisions in the sizes code below stay decimal.
+  case s.image_ratio
+    when '1:1'
+      assign ratio = 1.0
+    when '4:5'
+      assign ratio = 0.8
+    when '3:4'
+      assign ratio = 0.75
+    when '4:3'
+      assign ratio = 1.3333
+    when '3:2'
+      assign ratio = 1.5
+    when '16:9'
+      assign ratio = 1.7778
+    when '21:9'
+      assign ratio = 2.3333
+    else
+      assign ratio = 1.3333
+      if s.before_image != blank
+        assign ratio = s.before_image.aspect_ratio | round: 4
+      elsif s.after_image != blank
+        assign ratio = s.after_image.aspect_ratio | round: 4
+      endif
+  endcase
+  assign ratio_m = ''
+  case s.image_ratio_mobile
+    when '1:1'
+      assign ratio_m = 1.0
+    when '4:5'
+      assign ratio_m = 0.8
+    when '3:4'
+      assign ratio_m = 0.75
+  endcase
+
+  # Loading: both images are on screen together, so in the first two template
+  # sections (snippets/anvil-above-fold) both load eagerly. The before image (the
+  # full layer underneath) gets the high fetch priority only in the first
+  # section, where it is the likely LCP image; under a hero it would compete
+  # with the hero's image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign load = 'eager'
+  assign fetch = 'auto'
+  if fold == 'lazy'
+    assign load = 'lazy'
+  elsif fold == 'lcp'
+    assign fetch = 'high'
+  endif
+
+  assign img_widths = '375, 550, 750, 1100, 1500, 1800, 2200'
+  case s.width
+    when 'full'
+      assign cap = 0
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 0
+    else
+      assign cap = settings.page_width | default: 0
+  endcase
+
+  # sizes, one string per image. The rendered image is never wider than any of
+  # three bounds: the container (cap px, or 100vw), and the 80vh height cap on
+  # the figure (80vh x shape). With object-fit: cover an image wider than the
+  # box is scaled to the box height, so its rendered width is the box width x f
+  # (f = image shape / box shape, at least 1) and the height bound becomes
+  # 80vh x the wider of the two shapes. Each clause below is one of those
+  # bounds, so whichever clause matches never understates the rendered width;
+  # the conditions only pick the tightest one:
+  #   80vh x shape beats 100vw when the screen is wider than 0.8 x shape
+  #   (min-aspect-ratio), and beats cap when the screen is lower than
+  #   1.25 x cap / shape (max-height).
+  # A phone shape adds the same three clauses under (max-width: 749px) first.
+  assign sizes_before = ''
+  assign sizes_after = ''
+  for side in (1..2)
+    if side == 1
+      assign img = s.before_image
+    else
+      assign img = s.after_image
+    endif
+    if img == blank
+      continue
+    endif
+    assign img_r = img.aspect_ratio | default: ratio | times: 1.0
+    assign out = ''
+    for regime in (1..2)
+      assign pre = ''
+      assign r = ratio
+      if regime == 1
+        if ratio_m == ''
+          continue
+        endif
+        assign pre = '(max-width: 749px) and '
+        assign r = ratio_m
+      endif
+      assign f = img_r | divided_by: r | round: 2
+      if f < 1
+        assign f = 1
+      endif
+      # The cap binds on phones only when it is narrower than 750 px.
+      assign use_cap = false
+      if cap > 0
+        if regime == 2 or cap < 750
+          assign use_cap = true
+        endif
+      endif
+      assign q = r | times: 800 | round
+      assign h = r | times: f | times: 80 | ceil
+      assign wv = f | times: 100 | round
+      assign out = out | append: pre | append: '(min-aspect-ratio: ' | append: q | append: '/1000)'
+      if use_cap
+        assign hc = cap | times: 1.25 | divided_by: r | floor
+        assign out = out | append: ' and (max-height: ' | append: hc | append: 'px)'
+      endif
+      assign out = out | append: ' ' | append: h | append: 'vh, '
+      if use_cap
+        assign wc = cap | times: f | ceil
+        assign out = out | append: pre | append: '(min-width: ' | append: cap | append: 'px) ' | append: wc | append: 'px, '
+      endif
+      if regime == 1
+        assign out = out | append: '(max-width: 749px) ' | append: wv | append: 'vw, '
+      else
+        assign out = out | append: wv | append: 'vw'
+      endif
+    endfor
+    if side == 1
+      assign sizes_before = out
+    else
+      assign sizes_after = out
+    endif
+  endfor
+
+  capture grip
+    render 'anvil-icon', name: 'chevron-left', size: 16
+    render 'anvil-icon', name: 'chevron-right', size: 16
+  endcapture
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-before-after' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {{ 'anvil-compare.css' | asset_url | stylesheet_tag }}
+    <figure class="av-before-after" style="--av-before-after-r: {{ ratio }};{% if ratio_m != '' %} --av-before-after-r-m: {{ ratio_m }};{% endif %}">
+      <anvil-compare class="av-before-after__compare av-enhance"{% if s.vertical %} vertical{% endif %} style="--av-compare-pos: {{ start }}%;">
+        {%- comment -%}
+          Each tag lives inside its own image layer, so it is covered and
+          clipped together with its photo: wherever the divider is, a tag only
+          shows on the photo it names.
+        {%- endcomment -%}
+        <div class="av-compare__media av-compare__media--before"{% if s.before_image == blank %} aria-hidden="true"{% endif %}>
+          {%- if s.before_image != blank -%}
+            {{- s.before_image | image_url: width: 2200 | image_tag: widths: img_widths, sizes: sizes_before, loading: load, fetchpriority: fetch, alt: alt_before -}}
+          {%- else -%}
+            {{- 'lifestyle-1' | placeholder_svg_tag: 'av-placeholder av-before-after__ph' -}}
+          {%- endif -%}
+          {%- if label_before != blank -%}
+            <span class="av-compare__label av-compare__label--before" aria-hidden="true">{{ label_before | escape }}</span>
+          {%- endif -%}
+        </div>
+        <div class="av-compare__media av-compare__media--after"{% if s.after_image == blank %} aria-hidden="true"{% endif %}>
+          {%- if s.after_image != blank -%}
+            {{- s.after_image | image_url: width: 2200 | image_tag: widths: img_widths, sizes: sizes_after, loading: load, alt: alt_after -}}
+          {%- else -%}
+            {{- 'lifestyle-2' | placeholder_svg_tag: 'av-placeholder av-before-after__ph av-before-after__ph--after' -}}
+          {%- endif -%}
+          {%- if label_after != blank -%}
+            <span class="av-compare__label av-compare__label--after" aria-hidden="true">{{ label_after | escape }}</span>
+          {%- endif -%}
+        </div>
+        <span class="av-compare__handle" aria-hidden="true">
+          <span class="av-before-after__grip av-enhanced-only">{{ grip }}</span>
+        </span>
+        <input
+          class="av-compare__range av-enhanced-only"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value="{{ start }}"
+          aria-label="{{ 'anvil.before_after.slider_label' | t }}"
+          {% if s.vertical %}
+            aria-orientation="vertical"
+          {% endif %}
+          data-compare-range
+        >
+      </anvil-compare>
+      {%- if s.caption != blank -%}
+        <figcaption class="av-before-after__caption">{{ s.caption }}</figcaption>
+      {%- endif -%}
+    </figure>
+    <script type="module" src="{{ 'anvil-compare.js' | asset_url }}"></script>
+  </div>
+</div>
+{% stylesheet %}
+/* The figure carries the shape: phones use the phone shape when one is set.
+   Its width is capped at 80% of the screen height times the shape, so the
+   whole pair is always in view while the shopper drags. */
+.av-before-after{--av-before-after-cur:var(--av-before-after-r-m, var(--av-before-after-r, 1.3333));max-width:calc(80vh * var(--av-before-after-cur));max-width:calc(80svh * var(--av-before-after-cur));margin-inline:auto}
+/* Pinch-zoom on the slider comes from the shared rule (anvil-compare.css). */
+.av-before-after__compare{--av-compare-ratio:var(--av-before-after-cur)}
+/* Opaque base under the darker tint, so the before illustration does not
+   show through the after half. */
+.av-before-after .av-before-after__ph--after{background-color:var(--av-bg);background-image:linear-gradient(rgb(var(--av-fg-rgb) / 0.14), rgb(var(--av-fg-rgb) / 0.14))}
+.av-before-after__grip{position:absolute;top:50%;left:50%;z-index:1;display:flex;color:var(--av-fg);translate:-50% -50%}
+.av-before-after__grip svg{display:block;width:16px;height:16px}
+.av-before-after__compare[vertical] .av-before-after__grip{rotate:90deg}
+.av-before-after__caption{margin-top:var(--av-space-4);font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted);text-align:center}
+@media (min-width: 750px){
+.av-before-after{--av-before-after-cur:var(--av-before-after-r, 1.3333)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Before/after slider",
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Before/after slider" },
+    {
+      "type": "image_picker",
+      "id": "before_image",
+      "label": "Before image",
+      "info": "Use a real, unedited photo of the same subject as the after image, taken from the same angle and in the same light."
+    },
+    {
+      "type": "image_picker",
+      "id": "after_image",
+      "label": "After image",
+      "info": "Show a result the product really produced, without retouching, and say in the caption how typical it is."
+    },
+    {
+      "type": "text",
+      "id": "before_label",
+      "label": "Before label",
+      "default": "Before",
+      "info": "Shown on the image. Leave blank to hide it."
+    },
+    {
+      "type": "text",
+      "id": "after_label",
+      "label": "After label",
+      "default": "After",
+      "info": "Shown on the image; leave blank to hide it. Name a time such as 'After 4 weeks' only when that is when the photo was really taken."
+    },
+    {
+      "type": "range",
+      "id": "start",
+      "label": "Divider start position",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 50,
+      "info": "Where the divider sits until a shopper moves it: 0 shows the whole after image, 100 the whole before image."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "4:3", "label": "Landscape (4:3)" },
+        { "value": "3:2", "label": "Landscape (3:2)" },
+        { "value": "16:9", "label": "Landscape (16:9)" },
+        { "value": "21:9", "label": "Wide (21:9)" }
+      ],
+      "default": "adapt",
+      "info": "Original matches the before image and shows it uncropped; a fixed shape crops both images to fill it."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio_mobile",
+      "label": "Image shape on phones",
+      "options": [
+        { "value": "same", "label": "Same as desktop" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" }
+      ],
+      "default": "same"
+    },
+    {
+      "type": "checkbox",
+      "id": "vertical",
+      "label": "Split top and bottom",
+      "default": false,
+      "info": "Shoppers drag up and down; on touch screens a swipe that starts on the image moves the divider instead of scrolling the page."
+    },
+    {
+      "type": "inline_richtext",
+      "id": "caption",
+      "label": "Caption",
+      "info": "Say what changed and over what time, and say so when results vary from person to person."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Before/after slider",
+      "settings": {
+        "heading": "See the <strong>difference</strong>",
+        "caption": "Example: say what changed, over what time, and whether results vary. Replace it with your own."
+      }
+    }
+  ]
+}
+{% endschema %}

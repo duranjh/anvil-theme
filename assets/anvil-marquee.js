@@ -1,8 +1,7 @@
-/* anvil-marquee.js — <anvil-marquee speed direction pause-on-hover paused>: endless strip with a pause/play
-   button (WCAG 2.2.2). Clones [data-marquee-track] (.av-marquee__clone, aria-hidden, untabbable); reduced motion
-   and data-animations="off" stay static (.av-is-static, no clones, no button). Contract: CONVENTIONS §6. */
+/* anvil-marquee.js — <anvil-marquee speed direction pause-on-hover paused> (CONVENTIONS §6): clones the track in
+   phase (aria-hidden, untabbable), pause toggle (WCAG 2.2.2), static under reduced motion or animations off;
+   keyboard focus and editor block select scroll the item into view. */
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-const say = (k, f) => window.Anvil?.dom?.t?.(k, null, f) ?? f;
 
 class Marquee extends HTMLElement {
   static observedAttributes = ['paused'];
@@ -22,28 +21,27 @@ class Marquee extends HTMLElement {
     reduce.addEventListener('change', this.#layout);
     this.addEventListener('shopify:block:select', this.#hold);
     this.addEventListener('shopify:block:deselect', this.#hold);
+    this.addEventListener('focusout', this.#home);
     this.#layout();
   }
 
   disconnectedCallback() {
     this.#ro?.disconnect();
     reduce.removeEventListener('change', this.#layout);
-    this.removeEventListener('shopify:block:select', this.#hold);
-    this.removeEventListener('shopify:block:deselect', this.#hold);
     this.#clear(true);
   }
 
   attributeChangedCallback() {
-    this.#label();
+    this.#btn?.setAttribute('aria-pressed', this.hasAttribute('paused'));
   }
 
-  #hold = (e) => this.classList.toggle('av-is-held', e.type === 'shopify:block:select');
+  #home = () => (this.scrollLeft = 0);
 
-  #label() {
-    const p = this.hasAttribute('paused');
-    this.#btn?.setAttribute('aria-pressed', String(p));
-    this.#btn?.setAttribute('aria-label', p ? say(['play'], 'Play') : say(['pause'], 'Pause'));
-  }
+  #hold = (e) => {
+    const on = e.type === 'shopify:block:select';
+    this.classList.toggle('av-is-held', on);
+    on ? e.target.scrollIntoView({ block: 'nearest', inline: 'nearest' }) : this.#home();
+  };
 
   #clear(all) {
     for (const c of this.#clones) c.remove();
@@ -65,10 +63,11 @@ class Marquee extends HTMLElement {
       const b = (this.#btn = document.createElement('button'));
       b.type = 'button';
       b.className = 'av-marquee__pause';
+      b.setAttribute('aria-label', window.Anvil?.dom?.t?.('pause', null, 'Pause') ?? 'Pause');
       b.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path class="av-marquee__ico-pause" d="M8 5v14M16 5v14"/><path class="av-marquee__ico-play" d="m8 5 10 7-10 7z"/></svg>';
       b.onclick = () => this.toggleAttribute('paused');
       this.append(b);
-      this.#label();
+      this.attributeChangedCallback();
     }
     const n = Math.max(1, Math.ceil(this.clientWidth / w));
     if (this.#clones.length === n) return;
@@ -79,10 +78,13 @@ class Marquee extends HTMLElement {
       c.classList.add('av-marquee__clone');
       c.setAttribute('aria-hidden', 'true');
       for (const el of c.querySelectorAll('[id]')) el.removeAttribute('id');
+      for (const el of c.querySelectorAll('[data-shopify-editor-block]')) el.removeAttribute('data-shopify-editor-block');
       for (const el of c.querySelectorAll('a, button, input, select, textarea, [tabindex]')) el.tabIndex = -1;
       this.#clones.push(c);
     }
     this.#track.after(...this.#clones);
+    const t = this.#track.getAnimations()[0]?.currentTime;
+    if (t != null) for (const c of this.#clones) for (const a of c.getAnimations()) a.currentTime = t;
   };
 }
 

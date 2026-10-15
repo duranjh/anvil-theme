@@ -1,5 +1,21 @@
 # CHASSIS-API (extracted from LiquidDoc headers)
 
+## snippets/anvil-above-fold.liquid
+```
+Where a section's media sits relative to the first screen (CONVENTIONS §11, DECISIONS 85). Prints one word:
+`lcp` for the first section of a template (eager media, and the likely LCP image gets fetchpriority high),
+`eager` for the second section or when Shopify gives no index (online store editor, Section Rendering API), and
+`lazy` for everything else. Only template sections count: `section.index` restarts in every section group, so a
+header, footer or overlay section is always `lazy`. `section.location` is `template` (or `content_for_index` on
+a legacy homepage) for template sections and blank under the Section Rendering API.
+
+@param {object} section - The section object
+
+@example
+{%- capture fold -%}{% render 'anvil-above-fold', section: section %}{%- endcapture -%}
+{%- if fold != 'lazy' -%} … eager … {%- endif -%}
+```
+
 ## snippets/anvil-button.liquid
 ```
 Button or link styled as a button. Renders <a> when url is set, otherwise <button>.
@@ -95,6 +111,20 @@ Fixed tokens that do not depend on settings (space scale, easing, fluid type
 formulas) live in assets/anvil-base.css. Output here stays under 6 KB.
 
 @param {string} [part] - 'preload' for the preload tags; anything else for CSS
+```
+
+## snippets/anvil-editor-empty.liquid
+```
+The editor-only note for a section (or a part of one) with nothing to show (DECISIONS 87): a dashed, centred box
+styled by .av-editor-empty in assets/anvil-base.css. Prints nothing outside the online store editor; on the
+storefront a section with no body renders nothing at all.
+
+@param {string} [text] - Note text, already translated (default: anvil.editor.empty_section)
+@param {string} [class] - Extra classes
+
+@example
+{% render 'anvil-editor-empty' %}
+{%- assign note = 'anvil.editor.block_empty' | t -%}{% render 'anvil-editor-empty', text: note %}
 ```
 
 ## snippets/anvil-gallery.liquid
@@ -224,6 +254,21 @@ Structured data (schema.org JSON-LD), rendered once near the end of <body>:
 Nothing here is typed by the merchant; every value comes from Shopify data.
 ```
 
+## snippets/anvil-main-heading-tag.liquid
+```
+The heading level a hero or banner may use (DECISIONS 86). Prints `h1` only when the section asks for it, is the
+first section of a template (or Shopify gives no index, as in the online store editor, so the chosen level shows
+there) and that template's main section prints no H1 of its own; otherwise `h2`. Templates with their own H1:
+product, collection, page (main-page shows the page title by default), article, blog, search, cart,
+list-collections, 404, password, gift_card and every customers/* template. Group sections never print an H1.
+
+@param {object} section - The section object
+@param {string} [tag] - The section's heading_tag setting: h1 | h2 (default h2)
+
+@example
+{%- capture main_tag -%}{% render 'anvil-main-heading-tag', section: section, tag: s.heading_tag %}{%- endcapture -%}
+```
+
 ## snippets/anvil-media.liquid
 ```
 Responsive media in an aspect-ratio box: an image via image_tag, a Shopify video via video_tag,
@@ -233,19 +278,25 @@ Falls back to a placeholder illustration. Its styles live in assets/anvil-base.c
 @param {object} [image] - Image object; also used as the poster of an external video
 @param {object} [video] - Shopify video or external_video media object
 @param {object} [video_url] - video_url setting value (YouTube or Vimeo)
-@param {string} [ratio] - adapt | 1:1 | 4:5 | 3:4 | 16:9 | 21:9 (default adapt)
+@param {string} [ratio] - adapt | 1:1 | 4:5 | 3:4 | 9:16 | 16:9 | 21:9 (default adapt)
 @param {string} [widths] - Comma-separated srcset widths; the last one is the base width (default up to 2200)
 @param {string} [sizes] - sizes attribute (default 100vw)
 @param {string} [loading] - lazy | eager (default lazy)
-@param {boolean} [priority] - LCP media: eager, fetchpriority high and preload
-@param {string} [alt] - Alt text; defaults to the media's own alt
+@param {boolean} [priority] - LCP media: eager, fetchpriority high and preload (an image, or the cover of a
+  YouTube/Vimeo facade)
+@param {string} [alt] - Alt text; defaults to the media's own alt (a blank value falls back too)
+@param {boolean} [decorative] - Image: write alt="" because a link or heading around it already names it
+@param {string} [play_label] - YouTube/Vimeo facade: hidden name of the play link (default "Play video")
 @param {string} [fit] - cover | contain (default cover)
 @param {string} [placeholder] - placeholder_svg_tag name used when nothing is set (default image)
 @param {string} [class] - Extra classes on the box
 @param {boolean} [autoplay] - Shopify video: play muted and looping while in view, started by anvil-core.js only when
   the shopper allows motion; controls stay visible so it can always be paused (WCAG 2.2.2)
+@param {string} [autoplay_scope] - all | mobile: with autoplay, where it applies (default all; mobile = below 750 px)
 @param {boolean} [loop] - Shopify video: loop (default follows autoplay)
 @param {boolean} [controls] - Shopify video: show controls (default true; autoplay keeps them on)
+@param {boolean} [muted] - Shopify video without autoplay: start without sound (autoplay always starts muted)
+Shopify videos load preload="metadata" when eager or priority, else preload="none" (only the poster loads).
 
 @example
 {% render 'anvil-media', image: s.image, ratio: '16:9', sizes: '(min-width: 990px) 50vw, 100vw' %}
@@ -427,7 +478,9 @@ example card.
 ```
 Product card: media with a hover second image, sale / sold-out badges, vendor, title, rating stars from the
 reviews.rating metafield, price and an optional quick-add form that posts the first available variant without
-JavaScript (products with options link to the product instead). The title link covers the whole card.
+JavaScript (products with options link to the product instead); the form loads assets/anvil-product.js itself
+(one fetch per page, module URLs dedupe), whose <anvil-product-form form-id> adds through the cart drawer.
+The title link covers the whole card.
 A blank product renders a placeholder card. Sections load assets/anvil-card.css once (media, price and stars styles
 are in anvil-base.css). The hover image is only displayed, and so only downloaded, on devices that can hover.
 
@@ -437,6 +490,8 @@ are in anvil-base.css). The hover image is only displayed, and so only downloade
 @param {boolean} [quick_add] - Show the add-to-cart form, or a "Choose options" link when options exist
 @param {string} [image_ratio] - adapt | 1:1 | 4:5 | 3:4 | 16:9 (default settings.card_image_ratio, then 4:5)
 @param {string} [sizes] - sizes attribute for the card image
+@param {string} [widths] - srcset widths, the last one the largest file (default '300, 450, 600'; a card shown
+  wider than about 600 px, such as a collage's big tile, may pass up to 1100)
 @param {string} [loading] - lazy | eager (default lazy); pass eager for cards in the first visible row
 @param {boolean} [priority] - First card on the page: eager plus fetchpriority high (it is usually the LCP image)
 @param {string} [heading_tag] - h2 | h3 | h4 for the title (default h3); keep the page outline without gaps
@@ -448,6 +503,60 @@ are in anvil-base.css). The hover image is only displayed, and so only downloade
 {% for product in collection.products %}
   {% render 'anvil-product-card', product: product, show_rating: true, quick_add: true, sizes: '(min-width: 990px) 25vw, 50vw' %}
 {% endfor %}
+```
+
+## snippets/anvil-product-row.liquid
+```
+A row of product cards as a grid or an <anvil-slider> (DECISIONS 93), shared by Featured collection and Related
+products. Columns follow the shared grid rule (phones 1-2, tablets up to 3 with 4 becoming 2, desktop the setting);
+the slider shows the same counts in view with the theme's standard peek and decides dots, arrows and peek per width
+at first paint (snippets/anvil-slider-attrs). With dots off the arrows stay on, so mouse users always have a way
+past the first view (the track hides its scrollbar). Card image sizes come from the column counts, capped by the
+page or narrow width. Load assets/anvil-card.css (and anvil-slider.css for a slider) before rendering; the slider
+module is loaded here. Styles: .av-product-row* in assets/anvil-card.css.
+
+@param {product[]} [products] - Products to show; blank renders `placeholders` example cards
+@param {number} [limit] - Most cards shown (default 8)
+@param {number} [placeholders] - Example cards when `products` is blank (default 0)
+@param {string} [layout] - grid | slider (default grid)
+@param {number} [cols_desktop] - Columns from 990 px (default 4)
+@param {number} [cols_mobile] - Columns below 750 px (default 2)
+@param {boolean} [show_arrows] - Slider arrows (tablets and desktop, beside the track)
+@param {boolean} [show_dots] - Slider dots
+@param {string} [label] - Name of the slider region (escaped here)
+@param {string} [fold] - lcp | eager | lazy from snippets/anvil-above-fold (default lazy)
+@param {string} [width] - The section's width setting: page | narrow | full (caps the image sizes)
+@param {boolean} [show_vendor] - Card vendor
+@param {boolean} [show_rating] - Card stars from the rating metafield
+@param {boolean} [quick_add] - Card quick add
+@param {string} [image_ratio] - Card image shape; blank or theme follows Theme settings > Product cards
+@param {boolean} [hover_image] - Show the card's second image on hover (default true)
+@param {string} [uid] - Keeps quick-add form ids unique (pass section.id)
+
+@example
+{% render 'anvil-product-row', products: collection.products, limit: 8, layout: s.layout, cols_desktop: 4, cols_mobile: 2, fold: fold, width: s.width, uid: section.id %}
+```
+
+## snippets/anvil-quick-buy.liquid
+```
+The quick-buy control under a product in Product videos and Shoppable image (DECISIONS 96): one product form that
+works without JavaScript and adds through the cart drawer once assets/anvil-product.js enhances it.
+- A single-variant product gets a hidden variant id and an add button.
+- A product with options gets a variant menu (every variant with its price through anvil-money; sold-out ones
+  cannot be chosen) and an add button, or, with variant_mode 'link', a "Choose options" link to its page.
+- A subscription-only product always links to its page; a sold-out product shows a disabled "Sold out" button.
+The product title follows every button for screen readers, so several "Add to cart" buttons read apart. The
+section loads assets/anvil-product.js once when any card renders a form.
+
+@param {object} product - The product
+@param {string} [variant_mode] - select | link (default select)
+@param {string} [label] - Add button text, raw (default: the translated "Add to cart")
+@param {string} [style] - Button style: primary | secondary (default primary)
+@param {string} form_id - Unique form id
+@param {string} [class] - Extra classes on the wrapper
+
+@example
+{% render 'anvil-quick-buy', product: p, variant_mode: s.variant_mode, label: s.add_label, style: s.button_style, form_id: 'av-pv-' | append: block.id %}
 ```
 
 ## snippets/anvil-section-attrs.liquid
@@ -469,14 +578,20 @@ data-anvil-section marks this root as the Section Rendering swap target: its chi
 ## snippets/anvil-section-head.liquid
 ```
 Section heading and subheading from the chassis settings (heading, subheading, head_align, head_size, accent_style).
-In the heading, <strong> becomes an accent span. Renders nothing when both texts are blank.
+In the heading, <strong> becomes an accent span. Renders nothing when both texts are blank, unless `fallback` is
+given: then a blank heading becomes a visually hidden heading with that text, so card or row titles below it
+(h3) never skip a level (CONVENTIONS §3, DECISIONS 84). Sections pass their own translated word, or the generic
+`anvil.a11y.highlights`.
 
 @param {object} section - The section object
 @param {string} [tag] - Heading element, default 'h2'
+@param {string} [fallback] - Already translated text for a hidden heading when the heading is blank
 
 @example
 {% render 'anvil-section-head', section: section %}
 {% render 'anvil-section-head', section: section, tag: 'h1' %}
+{%- assign fallback = 'anvil.a11y.highlights' | t -%}
+{% render 'anvil-section-head', section: section, fallback: fallback %}
 ```
 
 ## snippets/anvil-security.liquid
@@ -522,6 +637,37 @@ Date text uses the locale formats date_formats.anvil_ship_<format>; styles are i
 {% render 'anvil-ship-dates', processing_min: 1, processing_max: 2, delivery_min: 3, delivery_max: 5, skip_weekends: true, mode: 'steps' %}
 ```
 
+## snippets/anvil-slider-attrs.liquid
+```
+Attributes for an <anvil-slider> root (DECISIONS 89): class, the component attributes and the inline layout, so the
+row is laid out at first paint and nothing moves when assets/anvil-slider.js runs (CONVENTIONS §6). From the slide
+count and the slides in view per width it adds av-slider--fits-m|t|d, which hide the dots row and arrows and drop
+the peek where every slide fits. Card carousels pass `arrows: 'desktop'` and `gutter: true` (arrows beside the
+track from 750 px); media sliders pass `arrows: 'all'`. No role is written: the element adds region and carousel
+roles only while its track scrolls, and keeps the aria-label as the name. The section still renders the track and,
+when dots are on, the empty `<div class="av-slider__dots" data-slider-dots></div>` after it.
+
+@param {number} count - Number of slides
+@param {number} [per_view] - Slides in view on phones (default 1)
+@param {number} [per_view_tablet] - Slides in view at 750–989 px (default per_view)
+@param {number} [per_view_desktop] - Slides in view from 990 px (default per_view_tablet)
+@param {string} [peek] - 'auto' for the theme's standard peek (phones 40 px, or 24 px with 2+ slides in view;
+  tablets 32 px; desktop none), or pixels of the next slide shown on phones while the row scrolls (default 0)
+@param {number} [peek_tablet] - Peek at 750–989 px when peek is a number (default peek)
+@param {number} [peek_desktop] - Peek from 990 px when peek is a number (default 0)
+@param {string} [arrows] - all | desktop | none (default none)
+@param {boolean} [gutter] - Arrows sit beside the track while it scrolls (from 750 px)
+@param {boolean} [dots] - Dots row
+@param {number} [autoplay] - Seconds per slide, 0 = off (default 0)
+@param {boolean} [loop] - Wrap around at the ends
+@param {string} [label] - Accessible name (escaped here with escape_once)
+@param {string} [class] - Classes for the root
+@param {string} [style] - Extra inline declarations
+
+@example
+<anvil-slider {% render 'anvil-slider-attrs', count: n, per_view: 2, per_view_desktop: 4, peek: 'auto', arrows: 'desktop', gutter: true, dots: true, label: heading %}>
+```
+
 ## snippets/anvil-social-links.liquid
 ```
 Text pills for the social profiles filled in under Theme settings > Social links, in a list. Network names are
@@ -550,6 +696,20 @@ Styles live in assets/anvil-card.css.
 {% render 'anvil-stars', rating: product.metafields.reviews.rating.value.rating, max: product.metafields.reviews.rating.value.scale_max %}
 ```
 
+## snippets/anvil-surface.liquid
+```
+Card surface classes for a section's `card_style` setting (DECISIONS 83). Prints nothing for a card without a box
+("No box", or "Same as theme cards" while Theme settings > Cards is flat), else `av-surface av-surface--<style>`.
+The surface rules (border, one tint, shadow with a medium floor, theme cards copied exactly) live in
+assets/anvil-base.css; sections add their own padding. Capture the output: a blank result means "no box".
+
+@param {string} [style] - theme | flat | outlined | tinted | raised (default theme)
+
+@example
+{%- capture surface -%}{% render 'anvil-surface', style: s.card_style %}{%- endcapture -%}
+<li class="av-foo__card {{ surface }}">…</li>
+```
+
 ## snippets/anvil-text-icon.liquid
 ```
 One reassurance line: an icon from anvil-icon, or an uploaded image instead, and a short text, optionally on a
@@ -568,6 +728,174 @@ Loads assets/anvil-pb-trust.css (repeated links to one URL are fetched once).
 
 @example
 {% render 'anvil-text-icon', icon: 'truck', text: block.settings.text, size: 'sm', pill: true %}
+```
+
+## snippets/anvil-typed-date.liquid
+```
+A date the merchant typed as YYYY-MM-DD, as a <time> element (DECISIONS 88). The value is read at noon and ignored
+unless it reads back as the same date. The element is built from the typed date rather than with time_tag, which
+writes its datetime attribute in UTC (shopify.dev time_tag) and so could move a date by a day in a UTC+13/+14
+store. The text uses the theme date format (`date_formats.anvil_date`). Prints nothing for a blank or invalid date.
+
+@param {string} date - The typed date
+@param {string} [class] - Class on the <time> element
+
+@example
+{%- capture date_html -%}{% render 'anvil-typed-date', date: block.settings.date %}{%- endcapture -%}
+```
+
+## blocks/_anvil-columns-column.liquid
+```
+Private theme block for sections/anvil-columns.liquid: one column that stacks theme blocks (@theme) and app blocks
+with the section's block spacing. Column count, card style and vertical alignment come from the section; the column
+can take its own colour scheme, which always draws it as a padded box. With the section's card style "Same as theme
+cards" and a boxed theme card style, the column uses Theme settings > Cards > colour scheme unless it has its own.
+An empty column shows a note in the editor; on the storefront it keeps a blank slot from tablets up (no box) and is
+dropped on phones. Styles live in the section's stylesheet.
+
+Settings (id · type · values · default):
+- own_scheme · checkbox · default false
+- color_scheme · color_scheme · default "scheme-2" (shown when own_scheme is on)
+Accepts child blocks: @theme, @app
+
+@example
+{"type": "_anvil-columns-column"}
+```
+
+## blocks/_anvil-hero-slideshow-slide.liquid
+```
+Private theme block for sections/anvil-hero-slideshow.liquid: one slide of the hero carousel. The block root is the
+slider's [data-slider-slide] element (tag: null); inside it a frame holds the slide's image (a separate phone image
+is optional, served with <picture> below 750 px), an overlay, an optional link over the whole slide and the slide's
+theme blocks (@theme, @app) in a content box placed by the position settings. The section sets the slide height
+and the transition; this file reads section.settings.width for the image sizes. The first slide's image loads eagerly
+with high fetch priority in the first two sections (it is usually the LCP image) and is preloaded in the first
+section when it has no separate phone image; every other slide loads lazily. The slide link comes after the content
+in the DOM (z-index puts it underneath), and the editor shows a note while a linked slide's link has no name. Styles
+live in the section's stylesheet.
+
+Settings (id · type · values · default):
+- image · image_picker
+- image_mobile · image_picker
+- overlay · range · 0–90 step 5% · default 30
+- overlay_color · select · shadow | scheme · default "shadow"
+- position_desktop · select · top-left … bottom-right (9) · default "middle-center"
+- position_mobile · select · top | middle | bottom · default "middle"
+- content_width · range · 320–800 step 20px · default 560
+- box · checkbox · default false
+- own_scheme · checkbox · default false
+- color_scheme · color_scheme · default "scheme-1" (shown when own_scheme is on)
+- link · url
+- link_name · text
+Accepts child blocks: @theme, @app
+
+@example
+{"type": "_anvil-hero-slideshow-slide"}
+```
+
+## blocks/_anvil-popup-newsletter.liquid
+```
+Private theme block for sections/anvil-popup.liquid: the popup's email signup form. The section renders it once as
+a static block (content_for 'block', id "newsletter"), so merchants can edit or hide it but not remove or move it.
+A Shopify customer form (id anvil-popup-<section id>-form) posts contact[email] and contact[tags] = "newsletter"
+plus the optional tag below; each signup creates a customer with email marketing accepted. After a post the
+form shows a success message (role="status", the field and button are hidden) or Shopify's errors (role="alert",
+the field keeps the address); both messages carry data-anvil-result and tabindex="-1", which
+assets/anvil-popup.js uses to reopen the popup on the shopper's own result and move focus to the message.
+Without JavaScript the popup never opens, so this form only ever runs inside the open dialog.
+
+Settings (id · type · values · default):
+- layout · select · stacked | inline · default "stacked"
+- show_label · checkbox · default false
+- placeholder · text · default "Your email address"
+- button_label · text · default "Subscribe"
+- button_style · select · primary | secondary · default "primary"
+- success_text · text · default "Thanks for signing up."
+- small_print · richtext · default "<p>Example small print — …</p>"
+- tag · text · default "popup"
+- align · text_alignment · default "center" (small print and success message)
+
+@example
+{"type": "_anvil-popup-newsletter", "static": true, "id": "newsletter"}
+```
+
+## blocks/_anvil-pricing-feature.liquid
+```
+Private theme block: one feature row inside a plan of sections/anvil-pricing.liquid (blocks/_anvil-pricing-plan).
+A short line with a marker: included (check mark), not included (cross, muted text) or no marker. The marker is
+decorative; a visually hidden "Included:" / "Not included:" before the words carries the meaning, so the row
+never depends on the icon or its colour (WCAG 1.3.1, 1.4.1). Renders nothing on the storefront when the text is
+blank; the editor shows a note so the empty row can still be selected.
+
+Settings (id · type · values · default):
+- text · inline_richtext · default "Example feature — replace with something this plan includes"
+- state · select · included | excluded | plain · default "included"
+
+@example
+{"type": "_anvil-pricing-feature"}
+```
+
+## blocks/_anvil-pricing-plan.liquid
+```
+Private theme block: one plan card of sections/anvil-pricing.liquid (the only place it can be added). Name, short
+description, price, optional badge, a column of child blocks (feature rows from _anvil-pricing-feature, any theme
+block, app blocks) and one button pinned to the bottom of the card.
+Price: a linked product's price from Shopify (anvil-price: "From" when variants differ, compare-at strike-through
+and saving only from compare_at_price); the typed price only when no product is linked. The linked product is
+passed to the child blocks as closest.product, so an Add to cart or Stars block inside the plan uses it.
+Highlight: the plan finds its position in section.blocks and compares it with the section's highlight setting;
+the highlighted plan gets an accent border and the section's highlight colour scheme.
+Badge: shown only when "Badge is backed by sales data" is ticked (docs/HONEST.md); the editor says when it is hidden.
+Button: auto = the linked product's page, else the button link; cart = a product form that adds the linked
+single-variant product without JavaScript (<anvil-product-form> from assets/anvil-product.js enhances it), while a
+product with options or one that needs a selling plan opens its page; link = always the button link. Nothing is
+drawn when there is no destination or no label.
+Editor: when a product is linked but the price note still says "(example price)", an editor-only note asks the
+merchant to update it, since the price shown is then the real Shopify price.
+
+Settings (id · type · values · default):
+- title · text · default "Example: plan name"
+- summary · text · default "Example: say in one line who this plan is for"
+- product · product
+- price · text · default "$19"
+- price_note · text · no default (the section preset types the example notes)
+- show_compare · checkbox · default true
+- badge · text
+- badge_backed_by_sales · checkbox · default false
+- button_label · text · default "Choose this plan"
+- button_action · select · auto | cart | link · default "auto"
+- button_url · url
+Accepts child blocks: _anvil-pricing-feature, @theme, @app
+
+@example
+{"type": "_anvil-pricing-plan"}
+```
+
+## blocks/_anvil-tabs-tab.liquid
+```
+Private theme block for sections/anvil-tabs.liquid: one tab. The section draws the tab button in its strip from
+this block's title and icon; this file draws the matching panel (role="tabpanel") holding theme blocks (@theme,
+@app). Ids follow the section's rule: panel id = the link id setting (handleized) or av-tabs-<section id>-<block id>,
+labelled by the button av-tabs-tab-<section id>-<block id>. The first tab with a title starts open (the first tab in
+the editor); the other panels render hidden and <anvil-tabs> (assets/anvil-tabs.js) switches them. Without
+JavaScript every panel shows, each under its own h3 title (the section always has an h2, visually hidden when
+its heading is blank). A tab without a title renders nothing on the storefront, since its button would have no
+name. The panel is the block's only root element and the only one carrying block.shopify_attributes.
+
+Settings (id · type · values · default):
+- title · text · default "Example tab"
+- icon · select · none | info | check-circle | … · default "none"
+- icon_image · image_picker
+- anchor · text
+- layout · select · stack | split · default "stack"
+- valign · select · center | top · default "center"
+- width · select · full | narrow · default "full"
+- align · text_alignment · default "left" (app blocks and the no-JS title only)
+- gap · range · 0–64 step 4px · default 24
+Accepts child blocks: @theme, @app
+
+@example
+{"type": "_anvil-tabs-tab"}
 ```
 
 ## blocks/anvil-button.liquid
@@ -649,7 +977,7 @@ Accepts child blocks: @theme, @app
 Theme block: a heading; <strong> words take the accent style. Pick the level that keeps the page outline (one H1 per page).
 
 Settings (id · type · values · default):
-- heading · inline_richtext · default "Example heading — replace me"
+- heading · inline_richtext · default "Example: your heading"
 - tag · select · h1 | h2 | h3 | h4 | p · default "h2"
 - size · select · xs | sm | md | lg | xl · default "md"
 - align · text_alignment · default "left"
@@ -682,11 +1010,11 @@ Theme block: an image in an aspect-ratio box (snippets/anvil-media), optional li
 Settings (id · type · values · default):
 - image · image_picker
 - alt · text
-- ratio · select · adapt | 1:1 | 4:5 | 3:4 | 16:9 | 21:9 · default "adapt"
+- image_ratio · select · adapt | 1:1 | 4:5 | 3:4 | 16:9 | 21:9 · default "adapt"
 - width · range · 10–100 step 5% · default 100
 - align · text_alignment · default "center"
 - link · url
-- link_label · text
+- link_name · text
 - caption · text
 
 @example
@@ -695,7 +1023,7 @@ Settings (id · type · values · default):
 
 ## blocks/anvil-product-atc.liquid
 ```
-Theme block: add-to-cart for one product (the picked one, else closest.product). Single-variant products get a form that works without JavaScript; products with options link to the product page.
+Theme block: add-to-cart for one product (the picked one, else closest.product). Single-variant products get a form that works without JavaScript and loads assets/anvil-product.js (<anvil-product-form form-id> adds through the cart drawer); products with options link to the product page.
 
 Settings (id · type · values · default):
 - product · product

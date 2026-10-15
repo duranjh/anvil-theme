@@ -24,10 +24,10 @@
   assign img_sizes = '(min-width: 750px) ' | append: desk_vw | append: 'vw, ' | append: img_width | append: 'vw'
   assign img_alt = s.alt
   if s.link != blank
-    assign img_alt = s.alt | default: s.image.alt | default: s.link_label
+    assign img_alt = s.alt | default: s.image.alt | default: s.link_name
   endif
   capture media_html
-    render 'anvil-media', image: s.image, ratio: s.ratio, widths: '300, 450, 600, 800, 1100', sizes: img_sizes, alt: img_alt, placeholder: 'image', class: 'av-pb-image__media'
+    render 'anvil-media', image: s.image, ratio: s.image_ratio, widths: '300, 450, 600, 800, 1100', sizes: img_sizes, alt: img_alt, placeholder: 'image', class: 'av-pb-image__media'
   endcapture
 -%}
 {{ 'anvil-pb-content.css' | asset_url | stylesheet_tag }}

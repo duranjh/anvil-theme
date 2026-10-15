@@ -1,6 +1,74 @@
 {
   "type": "custom.overlay",
   "name": "Overlay",
-  "sections": {},
-  "order": []
+  "sections": {
+    "scroll_top": {
+      "type": "anvil-scroll-top",
+      "settings": {
+        "show_after": 600,
+        "position": "right",
+        "icon": "arrow-up",
+        "size": 48,
+        "shape": "circle",
+        "style": "button",
+        "pad_bottom": 24
+      }
+    },
+    "popup": {
+      "type": "anvil-popup",
+      "disabled": true,
+      "blocks": {
+        "heading": {
+          "type": "anvil-heading",
+          "settings": {
+            "heading": "Example: join the <strong>list</strong>",
+            "tag": "h2",
+            "size": "sm",
+            "align": "center"
+          }
+        },
+        "text": {
+          "type": "anvil-text",
+          "settings": {
+            "text": "<p>Example: new arrivals and restock news, about twice a month. Replace with what you really send, and name a discount only if a real code reaches every subscriber.</p>",
+            "align": "center",
+            "muted": true
+          }
+        },
+        "newsletter": {
+          "type": "_anvil-popup-newsletter",
+          "static": true,
+          "settings": {
+            "button_label": "Subscribe",
+            "success_text": "Thanks for signing up."
+          }
+        }
+      },
+      "block_order": [
+        "heading",
+        "text"
+      ],
+      "settings": {
+        "trigger": "delay",
+        "delay": 8,
+        "frequency_days": 7,
+        "pages": "no_cart",
+        "image_position": "none"
+      }
+    },
+    "audio": {
+      "type": "anvil-audio",
+      "disabled": true,
+      "settings": {
+        "track_title": "Example track — replace with your own",
+        "position": "left",
+        "start_muted": true
+      }
+    }
+  },
+  "order": [
+    "scroll_top",
+    "popup",
+    "audio"
+  ]
 }

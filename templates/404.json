@@ -3,7 +3,19 @@
     "main": {
       "type": "main-404",
       "settings": {}
+    },
+    "featured_collection": {
+      "type": "anvil-featured-collection",
+      "settings": {
+        "heading": "Keep <strong>shopping</strong>",
+        "layout": "grid",
+        "limit": 4,
+        "cols_desktop": "4"
+      }
     }
   },
-  "order": ["main"]
+  "order": [
+    "main",
+    "featured_collection"
+  ]
 }

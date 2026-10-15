@@ -3,7 +3,8 @@
   <form> that posts updates[<line key>] to the cart, so the page works without JavaScript; <anvil-cart-form
   cart-id="page"> (assets/anvil-cart.js) adds steppers, typed quantities, removal without a reload and gift-line
   handling. Line styles come from assets/anvil-cart-drawer.css (shared with the drawer).
-  The summary section (main-cart-footer) points its note and checkout button at this form with form="anvil-cart-form".
+  The summary section (main-cart-footer) points its note, policies checkbox and checkout button at this form with
+  form="anvil-cart-form"; Update skips validation (formnovalidate), so an unticked required policies box blocks only checkout.
   When a line carries the _anvil_gift property, the gift engine (assets/anvil-gifts.js) loads here too: with
   Theme settings > Cart type "Page" no drawer exists to load it, and a gift whose condition fails on this page
   (the shopper lowers the trigger quantity) must still be removed; its key alone tells the engine the condition.
@@ -46,7 +47,7 @@
             </ul>
             <p class="av-cart-items__error av-form-message av-form-message--error" role="alert" data-anvil-cart-error hidden></p>
             <div class="av-cart-items__update av-fallback-only">
-              {% render 'anvil-button', label: update_label, style: 'secondary', size: 'md', type: 'submit' %}
+              {% render 'anvil-button', label: update_label, style: 'secondary', size: 'md', type: 'submit', attrs: 'formnovalidate' %}
             </div>
           </form>
         </anvil-cart-form>
@@ -59,49 +60,17 @@
   </div>
 </div>
 {% stylesheet %}
-  .av-cart-items__head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--av-space-3);
-    margin-bottom: var(--av-space-5);
-  }
-  .av-cart-items__title {
-    font-size: var(--av-text-3xl);
-  }
-  .av-cart-items__empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--av-space-4);
-    padding: var(--av-space-9) 0;
-    text-align: center;
-  }
-  .av-cart-items__empty-text {
-    font-size: var(--av-text-lg);
-  }
-  .av-cart-items__lines {
-    margin: 0;
-    border-top: 1px solid var(--av-border);
-  }
-  .av-cart-items__lines > * {
-    padding: var(--av-space-4) 0;
-    border-bottom: 1px solid var(--av-border);
-  }
-  .av-cart-items__error {
-    margin-top: var(--av-space-4);
-  }
-  .av-cart-items__update {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: var(--av-space-4);
-  }
-  @media (min-width: 750px) {
-    .av-cart-items__lines > * {
-      padding: var(--av-space-5) 0;
-    }
-  }
+.av-cart-items__head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--av-space-3);margin-bottom:var(--av-space-5)}
+.av-cart-items__title{font-size:var(--av-text-3xl)}
+.av-cart-items__empty{display:flex;flex-direction:column;align-items:center;gap:var(--av-space-4);padding:var(--av-space-9) 0;text-align:center}
+.av-cart-items__empty-text{font-size:var(--av-text-lg)}
+.av-cart-items__lines{margin:0;border-top:1px solid var(--av-border)}
+.av-cart-items__lines>*{padding:var(--av-space-4) 0;border-bottom:1px solid var(--av-border)}
+.av-cart-items__error{margin-top:var(--av-space-4)}
+.av-cart-items__update{display:flex;justify-content:flex-end;margin-top:var(--av-space-4)}
+@media (min-width: 750px){
+.av-cart-items__lines>*{padding:var(--av-space-5) 0}
+}
 {% endstylesheet %}
 {% schema %}
 {

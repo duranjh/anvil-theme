@@ -8,7 +8,45 @@
       "type": "anvil-contact-form",
       "settings": {
         "heading": "Send us a <strong>message</strong>",
-        "subheading": "<p>Example text — say how quickly you usually reply.</p>"
+        "subheading": "<p>Example: say how quickly you usually reply.</p>"
+      }
+    },
+    "reach_us": {
+      "type": "anvil-icon-content",
+      "blocks": {
+        "reach_us_item_1": {
+          "type": "item",
+          "settings": {
+            "icon": "mail",
+            "heading": "Example: email",
+            "text": "<p>Example: replace with the address you answer from and how fast you usually reply.</p>"
+          }
+        },
+        "reach_us_item_2": {
+          "type": "item",
+          "settings": {
+            "icon": "phone",
+            "heading": "Example: phone",
+            "text": "<p>Example: add a number only if someone picks up, and say when. Delete this card if you have no phone line.</p>"
+          }
+        },
+        "reach_us_item_3": {
+          "type": "item",
+          "settings": {
+            "icon": "clock",
+            "heading": "Example: support hours",
+            "text": "<p>Example: replace with your real hours and time zone, and what happens to messages sent outside them.</p>",
+            "button_label": "Contact us"
+          }
+        }
+      },
+      "block_order": [
+        "reach_us_item_1",
+        "reach_us_item_2",
+        "reach_us_item_3"
+      ],
+      "settings": {
+        "heading": "Other ways to <strong>reach us</strong>"
       }
     },
     "faq": {
@@ -17,22 +55,22 @@
         "before_you_write_1": {
           "type": "item",
           "settings": {
-            "question": "Example question — How long does delivery take?",
-            "answer": "<p>Example answer — replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
+            "question": "Example: How long does delivery take?",
+            "answer": "<p>Example: replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
           }
         },
         "before_you_write_2": {
           "type": "item",
           "settings": {
-            "question": "Example question — What is your returns policy?",
-            "answer": "<p>Example answer — summarise your actual returns window and conditions here and link to your returns policy page.</p>"
+            "question": "Example: What is your returns policy?",
+            "answer": "<p>Example: summarise your actual returns window and conditions here and link to your returns policy page.</p>"
           }
         },
         "before_you_write_3": {
           "type": "item",
           "settings": {
-            "question": "Example question — Can I change or cancel an order?",
-            "answer": "<p>Example answer — say how quickly a shopper must contact you, how to reach you, and what happens once an order has shipped.</p>"
+            "question": "Example: Can I change or cancel an order?",
+            "answer": "<p>Example: say how quickly a shopper must contact you, how to reach you, and what happens once an order has shipped.</p>"
           }
         }
       },
@@ -53,6 +91,7 @@
   "order": [
     "main",
     "contact",
+    "reach_us",
     "faq"
   ]
 }

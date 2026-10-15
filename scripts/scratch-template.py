@@ -68,7 +68,8 @@ def convert_blocks(preset_blocks, counter):
     for pb in preset_blocks or []:
         if not isinstance(pb, dict) or "type" not in pb:
             continue
-        bid = block_id(pb["type"], counter)
+        # A static block keeps its preset id: the Liquid renders it with {% content_for 'block', id: '<id>' %}.
+        bid = pb.get("id") if pb.get("static") and pb.get("id") else block_id(pb["type"], counter)
         entry = {"type": pb["type"]}
         if isinstance(pb.get("settings"), dict):
             entry["settings"] = pb["settings"]
@@ -79,7 +80,8 @@ def convert_blocks(preset_blocks, counter):
             entry["blocks"] = inner
             entry["block_order"] = inner_order
         blocks[bid] = entry
-        order.append(bid)
+        if not pb.get("static"):
+            order.append(bid)
     return blocks, order
 
 

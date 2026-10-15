@@ -1,13 +1,19 @@
 {% doc %}
   Section heading and subheading from the chassis settings (heading, subheading, head_align, head_size, accent_style).
-  In the heading, <strong> becomes an accent span. Renders nothing when both texts are blank.
+  In the heading, <strong> becomes an accent span. Renders nothing when both texts are blank, unless `fallback` is
+  given: then a blank heading becomes a visually hidden heading with that text, so card or row titles below it
+  (h3) never skip a level (CONVENTIONS §3, DECISIONS 84). Sections pass their own translated word, or the generic
+  `anvil.a11y.highlights`.
 
   @param {object} section - The section object
   @param {string} [tag] - Heading element, default 'h2'
+  @param {string} [fallback] - Already translated text for a hidden heading when the heading is blank
 
   @example
   {% render 'anvil-section-head', section: section %}
   {% render 'anvil-section-head', section: section, tag: 'h1' %}
+  {%- assign fallback = 'anvil.a11y.highlights' | t -%}
+  {% render 'anvil-section-head', section: section, fallback: fallback %}
 {% enddoc %}
 {%- liquid
   assign s = section.settings
@@ -21,9 +27,13 @@
 <div class="av-section-head av-section-head--{{ head_align }} av-section-head--{{ head_size }}">
   {%- if s.heading != blank -%}
     <{{ head_tag }} class="av-section-head__title">{{ s.heading | replace: '<strong>', accent_open | replace: '</strong>', '</span>' }}</{{ head_tag }}>
+  {%- elsif fallback != blank -%}
+    <{{ head_tag }} class="av-visually-hidden">{{ fallback }}</{{ head_tag }}>
   {%- endif -%}
   {%- if s.subheading != blank -%}
     <div class="av-section-head__sub av-rte">{{ s.subheading }}</div>
   {%- endif -%}
 </div>
+{%- elsif fallback != blank -%}
+<{{ head_tag }} class="av-visually-hidden">{{ fallback }}</{{ head_tag }}>
 {%- endif -%}

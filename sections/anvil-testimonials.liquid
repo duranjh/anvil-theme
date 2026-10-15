@@ -1,0 +1,497 @@
+{%- liquid
+  assign s = section.settings
+
+  # Media in the first two template sections loads eagerly (snippets/anvil-above-fold).
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign top_section = true
+  if fold contains 'lazy'
+    assign top_section = false
+  endif
+
+  comment
+    First pass: count the cards that render (a card without a quote is skipped on the storefront and kept
+    in the editor so it can still be selected), find typed stars that stay hidden for want of a source
+    link, so the editor can say why, and note whether every quote links to its source (the disclosure
+    line cannot be switched off while one does not). The only for-loop tag over section.blocks is the
+    rendering loop below.
+  endcomment
+  assign card_count = 0
+  assign stars_hidden = false
+  assign all_sourced = true
+  for block in section.blocks
+    if block.settings.quote != blank or request.design_mode
+      assign card_count = card_count | plus: 1
+    endif
+    if block.settings.rating > 0 and block.settings.source_url == blank
+      assign stars_hidden = true
+    endif
+    if block.settings.quote != blank and block.settings.source_url == blank
+      assign all_sourced = false
+    endif
+  endfor
+
+  comment
+    Cards in view: phones 1 with the next one peeking, tablets the shared grid rule (up to 3; 4 become 2), desktop
+    the setting. snippets/anvil-slider-attrs writes the layout inline and marks the widths where every card fits,
+    so the dots, arrows and peek follow at first paint.
+  endcomment
+  assign per_view = s.cols_desktop | default: '3' | plus: 0 | at_most: card_count | at_least: 1
+  assign per_tablet = per_view | at_most: 3
+  if per_view == 4
+    assign per_tablet = 2
+  endif
+  assign autoplay = s.autoplay | default: 0
+  if card_count < 2
+    assign autoplay = 0
+  endif
+
+  capture surface
+    render 'anvil-surface', style: s.card_style
+  endcapture
+  assign surface = surface | strip
+  assign root_class = 'av-testimonials av-testimonials--' | append: s.text_align | append: ' av-testimonials--q-' | append: s.quote_size
+  if surface != blank
+    assign root_class = root_class | append: ' av-testimonials--boxed'
+  endif
+  if per_view >= 3
+    assign root_class = root_class | append: ' av-testimonials--dense'
+  endif
+  assign arrows = 'none'
+  if s.show_arrows
+    assign arrows = 'desktop'
+  endif
+
+  assign img_ratio = s.image_ratio | default: '1:1'
+  if img_ratio == 'theme'
+    assign img_ratio = settings.card_image_ratio | default: '4:5'
+  endif
+
+  assign slider_label = s.heading | strip_html | strip
+  if slider_label == blank
+    assign slider_label = 'anvil.testimonials.label' | t
+  endif
+
+  comment
+    The card image is capped at 400 px wide (stylesheet), so sizes is capped the same way.
+  endcomment
+  assign vw_desktop = 100 | divided_by: per_view
+  assign vw_tablet = 100 | divided_by: per_tablet
+  assign img_sizes = '(min-width: 990px) min(' | append: vw_desktop | append: 'vw, 400px), (min-width: 750px) min(' | append: vw_tablet | append: 'vw, 400px), min(85vw, 400px)'
+
+  comment
+    Translations come back from t already escaped, so they are printed as they are; merchant text is escaped here.
+  endcomment
+  assign label_verified = 'anvil.testimonials.verified' | t
+  assign label_source = 'anvil.trust.original_review' | t
+  assign label_new_tab = 'anvil.a11y.new_window' | t
+
+  assign disclosure = s.disclosure | strip | escape
+  if disclosure == blank
+    assign disclosure = 'anvil.trust.quotes_disclosure' | t
+  endif
+
+  # Icons are rendered once and printed per card.
+  if s.show_quote_icon
+    capture icon_quote
+      render 'anvil-icon', name: 'quote', size: 28
+    endcapture
+  endif
+  capture icon_verified
+    render 'anvil-icon', name: 'badge-check', size: 16
+  endcapture
+
+  assign card_n = 0
+-%}
+{%- comment -%} With no quote to show, the storefront renders nothing (not even the heading); the editor keeps the empty-section note. {%- endcomment -%}
+{%- if card_count > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-testimonials' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if card_count > 0 -%}
+      {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      <anvil-slider {% render 'anvil-slider-attrs', count: card_count, per_view: 1, per_view_tablet: per_tablet, per_view_desktop: per_view, peek: 'auto', arrows: arrows, gutter: true, dots: s.show_dots, autoplay: autoplay, label: slider_label, class: root_class %}>
+        <div class="av-testimonials__track" data-slider-track>
+          {%- for block in section.blocks -%}
+            {%- liquid
+              assign b = block.settings
+              if b.quote == blank and request.design_mode == false
+                continue
+              endif
+              assign card_n = card_n | plus: 1
+
+              assign media_loading = 'lazy'
+              if top_section and card_n <= per_view
+                assign media_loading = 'eager'
+              endif
+
+              assign show_stars = false
+              if b.rating > 0 and b.source_url != blank
+                assign show_stars = true
+              endif
+
+              assign name = b.name | strip
+              assign role = b.role | strip
+              assign initials = ''
+              if name != blank
+                assign name_parts = name | split: ' '
+                assign initials = name_parts.first | slice: 0
+                if name_parts.size > 1
+                  assign last_initial = name_parts.last | slice: 0
+                  assign initials = initials | append: last_initial
+                endif
+                assign initials = initials | upcase
+              endif
+
+              assign has_by = false
+              if name != blank or role != blank or b.verified or b.source_url != blank or b.avatar != blank
+                assign has_by = true
+              endif
+            -%}
+            <div class="av-testimonials__slide" data-slider-slide {{ block.shopify_attributes }}>
+              <figure class="av-testimonials__card {{ surface }}">
+                {%- if b.image != blank -%}
+                  {% render 'anvil-media', image: b.image, ratio: img_ratio, widths: '300, 450, 600', sizes: img_sizes, loading: media_loading, class: 'av-testimonials__media' %}
+                {%- endif -%}
+                {%- if show_stars -%}
+                  <div class="av-testimonials__stars">{% render 'anvil-stars', rating: b.rating, size: 18 %}</div>
+                {%- endif -%}
+                {%- if b.quote != blank -%}
+                  {%- if s.show_quote_icon -%}
+                    <span class="av-testimonials__mark">{{ icon_quote }}</span>
+                  {%- endif -%}
+                  <blockquote class="av-testimonials__quote av-rte">{{ b.quote }}</blockquote>
+                {%- else -%}
+                  <p class="av-testimonials__empty av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+                {%- endif -%}
+                {%- if has_by -%}
+                  <figcaption class="av-testimonials__by">
+                    {%- if b.avatar != blank -%}
+                      <span class="av-testimonials__avatar">
+                        {{- b.avatar | image_url: width: 96 | image_tag: widths: '48, 96', sizes: '48px', loading: media_loading, alt: '' -}}
+                      </span>
+                    {%- elsif initials != blank -%}
+                      <span class="av-testimonials__avatar" aria-hidden="true">{{ initials | escape }}</span>
+                    {%- endif -%}
+                    <span class="av-testimonials__who">
+                      {%- if name != blank -%}
+                        <span class="av-testimonials__name">{{ name | escape }}</span>
+                      {%- endif -%}
+                      {%- if role != blank -%}
+                        <span class="av-testimonials__role">{{ role | escape }}</span>
+                      {%- endif -%}
+                      {%- if b.verified -%}
+                        <span class="av-testimonials__verified">{{ icon_verified }}{{ label_verified }}</span>
+                      {%- endif -%}
+                      {%- if b.source_url != blank -%}
+                        <a class="av-testimonials__source" href="{{ b.source_url }}" target="_blank" rel="noopener">
+                          {{- label_source -}}
+                          <span class="av-visually-hidden"> {{ label_new_tab }}</span>
+                        </a>
+                      {%- endif -%}
+                    </span>
+                  </figcaption>
+                {%- endif -%}
+              </figure>
+            </div>
+          {%- endfor -%}
+        </div>
+        {%- if s.show_dots -%}
+          <div class="av-slider__dots" data-slider-dots></div>
+        {%- endif -%}
+      </anvil-slider>
+      <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+      {%- if s.show_disclosure or all_sourced == false -%}
+        <p class="av-testimonials__note av-align--{{ s.head_align }}">{{ disclosure }}</p>
+      {%- endif -%}
+      {%- if request.design_mode and stars_hidden -%}
+        <p class="av-testimonials__note av-example-note av-align--{{ s.head_align }}">{{ 'anvil.editor.review_stars_no_source' | t }}</p>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Cards in view, peek, arrows, dots and the pause button's room come from <anvil-slider> (snippets/anvil-slider-attrs);
+   card boxes from .av-surface. */
+.av-testimonials__slide{display:flex}
+.av-testimonials__card{display:flex;flex:1;flex-direction:column;align-items:flex-start;gap:var(--av-space-4);min-width:0;padding:var(--av-space-6);border-radius:var(--av-radius-card);text-align:start}
+/* The track clips its overflow: a boxed card keeps room for its shadow, an unboxed one for focus rings. */
+.av-testimonials--boxed > [data-slider-track]{padding:var(--av-space-2) var(--av-space-3) var(--av-space-5);scroll-padding-inline:var(--av-space-3)}
+.av-testimonials:not(.av-testimonials--boxed) .av-testimonials__card{padding:var(--av-space-2);border-radius:0}
+.av-testimonials--center .av-testimonials__card{align-items:center;text-align:center}
+.av-testimonials--right .av-testimonials__card{align-items:flex-end;text-align:end}
+/* Capped so a one-card row never blows the photo up past the screen; sizes is capped to match. */
+.av-testimonials__media{flex:none;width:100%;max-width:400px}
+.av-testimonials__stars{display:flex;line-height:0}
+.av-testimonials__mark{display:inline-flex;color:var(--av-accent)}
+.av-testimonials__mark svg{width:28px;height:28px}
+.av-testimonials__quote{max-width:100%;font-size:var(--av-text-md);line-height:1.6;overflow-wrap:break-word}
+.av-testimonials--q-sm .av-testimonials__quote{font-size:var(--av-text-sm)}
+.av-testimonials--q-lg .av-testimonials__quote{font-size:var(--av-text-lg);line-height:1.5}
+.av-testimonials__by{display:flex;align-items:center;gap:var(--av-space-3);max-width:100%;margin-top:auto}
+.av-testimonials--center .av-testimonials__by{flex-direction:column}
+.av-testimonials--right .av-testimonials__by{flex-direction:row-reverse}
+.av-testimonials__avatar{flex:none;display:grid;place-items:center;width:48px;height:48px;overflow:hidden;border-radius:50%;background:rgb(var(--av-fg-rgb) / 0.08);font-size:var(--av-text-sm);font-weight:600;line-height:1}
+.av-testimonials__avatar img{width:100%;height:100%;object-fit:cover}
+.av-testimonials__who{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+.av-testimonials--center .av-testimonials__who{align-items:center}
+.av-testimonials--right .av-testimonials__who{align-items:flex-end}
+.av-testimonials__name{font-size:var(--av-text-sm);font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.av-testimonials__role,.av-testimonials__verified,.av-testimonials__source{font-size:var(--av-text-xs);line-height:1.4;color:var(--av-fg-muted)}
+.av-testimonials__verified{display:inline-flex;align-items:center;gap:var(--av-space-1)}
+.av-testimonials__verified svg{flex:none;color:var(--av-accent)}
+.av-testimonials__source{display:inline-flex;align-items:center;min-height:24px;text-decoration:underline;text-underline-offset:0.15em}
+.av-testimonials__source:hover{color:var(--av-fg)}
+.av-testimonials__empty{margin:0}
+.av-testimonials__note{margin-top:var(--av-space-4);font-size:var(--av-text-xs);color:var(--av-fg-muted)}
+@media (min-width: 990px){
+.av-testimonials--boxed:not(.av-testimonials--dense) .av-testimonials__card{padding:var(--av-space-7)}
+}
+/* Four cards below 1200 px leave little room for the quote: a tighter card padding there. */
+@media (min-width: 990px) and (max-width: 1199.98px){
+.av-testimonials--dense.av-testimonials--boxed .av-testimonials__card{padding:var(--av-space-4)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Testimonials",
+  "max_blocks": 24,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Testimonials" },
+    { "type": "paragraph", "content": "Each card is a quote you type in. Use only words real customers sent you, with their permission. For reviews collected by a review app, use that app's own block or section." },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "3",
+      "info": "In a slider this is the number in view. Phones show one card with the next one peeking in; tablets show up to 3, and 4 become 2."
+    },
+    {
+      "type": "range",
+      "id": "autoplay",
+      "label": "Auto-advance every",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 0,
+      "info": "0 turns it off. It pauses on hover and focus, starts paused when the shopper prefers reduced motion, and always shows a pause button."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true,
+      "info": "On tablets and desktops, beside the cards while they scroll. Phones swipe or use the dots."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "Show dots",
+      "default": true
+    },
+    { "type": "header", "content": "Cards" },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "Card style",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "flat", "label": "No box" },
+        { "value": "outlined", "label": "Outlined" },
+        { "value": "tinted", "label": "Tinted" },
+        { "value": "raised", "label": "Shadow" }
+      ],
+      "default": "outlined",
+      "info": "\"Same as theme cards\" follows Theme settings > Cards."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Card text alignment",
+      "default": "left"
+    },
+    {
+      "type": "select",
+      "id": "quote_size",
+      "label": "Quote size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_quote_icon",
+      "label": "Show a quotation mark",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" }
+      ],
+      "default": "1:1"
+    },
+    { "type": "header", "content": "Disclosure" },
+    {
+      "type": "checkbox",
+      "id": "show_disclosure",
+      "label": "Show a disclosure line",
+      "default": true,
+      "info": "Tells shoppers that the store entered these quotes. The line stays on while any card has no source link."
+    },
+    {
+      "type": "text",
+      "id": "disclosure",
+      "label": "Disclosure text",
+      "info": "Leave empty for the default: “Quotes shared by customers; entered by the store.” Say plainly that the store entered these quotes; do not call them verified, independent or unedited unless that is true."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "card",
+      "name": "Testimonial",
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "A quote you type in. Shoppers read it as a real customer's words, so enter only what a customer actually told you, with their permission."
+        },
+        {
+          "type": "richtext",
+          "id": "quote",
+          "label": "Quote",
+          "default": "<p>Example: replace with words a real customer sent you, and ask before you publish them.</p>",
+          "info": "You may shorten a quote, but never change what the customer meant or add words they did not say."
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Customer name",
+          "default": "Example name",
+          "info": "The name the customer agreed to show, for example a first name and initial."
+        },
+        {
+          "type": "text",
+          "id": "role",
+          "label": "Role or detail",
+          "default": "Example: their city or job",
+          "info": "Something true they agreed to share. Do not write “verified” here; use the checkbox below."
+        },
+        {
+          "type": "image_picker",
+          "id": "avatar",
+          "label": "Avatar",
+          "info": "A photo the customer agreed to share. Without one, their initials are shown."
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Card image",
+          "info": "Optional, for example a photo the customer sent of the product in use. Use only images you have the rights to."
+        },
+        {
+          "type": "range",
+          "id": "rating",
+          "label": "Stars",
+          "min": 0,
+          "max": 5,
+          "step": 0.5,
+          "default": 0,
+          "info": "The rating this customer gave where they posted the review. Shown only with a source link; 0 hides the stars."
+        },
+        {
+          "type": "url",
+          "id": "source_url",
+          "label": "Link to this review",
+          "info": "Where the customer posted this review, so shoppers can check it. Stars need it."
+        },
+        {
+          "type": "checkbox",
+          "id": "verified",
+          "label": "Show “Verified purchase”",
+          "default": false,
+          "info": "Warning: tick only after matching this quote to a real order in your admin. Shoppers read it as proof that this person bought from you."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Testimonials",
+      "settings": {
+        "heading": "What customers <strong>say</strong>"
+      },
+      "blocks": [
+        {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: replace with words a real customer sent you, and ask before you publish them.</p>",
+            "name": "Example name",
+            "role": "Example: their city"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: a specific detail, such as what they bought and what changed for them, helps shoppers more than general praise.</p>",
+            "name": "Example name",
+            "role": "Example: what they bought"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: keep the customer's own words. Shorten it if you need to, but never change what they meant.</p>",
+            "name": "Example name",
+            "role": "Example: their job"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: add a card image only if the customer sent you the photo or agreed to share it.</p>",
+            "name": "Example name",
+            "role": "Example: how long they have used it"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

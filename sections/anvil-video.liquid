@@ -1,0 +1,273 @@
+{%- liquid
+  assign s = section.settings
+
+  # The source select decides which picker is read, so a link left behind after switching to an upload (or the
+  # reverse) never shows. kind: video (Shopify-hosted), external (YouTube/Vimeo facade) or none (placeholder).
+  assign source = s.source | default: 'upload'
+  assign media_video = nil
+  assign media_url = nil
+  assign media_cover = nil
+  assign kind = 'none'
+  if source == 'url'
+    if s.video_url != blank
+      assign media_url = s.video_url
+      assign kind = 'external'
+    endif
+    assign media_cover = s.cover
+  elsif s.video != blank
+    assign media_video = s.video
+    assign kind = 'video'
+  endif
+
+  # Muted looping play is for uploaded videos only; anvil-media marks the box data-anvil-autoplay and keeps the
+  # controls, and anvil-core.js plays it only while in view and when motion is allowed.
+  assign play_muted = false
+  if kind == 'video' and s.video_autoplay
+    assign play_muted = true
+  endif
+
+  # The play button and the player are named after the video: the title setting, else the section heading's text.
+  # Entities are decoded so t and escape do not double them; &amp; goes last, so a typed "&lt;" stays as text.
+  assign title = s.title | strip
+  if title == blank
+    assign title = s.heading | strip_html | replace: '&nbsp;', ' ' | replace: '&quot;', '"' | replace: '&#39;', "'" | replace: '&lt;', '<' | replace: '&gt;', '>' | replace: '&amp;', '&' | strip
+  endif
+
+  # Shape: anvil-media draws every ratio, 9:16 included; ratio_key names the shape class for the height caps below.
+  assign media_ratio = s.image_ratio | default: '16:9'
+  assign ratio_key = media_ratio | replace: ':', '-'
+
+  # Image widths and sizes for link covers. Portrait and square shapes are capped by the screen height from 750 px
+  # (see the stylesheet), so their sizes use vh there.
+  case ratio_key
+    when '9-16'
+      assign media_widths = '450, 600, 750, 1100'
+      assign media_sizes = '(min-width: 750px) 48vh, 100vw'
+    when '4-5'
+      assign media_widths = '450, 600, 750, 1100, 1500'
+      assign media_sizes = '(min-width: 750px) 68vh, 100vw'
+    when '1-1'
+      assign media_widths = '600, 750, 1100, 1500, 1800'
+      assign media_sizes = '(min-width: 750px) 85vh, 100vw'
+    else
+      case s.width
+        when 'full'
+          assign cap = 0
+          assign media_widths = '750, 1100, 1500, 1800, 2200'
+        when 'narrow'
+          assign cap = settings.narrow_width | default: 0
+          assign media_widths = '550, 750, 1100, 1500'
+        else
+          assign cap = settings.page_width | default: 0
+          assign media_widths = '750, 1100, 1500, 1800'
+      endcase
+      assign media_sizes = '100vw'
+      if cap > 0
+        assign media_sizes = '(min-width: ' | append: cap | append: 'px) ' | append: cap | append: 'px, 100vw'
+      endif
+  endcase
+
+  # An uploaded video requests only its poster from these widths: video_tag takes the last one as a single image
+  # with no srcset, the same file on every screen. That poster is the likely LCP image on phones, so it is held to
+  # 1100 px (16:9 at page or narrow width, 9:16) or 1500 px (full width, 1:1, 4:5); a little soft on a wide desktop
+  # screen until it plays.
+  if kind == 'video'
+    if ratio_key == '9-16'
+      assign media_widths = '1100'
+    elsif ratio_key == '16-9' and s.width != 'full'
+      assign media_widths = '1100'
+    else
+      assign media_widths = '1500'
+    endif
+  endif
+
+  # First two template sections (snippets/anvil-above-fold): eager. priority (fetchpriority high + preload) is passed
+  # for the first section; anvil-media applies it to an image and to a link's cover, not to an upload's poster
+  # (video_tag writes that one).
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign media_loading = 'eager'
+  if fold == 'lazy'
+    assign media_loading = 'lazy'
+  endif
+  assign media_priority = false
+  if fold == 'lcp'
+    assign media_priority = true
+  endif
+
+  assign wrap_class = 'av-video av-video--' | append: ratio_key
+  if s.bleed and s.width == 'full' and ratio_key == '16-9'
+    assign wrap_class = wrap_class | append: ' av-video--bleed'
+  endif
+
+  # anvil-media names the facade's iframe with alt (the title) and, through play_label, its play link too.
+  assign play_named = ''
+  if kind == 'external' and title != blank
+    assign play_named = 'anvil.media.play_title' | t: title: title
+  endif
+
+  capture media_html
+    render 'anvil-media', video: media_video, video_url: media_url, image: media_cover, ratio: media_ratio, widths: media_widths, sizes: media_sizes, loading: media_loading, priority: media_priority, alt: title, play_label: play_named, placeholder: 'lifestyle-1', autoplay: play_muted, class: 'av-video__media'
+  endcapture
+
+  # An uploaded video's own aria-label comes from video_tag (the file's alt text in Content > Files); without a
+  # caption the figure also carries the typed title.
+  assign figure_label = ''
+  if kind == 'video' and s.caption == blank
+    assign figure_label = s.title | strip
+  endif
+  assign caption_align = s.text_align | default: 'center'
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-video' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    <div class="{{ wrap_class }}">
+      <figure class="av-video__figure"{% if figure_label != blank %} aria-label="{{ figure_label | escape }}"{% endif %}>
+        {{- media_html -}}
+        {%- if s.caption != blank -%}
+          <figcaption class="av-video__caption av-video__caption--{{ caption_align }}">{{ s.caption }}</figcaption>
+        {%- endif -%}
+      </figure>
+      {%- if request.design_mode -%}
+        {%- if kind == 'none' -%}
+          <p class="av-video__note av-example-note">{{ 'anvil.editor.video_empty' | t }}</p>
+        {%- elsif kind == 'external' and media_cover == blank -%}
+          <p class="av-video__note av-example-note">{{ 'anvil.editor.video_no_cover' | t }}</p>
+        {%- endif -%}
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+.av-video{display:block}
+.av-video__figure{margin:0 auto;max-width:100%}
+.av-video__caption{margin-top:var(--av-space-3);font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted);overflow-wrap:anywhere}
+.av-video__caption--left{text-align:left}
+.av-video__caption--center{text-align:center}
+.av-video__caption--right{text-align:right}
+.av-video__caption a{color:inherit;text-decoration:underline;text-underline-offset:0.15em}
+.av-video__note{margin:var(--av-space-3) 0 0;text-align:center}
+/* Edge to edge (full width, 16:9): the box grows into the gutters; the frame's corners, border and shadow go. */
+.av-video--bleed .av-video__media{width:calc(100% + 2 * var(--av-gutter));margin-inline:calc(var(--av-gutter) * -1);border-width:0;border-radius:0;box-shadow:none}
+/* From 750 px, portrait and square boxes stay within the screen height (svh where supported). */
+@media (min-width: 750px){
+.av-video--9-16 .av-video__figure{max-width:min(100%,calc(85vh * 9 / 16));max-width:min(100%,calc(85svh * 9 / 16))}
+.av-video--4-5 .av-video__figure{max-width:min(100%,calc(85vh * 4 / 5));max-width:min(100%,calc(85svh * 4 / 5))}
+.av-video--1-1 .av-video__figure{max-width:min(100%,85vh);max-width:min(100%,85svh)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Video",
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Video" },
+    {
+      "type": "select",
+      "id": "source",
+      "label": "Source",
+      "options": [
+        { "value": "upload", "label": "Uploaded video" },
+        { "value": "url", "label": "YouTube or Vimeo link" }
+      ],
+      "default": "upload"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "Video",
+      "info": "Shoppers see the cover image set on the video in Content > Files. If people speak in it, add captions to the video file itself.",
+      "visible_if": "{{ section.settings.source == 'upload' }}"
+    },
+    {
+      "type": "video_url",
+      "id": "video_url",
+      "label": "YouTube or Vimeo link",
+      "accept": ["youtube", "vimeo"],
+      "info": "Nothing loads from YouTube or Vimeo until the shopper presses play. If people speak in the video, turn on captions there.",
+      "visible_if": "{{ section.settings.source == 'url' }}"
+    },
+    {
+      "type": "image_picker",
+      "id": "cover",
+      "label": "Cover image",
+      "info": "Shown with the play button until the shopper presses play. Without one, a plain placeholder shows.",
+      "visible_if": "{{ section.settings.source == 'url' }}"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Video title",
+      "placeholder": "For example: How to set it up",
+      "info": "Read by screen readers on the YouTube or Vimeo play button and player, and around an uploaded video that has no caption (also add alt text to the video in Content > Files). Describe what it really shows. Blank uses the heading for links."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "16:9", "label": "Landscape (16:9)" },
+        { "value": "9:16", "label": "Vertical (9:16)" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" }
+      ],
+      "default": "16:9",
+      "info": "The video is cropped to fill the shape. On desktop, portrait and square videos stay within the screen height."
+    },
+    {
+      "type": "checkbox",
+      "id": "video_autoplay",
+      "label": "Play uploaded videos muted while in view",
+      "default": false,
+      "info": "Only when the shopper allows motion. Controls stay visible, so it can always be paused. YouTube and Vimeo videos always wait for a tap.",
+      "visible_if": "{{ section.settings.source == 'upload' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "bleed",
+      "label": "Edge to edge",
+      "default": false,
+      "info": "The video reaches the screen edges, without rounded corners. The heading and caption keep the page margins.",
+      "visible_if": "{{ section.settings.width == 'full' and section.settings.image_ratio == '16:9' }}"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "caption",
+      "label": "Caption",
+      "info": "Shown under the video. Call a clip a customer video or a real result only when it is one."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Caption alignment",
+      "default": "center"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Video",
+      "settings": {
+        "heading": "See it in <strong>action</strong>",
+        "caption": "Example: say in one line what the video shows"
+      }
+    }
+  ]
+}
+{% endschema %}

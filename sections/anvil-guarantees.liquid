@@ -1,0 +1,491 @@
+{%- liquid
+  assign s = section.settings
+
+  assign layout = s.layout | default: 'stacked'
+  assign cols_mobile = s.cols_mobile | default: '1' | plus: 0 | at_least: 1 | at_most: 2
+
+  # Cards shoppers see: one with no title, no text and no image alt is skipped (same test as the card loop below).
+  assign visible = 0
+  for block in section.blocks
+    assign pre_title = block.settings.heading | strip
+    if pre_title != blank or block.settings.text != blank or block.settings.icon_image.alt != blank
+      assign visible = visible | plus: 1
+    endif
+  endfor
+  # Cards that render: all of them in the editor (empty ones stay selectable), the visible ones on the storefront.
+  assign rendered = visible
+  if request.design_mode
+    assign rendered = section.blocks.size
+  endif
+
+  # Match item count: one row of up to four cards; five or six cards wrap into rows of three.
+  if s.cols_desktop == blank or s.cols_desktop == 'auto'
+    assign cols_desktop = rendered | at_least: 1
+    if cols_desktop > 4
+      assign cols_desktop = 3
+    endif
+  else
+    assign cols_desktop = s.cols_desktop | plus: 0 | at_least: 1 | at_most: 4
+  endif
+  # Tablets follow the shared grid (.av-grid: up to 3, 4 becomes 2); with the icon beside the text they stop at 2.
+
+  # Card surface from the shared utility (blank = no box).
+  capture surface
+    render 'anvil-surface', style: s.card_style
+  endcapture
+  assign surface = surface | strip
+
+  assign icon_px = s.icon_size | default: 28
+  assign framed = false
+  if s.icon_style != blank and s.icon_style != 'plain'
+    assign framed = true
+  endif
+  # Uploaded images skip the frame and take its size instead, so a seal or badge artwork reads at full size.
+  assign img_px = icon_px
+  if framed
+    assign img_px = icon_px | times: 7 | divided_by: 4
+  endif
+  assign img_px_2x = img_px | times: 2
+  assign img_widths = img_px | append: ', ' | append: img_px_2x
+  assign img_sizes = img_px | append: 'px'
+
+  assign list_class = 'av-guarantees av-grid av-grid--flex av-grid--center av-grid--c' | append: cols_desktop | append: ' av-grid--m' | append: cols_mobile
+  assign list_class = list_class | append: ' av-guarantees--m' | append: cols_mobile
+  case layout
+    when 'inline'
+      assign list_class = list_class | append: ' av-guarantees--inline'
+    when 'inline_mobile'
+      assign list_class = list_class | append: ' av-guarantees--inline-m'
+  endcase
+  if surface != blank
+    assign list_class = list_class | append: ' av-guarantees--boxed'
+  endif
+  if s.text_align == 'left' or s.text_align == 'right'
+    assign list_class = list_class | append: ' av-guarantees--align-' | append: s.text_align
+  endif
+
+  # Icon frame from the shared utility (plain | circle | square | ring | solid); uploaded images skip it.
+  assign icon_frame = 'av-icon-frame av-icon-frame--' | append: s.icon_style
+  if s.icon_color == 'text'
+    assign icon_frame = icon_frame | append: ' av-icon-frame--text'
+  endif
+
+  assign list_style = '--av-icon-size: ' | append: icon_px | append: 'px; --av-guarantees-img: ' | append: img_px | append: 'px;'
+
+  # Small icon images load eagerly in the first two template sections (snippets/anvil-above-fold), lazily below.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign img_loading = 'eager'
+  if fold contains 'lazy'
+    assign img_loading = 'lazy'
+  endif
+  assign learn_more = 'anvil.a11y.learn_more' | t
+-%}
+{%- if rendered > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-guarantees' %}>
+  <div class="av-section__inner">
+    {%- if rendered > 0 -%}
+      {%- assign fallback = 'anvil.guarantees.heading' | t -%}
+      {% render 'anvil-section-head', section: section, fallback: fallback %}
+      <ul class="{{ list_class }}" role="list" style="{{ list_style }}">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign b = block.settings
+            assign title = b.heading | strip
+
+            assign has_text = false
+            if title != blank or b.text != blank
+              assign has_text = true
+            endif
+            assign has_icon = false
+            if b.icon_image != blank
+              assign has_icon = true
+            elsif b.icon != blank and b.icon != 'none'
+              assign has_icon = true
+            endif
+
+            # The image is decorative beside words; alone it speaks with its own alt text.
+            assign img_alt = ''
+            unless has_text
+              assign img_alt = b.icon_image.alt | default: ''
+            endunless
+
+            # A card that tells the shopper nothing is skipped; the editor keeps it selectable.
+            unless has_text or img_alt != blank or request.design_mode
+              continue
+            endunless
+
+            # Policy links come from Settings > Policies and show only once that policy has text.
+            assign pol = nil
+            case b.link_type
+              when 'refund'
+                assign pol = shop.refund_policy
+              when 'shipping'
+                assign pol = shop.shipping_policy
+              when 'privacy'
+                assign pol = shop.privacy_policy
+              when 'terms'
+                assign pol = shop.terms_of_service
+            endcase
+            assign link_url = ''
+            assign link_text = b.link_label | strip
+            if pol != nil and pol.url != blank and pol.body != blank
+              assign link_url = pol.url
+              if link_text == blank
+                assign link_text = pol.title
+              endif
+            elsif b.link_type == 'custom' and b.link != blank
+              assign link_url = b.link
+              if link_text == blank
+                assign link_text = learn_more
+              endif
+            endif
+
+            assign title_id = 'av-guarantees-' | append: section.id | append: '-' | append: block.id
+
+            # The editor marks a card shoppers will not see (icon only, image without alt, or link only).
+            assign show_note = false
+            if request.design_mode and has_text == false and img_alt == blank
+              assign show_note = true
+            endif
+          -%}
+          <li class="av-guarantees__item {{ surface }}" {{ block.shopify_attributes }}>
+            {%- if has_icon -%}
+              {%- if b.icon_image != blank -%}
+                <span class="av-guarantees__icon av-guarantees__icon--img">
+                  {{- b.icon_image | image_url: width: img_px_2x | image_tag: widths: img_widths, sizes: img_sizes, loading: img_loading, alt: img_alt -}}
+                </span>
+              {%- else -%}
+                <span class="av-guarantees__icon {{ icon_frame }}">{% render 'anvil-icon', name: b.icon, size: icon_px %}</span>
+              {%- endif -%}
+            {%- endif -%}
+            {%- if has_text or link_url != '' or show_note -%}
+              <div class="av-guarantees__body">
+                {%- if show_note -%}
+                  <p class="av-guarantees__note av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+                {%- endif -%}
+                {%- if title != blank -%}
+                  <h3 class="av-guarantees__title" id="{{ title_id }}">{{ title | escape }}</h3>
+                {%- endif -%}
+                {%- if b.text != blank -%}
+                  <div class="av-guarantees__text av-rte">{{ b.text }}</div>
+                {%- endif -%}
+                {%- if link_url != '' -%}
+                  <a class="av-guarantees__link" href="{{ link_url }}"{% if title != blank %} id="{{ title_id }}-link" aria-labelledby="{{ title_id }}-link {{ title_id }}"{% endif %}>
+                    {{- link_text | escape -}}
+                  </a>
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- else -%}
+      {% render 'anvil-section-head', section: section %}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Columns and the centred rows come from the shared .av-grid; boxes from .av-surface; icon frames from .av-icon-frame. */
+.av-guarantees{--av-guarantees-pad:var(--av-space-5);--av-guarantees-align:center;--av-guarantees-text:center;--av-grid-space:var(--av-space-4);padding:0;list-style:none}
+.av-guarantees--m2{--av-grid-space:var(--av-space-3);--av-guarantees-pad:var(--av-space-4)}
+.av-guarantees--align-left{--av-guarantees-align:flex-start;--av-guarantees-text:start}
+.av-guarantees--align-right{--av-guarantees-align:flex-end;--av-guarantees-text:end}
+.av-guarantees__item{display:flex;flex-direction:column;align-items:var(--av-guarantees-align);gap:var(--av-space-4);margin:0;text-align:var(--av-guarantees-text)}
+.av-guarantees--inline .av-guarantees__item,.av-guarantees--inline-m .av-guarantees__item{flex-direction:row;align-items:flex-start;text-align:start}
+.av-guarantees--m2.av-guarantees--inline .av-guarantees__item,.av-guarantees--m2.av-guarantees--inline-m .av-guarantees__item{flex-direction:column;align-items:var(--av-guarantees-align);text-align:var(--av-guarantees-text)}
+.av-guarantees--boxed .av-guarantees__item{padding:var(--av-guarantees-pad)}
+.av-guarantees__icon--img{flex:none;display:inline-flex}
+.av-guarantees__icon > img{display:block;width:var(--av-guarantees-img);height:var(--av-guarantees-img);object-fit:contain}
+.av-guarantees__body{flex:1 1 auto;min-width:0;max-width:100%}
+.av-guarantees__body > * + *{margin-top:var(--av-space-2)}
+.av-guarantees__body > * + .av-guarantees__link{margin-top:var(--av-space-3)}
+.av-guarantees__note{margin:0}
+.av-guarantees__title{margin:0;font-size:var(--av-text-lg);line-height:1.3;overflow-wrap:break-word;text-wrap:balance}
+.av-guarantees .av-guarantees__text{font-size:var(--av-text-sm);line-height:1.55;color:var(--av-fg-muted)}
+.av-guarantees__link{display:inline-flex;align-items:center;min-height:24px;font-size:var(--av-text-sm);font-weight:600;color:inherit;text-decoration:underline;text-underline-offset:0.2em}
+.av-guarantees__link:hover{color:var(--av-accent)}
+@media (min-width: 750px){
+.av-guarantees,.av-guarantees--m2{--av-grid-space:initial;--av-guarantees-pad:var(--av-space-5)}
+.av-guarantees--inline.av-grid--c3{--av-cols-tablet:2}
+.av-guarantees--m2.av-guarantees--inline .av-guarantees__item{flex-direction:row;align-items:flex-start;text-align:start}
+.av-guarantees--inline-m .av-guarantees__item{flex-direction:column;align-items:var(--av-guarantees-align);text-align:var(--av-guarantees-text)}
+}
+@media (min-width: 990px){
+.av-guarantees,.av-guarantees--m2{--av-guarantees-pad:var(--av-space-6)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Guarantees",
+  "max_blocks": 6,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Guarantees" },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "auto", "label": "Match item count" },
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "auto",
+      "info": "Match item count puts up to four cards in one row and five or six in rows of three, counting only cards shoppers see. Tablets show up to 3; 4 columns become 2, and 2 when the icon sits beside the text."
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Card layout",
+      "options": [
+        { "value": "stacked", "label": "Icon above text" },
+        { "value": "inline", "label": "Icon beside text" },
+        { "value": "inline_mobile", "label": "Beside on phones, above on larger screens" }
+      ],
+      "default": "inline_mobile",
+      "info": "With two columns on phones the icon always sits above the text there."
+    },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "Card style",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "flat", "label": "No box" },
+        { "value": "outlined", "label": "Outlined" },
+        { "value": "tinted", "label": "Tinted" },
+        { "value": "raised", "label": "Shadow" }
+      ],
+      "default": "outlined",
+      "info": "\"Same as theme cards\" follows Theme settings > Cards."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Text alignment",
+      "default": "center",
+      "info": "Applies when the icon sits above the text."
+    },
+    { "type": "header", "content": "Icons" },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon size",
+      "min": 16,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "select",
+      "id": "icon_style",
+      "label": "Icon style",
+      "options": [
+        { "value": "plain", "label": "Plain" },
+        { "value": "circle", "label": "Tinted circle" },
+        { "value": "square", "label": "Tinted square" },
+        { "value": "ring", "label": "Ring" },
+        { "value": "solid", "label": "Solid circle" }
+      ],
+      "default": "circle",
+      "info": "Uploaded icon images skip the frame and show at its size. A ring or an award icon is decoration only: never pair it with a title that suggests a certification, award or endorsement you do not hold."
+    },
+    {
+      "type": "select",
+      "id": "icon_color",
+      "label": "Icon colour",
+      "options": [
+        { "value": "accent", "label": "Accent" },
+        { "value": "text", "label": "Text colour" }
+      ],
+      "default": "accent"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Guarantee",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "shield-check", "label": "Shield check" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "lock", "label": "Lock" },
+            { "value": "lock-keyhole", "label": "Lock with keyhole" },
+            { "value": "badge-check", "label": "Badge check" },
+            { "value": "check-circle", "label": "Check in circle" },
+            { "value": "check", "label": "Check" },
+            { "value": "award", "label": "Award" },
+            { "value": "medal", "label": "Medal" },
+            { "value": "trophy", "label": "Trophy" },
+            { "value": "rotate-ccw", "label": "Return arrow" },
+            { "value": "refresh-cw", "label": "Refresh" },
+            { "value": "undo", "label": "Undo" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "package", "label": "Package" },
+            { "value": "package-check", "label": "Package checked" },
+            { "value": "plane", "label": "Plane" },
+            { "value": "ship", "label": "Ship" },
+            { "value": "globe", "label": "Globe" },
+            { "value": "map-pin", "label": "Map pin" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "timer", "label": "Timer" },
+            { "value": "calendar", "label": "Calendar" },
+            { "value": "hourglass", "label": "Hourglass" },
+            { "value": "credit-card", "label": "Credit card" },
+            { "value": "wallet", "label": "Wallet" },
+            { "value": "banknote", "label": "Banknote" },
+            { "value": "circle-dollar-sign", "label": "Dollar in circle" },
+            { "value": "receipt", "label": "Receipt" },
+            { "value": "piggy-bank", "label": "Piggy bank" },
+            { "value": "tag", "label": "Tag" },
+            { "value": "percent", "label": "Percent" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "heart", "label": "Heart" },
+            { "value": "hand-heart", "label": "Hand with heart" },
+            { "value": "thumbs-up", "label": "Thumbs up" },
+            { "value": "star", "label": "Star" },
+            { "value": "users", "label": "People" },
+            { "value": "user-check", "label": "Person checked" },
+            { "value": "headphones", "label": "Headphones" },
+            { "value": "message-circle", "label": "Chat bubble" },
+            { "value": "mail", "label": "Mail" },
+            { "value": "phone", "label": "Phone" },
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "recycle", "label": "Recycle" },
+            { "value": "sparkles", "label": "Sparkles" },
+            { "value": "zap", "label": "Lightning" },
+            { "value": "infinity", "label": "Infinity" },
+            { "value": "wrench", "label": "Wrench" },
+            { "value": "scale", "label": "Scale" },
+            { "value": "info", "label": "Info" }
+          ],
+          "default": "shield-check",
+          "info": "Icons are decoration only: an award, medal, trophy or badge icon must not suggest a certification, award or endorsement you do not hold."
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "Custom icon image",
+          "info": "Replaces the icon. Upload only seals, logos or artwork you are entitled to use, never a badge for a certification you do not hold. Its alt text is read only when the card has no title or text, so put anything the image says into the title or text."
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Example: 30-day returns",
+          "info": "Must match your policies: promise only what your refund, shipping and payment terms actually give."
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "<p>Example: replace with a guarantee your policies back up.</p>",
+          "info": "Must match your policies. Put the conditions here, such as the return window or the order value free shipping needs."
+        },
+        {
+          "type": "select",
+          "id": "link_type",
+          "label": "Link to",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "refund", "label": "Refund policy" },
+            { "value": "shipping", "label": "Shipping policy" },
+            { "value": "privacy", "label": "Privacy policy" },
+            { "value": "terms", "label": "Terms of service" },
+            { "value": "custom", "label": "Custom link" }
+          ],
+          "default": "none",
+          "info": "Linking the policy that backs the promise lets shoppers check it. Policies come from Settings > Policies and show only once written."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Custom link",
+          "info": "Used when \"Link to\" is set to Custom link.",
+          "visible_if": "{{ block.settings.link_type == 'custom' }}"
+        },
+        {
+          "type": "text",
+          "id": "link_label",
+          "label": "Link label",
+          "info": "Leave blank to use the policy's name, or \"Learn more\" for a custom link."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Guarantees",
+      "settings": {
+        "heading": "What we <strong>promise</strong>"
+      },
+      "blocks": [
+        {
+          "type": "item",
+          "settings": {
+            "icon": "rotate-ccw",
+            "text": "<p>Example: replace with the return window and conditions in your refund policy.</p>",
+            "heading": "Example: 30-day returns",
+            "link_type": "refund"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "icon": "truck",
+            "text": "<p>Example: replace with the delivery times your shipping policy states.</p>",
+            "heading": "Example: tracked shipping",
+            "link_type": "shipping"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "icon": "lock",
+            "text": "<p>Example: describe in plain words what protects a payment in your store.</p>",
+            "heading": "Example: secure checkout"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

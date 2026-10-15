@@ -19,8 +19,8 @@
 #      them while a verbatim reference class still does.
 #   2. File-name prefix rule for sections/ snippets/ blocks/ assets/:
 #      anvil-*, _anvil-*, main-*, plus the Shopify-fixed names
-#      header-group.json, footer-group.json, overlay-group.json, apps.liquid,
-#      _blocks.liquid. No sub-directories.
+#      header-group.json, footer-group.json, overlay-group.json, apps.liquid.
+#      No sub-directories.
 #   3. Size rules: Liquid, asset, JSON template and section-group files
 #      <= 256 KB; config/settings_schema.json <= 512 KB;
 #      config/settings_data.json and locales/*.json <= 1.5 MB.
@@ -192,7 +192,6 @@ for dir in sections snippets blocks assets; do
     ok=0
     case "$dir/$base" in
       sections/header-group.json|sections/footer-group.json|sections/overlay-group.json|sections/apps.liquid) ok=1 ;;
-      blocks/_blocks.liquid) ok=1 ;;
     esac
     if [ "$ok" = 0 ]; then
       note "$entry" 1 "file name must start with anvil-, _anvil- or main- (or be a Shopify-fixed name)"

@@ -1,0 +1,11 @@
+# Files Shopify CLI skips on theme push, pull and dev (root of the theme; simple names,
+# wildcards and /regular expressions/ per shopify.dev "Shopify CLI for themes").
+# Only the theme folders belong on a store; the repo's tooling and docs stay local.
+/^(docs|scripts|tests|dist|\.harness|\.github|node_modules)\//
+package.json
+package-lock.json
+shopify.theme.toml
+README.md
+CHANGELOG.md
+LICENSE
+NOTICE

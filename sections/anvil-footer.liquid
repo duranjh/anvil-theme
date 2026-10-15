@@ -127,7 +127,7 @@
                       assign img_widths = img_w | append: ', ' | append: img_w2
                       assign img_alt = block.settings.image.alt
                       if block.settings.link != blank
-                        assign img_alt = block.settings.link_label | default: block.settings.image.alt | default: shop.name
+                        assign img_alt = block.settings.link_name | default: block.settings.image.alt | default: shop.name
                       endif
                     -%}
                     {%- if block.settings.link != blank -%}
@@ -162,7 +162,7 @@
                   {%- else -%}
                     <div class="av-footer__collection">
                       {% render 'anvil-media', ratio: '4:5', placeholder: 'collection-1' %}
-                      <span class="av-footer__collection-title">{{ 'anvil.footer.example_collection' | t }}</span>
+                      <span class="av-footer__collection-title">{{ 'anvil.card.example_collection' | t }}</span>
                     </div>
                   {%- endif -%}
               {%- endcase -%}
@@ -236,141 +236,41 @@
   </div>
 </div>
 {% stylesheet %}
-  .av-footer {
-    display: block;
-    font-size: var(--av-text-sm);
-  }
-  .av-footer__grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--av-space-6);
-    padding-bottom: var(--av-space-6);
-  }
-  .av-footer__heading {
-    margin: 0 0 var(--av-space-3);
-    font-size: var(--av-text-md);
-    font-weight: 700;
-  }
-  .av-footer__links li + li {
-    margin-top: var(--av-space-2);
-  }
-  .av-footer__link {
-    text-decoration: none;
-  }
-  .av-footer__link:hover {
-    text-decoration: underline;
-  }
-  .av-footer__text {
-    font-size: inherit;
-  }
-  .av-footer__brand-logo {
-    display: inline-block;
-    margin-bottom: var(--av-space-3);
-  }
-  .av-footer__brand-logo img {
-    width: var(--av-logo-w);
-    max-width: 100%;
-    height: auto;
-  }
-  .av-footer__socials {
-    margin-top: var(--av-space-3);
-  }
-  .av-footer__newsletter {
-    margin-top: var(--av-space-3);
-  }
-  .av-footer__image img,
-  .av-footer__placeholder {
-    max-width: 100%;
-    height: auto;
-    border-radius: var(--av-radius-media);
-  }
-  .av-footer__image--placeholder {
-    max-width: 240px;
-    aspect-ratio: 4 / 3;
-    background: rgb(var(--av-fg-rgb) / 0.06);
-  }
-  .av-footer__card,
-  .av-footer__collection {
-    max-width: 260px;
-  }
-  .av-footer__collection {
-    display: grid;
-    gap: var(--av-space-2);
-    text-decoration: none;
-  }
-  .av-footer__collection-title {
-    font-weight: 600;
-  }
-  .av-footer__collection:hover .av-footer__collection-title {
-    text-decoration: underline;
-  }
-  .av-footer__bottom {
-    display: flex;
-    flex-direction: column;
-    gap: var(--av-space-4);
-    padding-top: var(--av-space-5);
-    border-top: 1px solid var(--av-border);
-  }
-  .av-footer__loc-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--av-space-4);
-  }
-  .av-footer__loc-row {
-    display: flex;
-    gap: var(--av-space-2);
-  }
-  .av-footer__loc-row .av-field__select {
-    min-width: 200px;
-  }
-  .av-footer__payments {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--av-space-2);
-  }
-  .av-footer__payments--row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-  .av-footer__payment-icon {
-    width: 38px;
-    height: 24px;
-  }
-  .av-footer__legal {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--av-space-2) var(--av-space-4);
-    color: var(--av-fg-muted);
-    font-size: var(--av-text-xs);
-  }
-  .av-footer__policies {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--av-space-2) var(--av-space-4);
-  }
-  @media (min-width: 750px) {
-    .av-footer__grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .av-footer__legal {
-      justify-content: space-between;
-    }
-  }
-  @media (min-width: 990px) {
-    .av-footer__grid {
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    }
-    .av-footer__bottom {
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .av-footer__legal {
-      flex-basis: 100%;
-    }
-  }
+.av-footer{display:block;font-size:var(--av-text-sm)}
+.av-footer__grid{display:grid;grid-template-columns:1fr;gap:var(--av-space-6);padding-bottom:var(--av-space-6)}
+.av-footer__heading{margin:0 0 var(--av-space-3);font-size:var(--av-text-md);font-weight:700}
+.av-footer__links li + li{margin-top:var(--av-space-2)}
+.av-footer__link{text-decoration:none}
+.av-footer__link:hover{text-decoration:underline}
+.av-footer__text{font-size:inherit}
+.av-footer__brand-logo{display:inline-block;margin-bottom:var(--av-space-3)}
+.av-footer__brand-logo img{width:var(--av-logo-w);max-width:100%;height:auto}
+.av-footer__socials{margin-top:var(--av-space-3)}
+.av-footer__newsletter{margin-top:var(--av-space-3)}
+.av-footer__image img,.av-footer__placeholder{max-width:100%;height:auto;border-radius:var(--av-radius-media)}
+.av-footer__image--placeholder{max-width:240px;aspect-ratio:4 / 3;background:rgb(var(--av-fg-rgb) / 0.06)}
+.av-footer__card,.av-footer__collection{max-width:260px}
+.av-footer__collection{display:grid;gap:var(--av-space-2);text-decoration:none}
+.av-footer__collection-title{font-weight:600}
+.av-footer__collection:hover .av-footer__collection-title{text-decoration:underline}
+.av-footer__bottom{display:flex;flex-direction:column;gap:var(--av-space-4);padding-top:var(--av-space-5);border-top:1px solid var(--av-border)}
+.av-footer__loc-group{display:flex;flex-wrap:wrap;gap:var(--av-space-4)}
+.av-footer__loc-row{display:flex;gap:var(--av-space-2)}
+.av-footer__loc-row .av-field__select{min-width:200px}
+.av-footer__payments{display:flex;flex-wrap:wrap;gap:var(--av-space-2)}
+.av-footer__payments--row{flex-wrap:nowrap;overflow-x:auto}
+.av-footer__payment-icon{width:38px;height:24px}
+.av-footer__legal{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2) var(--av-space-4);color:var(--av-fg-muted);font-size:var(--av-text-xs)}
+.av-footer__policies{display:flex;flex-wrap:wrap;gap:var(--av-space-2) var(--av-space-4)}
+@media (min-width: 750px){
+.av-footer__grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
+.av-footer__legal{justify-content:space-between}
+}
+@media (min-width: 990px){
+.av-footer__grid{grid-template-columns:repeat(auto-fit, minmax(220px, 1fr))}
+.av-footer__bottom{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.av-footer__legal{flex-basis:100%}
+}
 {% endstylesheet %}
 {% schema %}
 {
@@ -459,7 +359,7 @@
           "type": "richtext",
           "id": "text",
           "label": "Text",
-          "default": "<p>Example footer text — replace this with a short note about your store.</p>"
+          "default": "<p>Example: replace this with a short note about your store.</p>"
         }
       ]
     },
@@ -479,7 +379,7 @@
           "type": "richtext",
           "id": "text",
           "label": "Text",
-          "default": "<p>Example brand description — replace this with a sentence about your store.</p>"
+          "default": "<p>Example: replace this with a sentence about your store.</p>"
         },
         {
           "type": "checkbox",
@@ -506,7 +406,7 @@
           "id": "text",
           "label": "Text",
           "info": "Say what subscribers will receive and how often. Promise only what you will send.",
-          "default": "<p>Example newsletter text — tell people what they will receive.</p>"
+          "default": "<p>Example: tell people what they will receive.</p>"
         }
       ]
     },
@@ -537,7 +437,7 @@
         },
         {
           "type": "text",
-          "id": "link_label",
+          "id": "link_name",
           "label": "Link description",
           "info": "Read out by screen readers when the image links somewhere, for example \"Our returns policy\". Defaults to the image's alt text."
         }

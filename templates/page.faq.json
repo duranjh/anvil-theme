@@ -10,22 +10,22 @@
         "shipping_1": {
           "type": "item",
           "settings": {
-            "question": "Example question — How long does delivery take?",
-            "answer": "<p>Example answer — replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
+            "question": "Example: How long does delivery take?",
+            "answer": "<p>Example: replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
           }
         },
         "shipping_2": {
           "type": "item",
           "settings": {
-            "question": "Example question — How much does shipping cost?",
-            "answer": "<p>Example answer — list your actual shipping rates and any free-shipping threshold exactly as they are set in your admin.</p>"
+            "question": "Example: How much does shipping cost?",
+            "answer": "<p>Example: list your actual shipping rates and any free-shipping threshold exactly as they are set in your admin.</p>"
           }
         },
         "shipping_3": {
           "type": "item",
           "settings": {
-            "question": "Example question — How do I track my order?",
-            "answer": "<p>Example answer — explain where the tracking link arrives (for example in the shipping confirmation email) and how long carriers take to show updates.</p>"
+            "question": "Example: How do I track my order?",
+            "answer": "<p>Example: explain where the tracking link arrives (for example in the shipping confirmation email) and how long carriers take to show updates.</p>"
           }
         }
       },
@@ -48,22 +48,22 @@
         "product_1": {
           "type": "item",
           "settings": {
-            "question": "Example question — What is it made of?",
-            "answer": "<p>Example answer — describe the real materials and where to find care instructions.</p>"
+            "question": "Example: What is it made of?",
+            "answer": "<p>Example: describe the real materials and where to find care instructions.</p>"
           }
         },
         "product_2": {
           "type": "item",
           "settings": {
-            "question": "Example question — What is your returns policy?",
-            "answer": "<p>Example answer — summarise your actual returns window and conditions here and link to your returns policy page.</p>"
+            "question": "Example: What is your returns policy?",
+            "answer": "<p>Example: summarise your actual returns window and conditions here and link to your returns policy page.</p>"
           }
         },
         "product_3": {
           "type": "item",
           "settings": {
-            "question": "Example question — Can I change or cancel an order?",
-            "answer": "<p>Example answer — say how quickly a shopper must contact you, how to reach you, and what happens once an order has shipped.</p>"
+            "question": "Example: Can I change or cancel an order?",
+            "answer": "<p>Example: say how quickly a shopper must contact you, how to reach you, and what happens once an order has shipped.</p>"
           }
         }
       },

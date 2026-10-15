@@ -3,7 +3,7 @@
  * (sections/anvil-cart-drawer.liquid, loaded with <script type="module"> from that section).
  *
  * open(opener) → showModal + scroll lock; close() → dialog.close(); focus returns to the opener (or to the element
- * focused when the drawer opened itself). aria-expanded is written only on an explicit opener that declares
+ * focused when the drawer opened itself; when that is hidden by now, to the [aria-controls] control of its container). aria-expanded is written only on an explicit opener that declares
  * aria-haspopup (the header cart link), never on an Add to cart button the drawer happened to open after. Closes with Esc (native), the close button ([data-anvil-close], handled by anvil-core.js) and a click on
  * the backdrop. Opens after an add-to-cart (anvil:cart:updated with source "add") when
  * window.Anvil.settings.openCartOnAdd is true. Re-renders swap only the children of the inner
@@ -240,7 +240,13 @@ class CartDrawer extends HTMLElement {
     const opener = this.#opener;
     this.#opener = null;
     if (this.#expands) opener?.setAttribute('aria-expanded', 'false');
-    if (opener?.isConnected && typeof opener.focus === 'function') opener.focus({ preventScroll: true });
+    let to = opener;
+    // An opener that is hidden by now (an Add button in a popover that closed) hands focus to the control that
+    // opens its container ([aria-controls] naming an ancestor's id), so focus never drops to <body>.
+    for (let p = to?.parentElement; p && to.checkVisibility && !to.checkVisibility(); p = p.parentElement) {
+      if (p.id) to = document.querySelector(`[aria-controls="${CSS.escape(p.id)}"]`) || to;
+    }
+    if (to?.isConnected && typeof to.focus === 'function') to.focus({ preventScroll: true });
   };
 
   #recs() {

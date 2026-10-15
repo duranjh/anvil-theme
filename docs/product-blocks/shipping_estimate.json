@@ -118,7 +118,7 @@
         },
         {
           "value": "package-check",
-          "label": "Package check"
+          "label": "Package checked"
         },
         {
           "value": "box",
@@ -150,7 +150,7 @@
         },
         {
           "value": "check-circle",
-          "label": "Check circle"
+          "label": "Check in circle"
         },
         {
           "value": "shopping-bag",

@@ -1,0 +1,162 @@
+{%- liquid
+  assign s = section.settings
+
+  # Overlay section (overlay group, reduced chassis). The root takes no room in the page: the stylesheet zeroes its
+  # padding and background, and the padding custom properties that anvil-section-attrs writes inline become the
+  # button's distance from the bottom of the screen (pad_bottom, times the phone multiplier from pad_mobile). The
+  # colour scheme colours the button. The button stays hidden until assets/anvil-scroll-top.js shows it, so a page
+  # without JavaScript never shows a control that cannot work, and the editor never shows it on load.
+  assign position = s.position | default: 'right'
+  assign shape = s.shape | default: 'circle'
+  assign look = s.style | default: 'button'
+  assign icon = s.icon | default: 'arrow-up'
+  assign btn_size = s.size | default: 48
+  assign icon_px = btn_size | times: 0.42 | round
+  assign show_after = s.show_after | default: 400
+  assign label = s.label | strip
+
+  assign host_class = 'av-scroll-top av-scroll-top--' | append: position
+  assign host_class = host_class | append: ' av-scroll-top--' | append: shape
+  assign host_class = host_class | append: ' av-scroll-top--' | append: look
+  if label != blank
+    assign host_class = host_class | append: ' av-scroll-top--text'
+  endif
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-scroll-top' %}>
+  <div class="av-section__inner">
+    <anvil-scroll-top class="{{ host_class }}" threshold="{{ show_after }}" style="--av-scroll-top-size: {{ btn_size }}px;" data-anvil-editor-open>
+      <button type="button" class="av-scroll-top__btn"{% if label == blank %} aria-label="{{ 'anvil.a11y.back_to_top' | t }}"{% endif %}>
+        {%- render 'anvil-icon', name: icon, size: icon_px, class: 'av-scroll-top__icon' -%}
+        {%- if label != blank -%}
+          <span class="av-scroll-top__label">{{ label | escape }}</span>
+        {%- endif -%}
+      </button>
+    </anvil-scroll-top>
+  </div>
+</div>
+<script type="module" src="{{ 'anvil-scroll-top.js' | asset_url }}"></script>
+{% stylesheet %}
+/* The section root floats nothing and takes no height; only the button is drawn, fixed to the viewport. */
+.av-section.av-s-anvil-scroll-top{padding:0;background:none}
+/* The host never takes clicks (pointer-events: none); only the shown button does, since a hidden button cannot be hit. */
+.av-scroll-top{--av-scroll-top-size:48px;position:fixed;z-index:50;right:max(var(--av-gutter),env(safe-area-inset-right,0px));bottom:calc(var(--av-pad-bottom,48px) * var(--av-pad-mobile,1) + var(--av-sticky-bar-h,0px) + var(--av-scroll-top-lift) + env(safe-area-inset-bottom,0px));display:block;pointer-events:none}
+.av-scroll-top--left{right:auto;left:max(var(--av-gutter),env(safe-area-inset-left,0px))}
+.av-scroll-top--center{right:auto;left:50%;transform:translateX(-50%)}
+.av-scroll-top__btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--av-space-2);min-width:var(--av-scroll-top-size);height:var(--av-scroll-top-size);margin:0;padding:0;font-family:var(--av-font-body);font-size:var(--av-text-sm);font-weight:600;line-height:1;color:var(--av-btn-fg);background:var(--av-btn-bg);border:var(--av-border-w-button,1px) solid var(--av-btn-border);border-radius:var(--av-radius-pill);box-shadow:var(--av-shadow-md);cursor:pointer;-webkit-tap-highlight-color:transparent;pointer-events:auto;opacity:0;visibility:hidden;transform:translateY(25%)}
+.av-scroll-top--theme .av-scroll-top__btn{border-radius:var(--av-radius-button)}
+.av-scroll-top--surface .av-scroll-top__btn{color:var(--av-fg);background:var(--av-bg);border:1px solid var(--av-input-border)}
+.av-scroll-top--text .av-scroll-top__btn{padding-inline:calc(var(--av-scroll-top-size) * 0.32)}
+.av-scroll-top.av-is-in .av-scroll-top__btn{opacity:1;visibility:visible;transform:none}
+/* Hidden while a drawer or dialog holds the scroll lock (Anvil.dom.lockScroll), so no dead control shows over a modal. */
+html.av-scroll-locked .av-scroll-top .av-scroll-top__btn{opacity:0;visibility:hidden}
+/* The docked music player writes the room it takes at the foot of the page to --av-audio-space on <html>
+   (CONVENTIONS §2); the button rises by that much, so it never covers the player, whichever side either sits on. */
+.av-scroll-top{--av-scroll-top-lift:var(--av-audio-space,0px)}
+.av-scroll-top__icon{flex:none;display:block}
+.av-scroll-top__label{white-space:nowrap}
+@media (min-width: 750px){
+.av-scroll-top{bottom:calc(var(--av-pad-bottom,48px) + var(--av-sticky-bar-h,0px) + var(--av-scroll-top-lift) + env(safe-area-inset-bottom,0px))}
+}
+@media (prefers-reduced-motion: no-preference){
+html:not([data-animations="off"]) .av-scroll-top__btn{transition:opacity var(--av-dur) var(--av-ease),transform var(--av-dur) var(--av-ease),visibility 0s linear var(--av-dur)}
+html:not([data-animations="off"]) .av-scroll-top.av-is-in .av-scroll-top__btn{transition-delay:0s}
+html:not([data-animations="off"]) .av-scroll-top__icon{transition:transform var(--av-dur) var(--av-ease)}
+html:not([data-animations="off"]) .av-scroll-top__btn:hover .av-scroll-top__icon{transform:translateY(-2px)}
+}
+@media (forced-colors: active){
+.av-scroll-top__btn{border:1px solid ButtonText}
+}
+@media print{
+.av-scroll-top{display:none}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Scroll to top",
+  "limit": 1,
+  "enabled_on": { "groups": ["custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1", "info": "The button takes the scheme's button colours, or its background and text colours with the bordered style." },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48, "info": "Not used: the button floats over the page and takes no room in it." },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48, "info": "Distance between the button and the bottom of the screen. It moves up by itself while a sticky add-to-cart bar shows." },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact", "info": "Compact keeps 60 % of the bottom distance on phones." },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "header", "content": "Scroll to top" },
+    {
+      "type": "range",
+      "id": "show_after",
+      "label": "Show after scrolling",
+      "min": 100,
+      "max": 2000,
+      "step": 50,
+      "unit": "px",
+      "default": 400,
+      "info": "The button appears once a shopper has scrolled this far down a page. In the editor, select this section to see it."
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Position",
+      "options": [
+        { "value": "right", "label": "Bottom right" },
+        { "value": "left", "label": "Bottom left" },
+        { "value": "center", "label": "Bottom centre" }
+      ],
+      "default": "right",
+      "info": "If you also use the audio player, put it in a different corner from this button. The button moves up when the player could sit under it."
+    },
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "Icon",
+      "options": [
+        { "value": "arrow-up", "label": "Arrow" },
+        { "value": "chevron-up", "label": "Chevron" },
+        { "value": "rocket", "label": "Rocket" }
+      ],
+      "default": "arrow-up"
+    },
+    {
+      "type": "range",
+      "id": "size",
+      "label": "Button size",
+      "min": 44,
+      "max": 72,
+      "step": 4,
+      "unit": "px",
+      "default": 48,
+      "info": "44 px is the smallest comfortable touch target."
+    },
+    {
+      "type": "select",
+      "id": "shape",
+      "label": "Shape",
+      "options": [
+        { "value": "circle", "label": "Round" },
+        { "value": "theme", "label": "Theme button corners" }
+      ],
+      "default": "circle"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "options": [
+        { "value": "button", "label": "Button colours" },
+        { "value": "surface", "label": "Background colour with border" }
+      ],
+      "default": "button"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Text beside the icon",
+      "info": "Optional, for example \"Top\". Leave blank for an icon-only button; screen readers then hear \"Back to top\"."
+    }
+  ],
+  "presets": [
+    { "name": "Scroll to top" }
+  ]
+}
+{% endschema %}

@@ -492,3 +492,37 @@
     font-weight: 600;
   }
 }
+
+/* Inline search (search_mode "inline"): a field in the bar from 990 px, results in a panel under it; narrower
+   screens keep the icon link to the search page. */
+.av-header__search-inline {
+  position: relative;
+  display: none;
+}
+
+.av-header__search-pop {
+  position: absolute;
+  z-index: 10;
+  inset-inline-end: 0;
+  top: 100%;
+  width: min(28rem, 90vw);
+  max-height: 70vh;
+  margin-top: var(--av-space-2);
+  padding: var(--av-space-4);
+  overflow: auto;
+  border-radius: var(--av-radius-popup);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  box-shadow: var(--av-shadow-popup);
+}
+
+@media (min-width: 990px) {
+  .av-header__search-inline {
+    display: block;
+    width: clamp(12rem, 22vw, 20rem);
+  }
+
+  .av-header__search-link {
+    display: none;
+  }
+}

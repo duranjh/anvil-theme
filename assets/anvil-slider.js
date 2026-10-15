@@ -12,10 +12,14 @@
  * Behaviour: arrows move one page (per-view slides); one dot per page; ArrowLeft/ArrowRight inside the element;
  * autoplay pauses on hover, focus within, hidden tab, off-screen and while a block is selected in the editor; under
  * reduced motion (html[data-animations="off"] too) it starts paused and the pause/play button offers Play. A11y:
- * role=region + aria-roledescription carousel, slides role=group "N of M", a named dots group, the track is
- * keyboard-focusable whenever it scrolls, a polite live region (off while auto-rotating).
- * Strings (window.Anvil.strings, first key found wins): slider_label|carousel, slide_of|slideOf ({{ index }}/{{ total }}
- * or [index]/[total]), slider_prev|previous, slider_next|next, slider_goto, slider_dots|chooseSlide,
+ * while the track scrolls, role=region + aria-roledescription carousel and slides role=group "N of M" (dropped
+ * while every slide fits, so a wrapped grid is not announced as a carousel), a named dots group, the track is
+ * keyboard-focusable whenever it scrolls, a polite live region (off while auto-rotating). Arrow keys from inside a
+ * slide move focus to the track first (focus never stays on a slide that left the view) and skip form fields and
+ * native media controls; a slide change pauses a playing video with sound that left the view (muted autoplay
+ * video is anvil-core's).
+ * Strings (window.Anvil.strings, first key found wins): slider_label|carousel, slide_role|slideRole,
+ * slide_of|slideOf ({{ index }}/{{ total }} or [index]/[total]), slider_prev|previous, slider_next|next, slider_goto, slider_dots|chooseSlide,
  * slider_pause|pause, slider_play|play, slider_moved. Events: anvil:slider:change {index, total, element} (bubbles). shopify:block:select jumps to that
  * slide. Methods: goTo(index, smooth?), next(), prev(), play(), pause(). Property: index.
  */
@@ -59,6 +63,8 @@ class Slider extends HTMLElement {
   #editing = false;
   #userPaused = false;
   #ownTabindex = false;
+  #name = '';
+  #aria;
   #ro;
   #io;
 
@@ -81,17 +87,11 @@ class Slider extends HTMLElement {
       if (value && !this.style.getPropertyValue(prop)) this.style.setProperty(prop, `${parseFloat(value) || 0}${unit}`);
     }
 
-    if (!this.hasAttribute('role')) this.setAttribute('role', 'region');
-    this.setAttribute('aria-roledescription', t(['slider_role'], null, 'carousel'));
-    if (!this.hasAttribute('aria-label') && !this.hasAttribute('aria-labelledby')) {
-      this.setAttribute('aria-label', t(['slider_label', 'carousel'], null, 'Carousel'));
+    if (!this.hasAttribute('aria-labelledby')) {
+      this.#name ||= this.getAttribute('aria-label') || t(['slider_label', 'carousel'], null, 'Carousel');
     }
-    const total = this.#slides.length;
-    this.#slides.forEach((slide, i) => {
-      slide.setAttribute('role', 'group');
-      slide.setAttribute('aria-roledescription', t('slide_role', null, 'slide'));
-      slide.setAttribute('aria-label', t(['slide_of', 'slideOf'], { index: i + 1, total }, '{{ index }} of {{ total }}'));
-    });
+    this.#aria = undefined;
+    this.#roles(true);
 
     this.#live =
       this.querySelector('[data-slider-live]') ||
@@ -176,6 +176,22 @@ class Slider extends HTMLElement {
     this.removeEventListener('shopify:block:deselect', this.#onBlockDeselect);
   }
 
+  // Carousel semantics only while the track scrolls; the author's aria-label is kept in #name and restored.
+  #roles(on) {
+    if (on === this.#aria) return;
+    this.#aria = on;
+    const set = (el, name, value) => (on && value ? el.setAttribute(name, value) : el.removeAttribute(name));
+    const total = this.#slides.length;
+    set(this, 'role', 'region');
+    set(this, 'aria-roledescription', t(['slider_role'], null, 'carousel'));
+    set(this, 'aria-label', this.#name);
+    this.#slides.forEach((slide, i) => {
+      set(slide, 'role', 'group');
+      set(slide, 'aria-roledescription', t(['slide_role', 'slideRole'], null, 'slide'));
+      set(slide, 'aria-label', t(['slide_of', 'slideOf'], { index: i + 1, total }, '{{ index }} of {{ total }}'));
+    });
+  }
+
   #make(tag, className, attrs, html = '') {
     const el = document.createElement(tag);
     el.className = className;
@@ -219,6 +235,7 @@ class Slider extends HTMLElement {
     }
     const scrolls = this.#maxScroll > 1;
     this.classList.toggle('av-is-static', !scrolls);
+    this.#roles(scrolls);
     if (this.#ownTabindex) {
       if (scrolls) this.#track.tabIndex = 0;
       else this.#track.removeAttribute('tabindex');
@@ -252,6 +269,9 @@ class Slider extends HTMLElement {
     this.#idle = setTimeout(() => {
       this.#live.textContent = t(['slider_moved', 'slide_of', 'slideOf'], { index: i + 1, total }, 'Slide {{ index }} of {{ total }}');
     }, 250);
+    this.#slides.forEach((slide, n) => {
+      if (n < i || n >= i + this.#perView) for (const v of slide.querySelectorAll('video')) if (!v.muted) v.pause();
+    });
     this.dispatchEvent(
       new CustomEvent('anvil:slider:change', { bubbles: true, detail: { index: i, total, element: this } })
     );
@@ -345,7 +365,10 @@ class Slider extends HTMLElement {
     if (dot) this.goTo(Math.min(this.#slides.length - 1, Number(dot.dataset.anvilPage) * this.#perView));
   };
   #onKey = (e) => {
-    if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+    if (e.target.closest('input, textarea, select, video, audio, [contenteditable]')) return;
+    if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && e.target !== this.#track && e.target.closest('[data-slider-slide]')) {
+      this.#track.focus({ preventScroll: true });
+    }
     if (e.key === 'ArrowRight') {
       e.preventDefault();
       this.next();

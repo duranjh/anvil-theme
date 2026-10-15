@@ -41,16 +41,16 @@ No "authentication", "licence" or "help" groups exist. Theme information (name A
 ## 2. Global chrome
 
 ### 2.1 Announcement bar (header group)
-Merchant sets: one or more bars (blocks), each either **text** (rich text + optional link), **discount code** (code shown with a one-tap copy button; optional "apply" that attaches the code to the cart), or **social links**; rotate between bars with timing and arrows; show on all templates or only some; colour scheme; height. Shopper sees a slim bar above or below the header; on M the text truncates to one line or scrolls.
+Merchant sets: one or more bars (blocks), each either **text** (rich text + optional link), **discount code** (code shown with a one-tap copy button; optional "apply" that attaches the code to the cart), or **social links**; rotate between bars with timing and arrows; show on all templates or only some; colour scheme; height (as padding and text size). Shopper sees a slim bar above or below the header; on M long text wraps onto a second line (amended 2026-10-15, DECISIONS 111: truncating or scrolling text fails WCAG reflow and hides the offer).
 
 ### 2.2 Header (header group)
-Merchant sets: logo position (left/centre) and menu position (left/centre/below); main menu (Shopify navigation); **mega menu** mode for top-level items that lists child links in columns and can show featured product/collection images; sticky mode (always / on scroll-up / never); transparent-over-hero option; icons (search, account, cart) with cart count bubble; M menu drawer layout (list / large tiles) and whether to show social links and localisation selectors in it; search opens inline or in a modal with predictive results. Shopper sees a one-row header on M with hamburger, logo, cart; the cart icon opens the drawer (or links to the cart page when the drawer is off).
+Merchant sets: logo position (left/centre) and menu position (left/centre/below); main menu (Shopify navigation); **mega menu** mode for top-level items that lists child links in columns and can show featured product/collection images; sticky mode (always / on scroll-up / never); transparent-over-the-first-section option (on the homepage or on the templates the merchant lists); icons (search, account, cart) with cart count bubble; M menu drawer layout (list / large tiles) and whether to show social links and localisation selectors in it; search opens as a field in the header (D), in a modal, or as a link to the search page, with predictive results in the field and the modal. Shopper sees a one-row header on M with hamburger, logo, cart; the cart icon opens the drawer (or links to the cart page when the drawer is off).
 
 ### 2.3 Footer (footer group)
 Merchant sets blocks: **link list** (menu with heading), **brand information** (logo/text/social icons), **text**, **image**, **email signup** (form with success/error message), **featured product**, **featured collection**; footer-wide: payment icons (Shopify's enabled methods, optional filter to a short list on one line), language/country selectors, copyright line, policy links, colour scheme. Shopper sees stacked columns on M, grid on D.
 
 ### 2.4 Cart drawer (static section)
-Merchant sets: width (D), colour scheme, open-on-add, "keep open while editing" (editor only), heading, and blocks in body or footer position:
+Merchant sets: colour scheme, "keep open while editing" (editor only), heading, and blocks in body or footer position; width (D), open-on-add, vendor and the quantity stepper style are theme-wide settings (Theme settings > Drawers & popups, Cart, Quantity picker) that the drawer's schema points to (amended 2026-10-15, DECISIONS 116). With cart type Page the drawer is not rendered: its blocks stay drawer-only, and the cart page's summary has its own policies checkbox.
 
 | Block | Merchant sets | Shopper sees / behaviour |
 |---|---|---|
@@ -78,7 +78,7 @@ Behaviour: opens from the header icon and (if enabled) after add-to-cart; traps 
 
 ---
 
-## 3. Product page (`main-product`; the same blocks are available in the addable "Featured product" section)
+## 3. Product page (`main-product`; the same blocks except Sticky add-to-cart and Gifts on quantity are available in the addable "Featured product" section, DECISIONS 115)
 
 ### 3.1 Section settings
 Gallery position (left/right) and width; thumbnails D (left / bottom / hidden / stacked) and M (hidden / bottom); M pager style (dots under / dots overlay / numeric / hidden); peek of the next slide on M; zoom (none / hover / lightbox); show the selected variant's image first; hide media that belongs to other variants; video autoplay/loop/mute/controls; trust badge image under the buy box; mobile and desktop padding.
@@ -93,7 +93,7 @@ Gallery position (left/right) and width; thumbnails D (left / bottom / hidden / 
 | Inventory | low-stock threshold, texts | "Only N left" from tracked inventory, or "In stock"; nothing when inventory is untracked |
 | Variant picker | style (dropdowns / pills & swatches / **offer cards**); hide sold-out values; size-chart option name; offer-card options: which option drives the cards, preselected card, savings display (amount / percent / both / none), card image source | **Offer cards:** one card per variant with label, caption, badge, benefit line, strike-through compare-at, computed "you save", variant image; the preselected card opens on load unless the URL names a variant; other options render as pills under the cards. Dropdowns and pills work as expected; swatches come from Shopify's option swatches or the fallback colour list |
 | Offer card (child data, up to 6) | variant position, label, caption, badge, "badge backed by sales data" tick, benefit line, show image | the card described above; the badge shows only when the tick is on |
-| Quantity selector | style (stepper / **tier cards**); min/max/step; tier cards (up to 5): quantity, label, badge, discount percent, name of the automatic discount | stepper, or cards that set the quantity and show the per-unit price "with <discount> applied at checkout" |
+| Quantity selector | style (stepper / **tier cards**); max (min and step follow the variant's Shopify quantity rule, so B2B and volume rules hold; amended 2026-10-15, DECISIONS 114); tier cards (up to 5): quantity, label, badge, discount percent, name of the automatic discount | stepper, or cards that set the quantity and show the per-unit price "with <discount> applied at checkout" |
 | Buy buttons | label, sold-out label, dynamic checkout buttons (default off), secure line | add-to-cart; adds the selected variant and opens the drawer |
 | Sticky add-to-cart | show on M / D; show image / price / quantity; label | a bottom bar appears when the main button scrolls out of view |
 | Text with icon | icon or image, text, size, background pill, colours, margins | reassurance line (e.g. shipping, returns) |
@@ -112,7 +112,7 @@ Gallery position (left/right) and width; thumbnails D (left / bottom / hidden / 
 | Urgency text | source (tracked inventory / plain text), threshold, text | "Only N left" or the text; no viewer counts exist |
 | Emoji benefits | lines of text each starting with an emoji | checklist of benefits |
 | Image | image, width, alignment | an image in the buy column |
-| Video | Shopify video or URL, autoplay/mute/loop | a video in the buy column |
+| Video | Shopify video or URL, autoplay (always muted)/start without sound/loop | a video in the buy column |
 | Divider | thickness, colour, margins | a rule |
 | Link button | label, URL, style | a button |
 | Scroll-to buttons | up to 3 labels + target anchors | buttons that scroll to sections on the page (every Anvil section has an anchor id) |
@@ -150,15 +150,15 @@ Image banner · Slideshow hero · Image with text · Multicolumn · Multirow · 
 | Stories strip | up to 20 stories (thumbnail, full media, label, link); ring colour | a row of round thumbnails; tapping opens a full-screen vertical viewer with tap-through |
 | Logo list | up to 16 logos (image, link, alt); grid or marquee; greyscale; height | a "featured in" row |
 | Content tabs | tabs (title, icon) each holding content blocks; style | a tab strip (scrollable on M) with panels |
-| Custom columns | up to 4 columns each holding heading / text / stars / buttons / add-to-cart / image blocks; gap; alignment | flexible columns |
+| Custom columns | up to 4 columns per row (more wrap onto the next row, DECISIONS 117) each holding heading / text / stars / buttons / add-to-cart / image blocks; gap; alignment | flexible columns |
 | Product features (hotspots) | image, up to 12 numbered spots (position, title, text) and matching bullets; image side | an annotated image with a bullet list (list under image on M) |
 | Shoppable image | image, up to 12 spots each linked to a product | dots that open a small product card with price and add button |
 | Results / stats | up to 6 statistics (value, suffix, label, icon); size; count-up | big numbers in a row |
 | Pricing table | plans (name, price or linked product, badge, feature rows, button); highlighted plan; columns | plan cards |
 | Promo popup | trigger (delay / scroll depth / exit on D), delay, show-once days, image, content blocks (newsletter form, text, button) | a dialog that opens once per visitor per period; never within 3 s of landing and never while editing |
 | Track order | mode (account link / tracking-number form with a carrier URL template / merchant-pasted embed), help text | a tracking form or link |
-| Parallax hero | media, height, overlay, content position, strength | a hero whose background moves slower than the page (off on touch and reduced motion) |
-| Slideshow hero | slides (media + content blocks); autoplay; height; transition; dots | a hero carousel |
+| Parallax hero | image (and a phone image), height, overlay, content position, strength (image-only, amended 2026-10-15, DECISIONS 112) | a hero whose background moves slower than the page (off on touch and reduced motion) |
+| Slideshow hero | slides (image + content blocks; image-only, DECISIONS 112); autoplay; height; transition; dots | a hero carousel |
 | Section divider | style (line / wave / angle / icon), height, flip | a decorative separator |
 | Sections group | nested boxed areas with their own scheme/padding | grouped content |
 | Scroll-to-top | threshold, position, icon, size | a floating button |
@@ -179,7 +179,7 @@ Image banner · Slideshow hero · Image with text · Multicolumn · Multirow · 
 - **Homepage**: slideshow hero → ticker → icon bar → featured collection → comparison table → stats → testimonials → image with text → FAQ → logo list → newsletter → contact.
 - **Product (default)**: product section with title, price, variant picker, quantity, buy buttons, description, tabs, share; related products.
 - **Product landing** (`product.landing`, assign per product): product → ticker → icon bar → stats → feature grid → comparison table → before/after → testimonials → product videos → timeline → scrolling images → gallery → image with text → multicolumn → guarantees → bundle → FAQ → review wall → related products.
-- **Pages**: default; contact; FAQ (two FAQ sections with anchors + "still have questions"); track order.
+- **Pages**: default; contact; FAQ (two FAQ sections with anchors; owner decision G keeps the page to the two FAQs, and the contact page carries "other ways to reach us", DECISIONS 26, 75, 113); track order.
 - **Collection, collections list, search, cart, blog, article, 404, password, gift card, customer account pages.**
 - Two theme-style presets: light ("Anvil") and dark ("Anvil Dark").
 

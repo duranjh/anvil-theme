@@ -28,6 +28,22 @@
   box-shadow: var(--av-shadow-card, var(--av-shadow-lg));
 }
 
+/* Fill variant (class: 'av-card--fill'): inside a parent that sets the height (a collage tile), the image takes the
+   room the text leaves and is shown whole. */
+.av-card--fill > .av-card__media {
+  flex: 1 1 0;
+  min-height: var(--av-space-8);
+  aspect-ratio: auto;
+}
+
+.av-card--fill > .av-card__body {
+  flex: none;
+}
+
+.av-card--fill .av-card__img {
+  object-fit: contain;
+}
+
 .av-card--align-left { text-align: left; }
 .av-card--align-center { text-align: center; }
 .av-card--align-right { text-align: right; }
@@ -126,5 +142,31 @@ a.av-card__link::after {
 }
 
 .av-card__form-status:empty {
+  display: none;
+}
+
+/* Product row (snippets/anvil-product-row: Featured collection, Related products). Columns and gap come from the
+   shared .av-grid; the slider's per-view, peek, arrows and dots from <anvil-slider>. */
+.av-product-row__grid {
+  padding: 0;
+  list-style: none;
+}
+
+.av-product-row__cell {
+  min-width: 0;
+  margin: 0;
+}
+
+.av-product-row__slide {
+  display: flex;
+}
+
+.av-product-row__slide > .av-card {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The section's switch for the card's second image: hidden, it is never downloaded (lazy and not rendered). */
+.av-product-row--no-hover .av-card .av-card__img--hover {
   display: none;
 }

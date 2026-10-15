@@ -51,7 +51,7 @@
           "settings": {
             "card_variant_position": 1,
             "card_label": "Example: 1 pack",
-            "card_caption": "Replace with what this option includes",
+            "card_caption": "Example: what this option includes",
             "card_badge_backed_by_sales": false,
             "card_show_image": true
           }
@@ -61,7 +61,7 @@
           "settings": {
             "card_variant_position": 2,
             "card_label": "Example: 2 pack",
-            "card_caption": "Replace with what this option includes",
+            "card_caption": "Example: what this option includes",
             "card_badge": "Most popular",
             "card_badge_backed_by_sales": false,
             "card_benefit": "Example: replace with a real benefit of this option",
@@ -73,7 +73,7 @@
           "settings": {
             "card_variant_position": 3,
             "card_label": "Example: 3 pack",
-            "card_caption": "Replace with what this option includes",
+            "card_caption": "Example: what this option includes",
             "card_badge_backed_by_sales": false,
             "card_show_image": true
           }
@@ -205,6 +205,59 @@
       ],
       "settings": {}
     },
+    "ticker": {
+      "type": "anvil-ticker",
+      "blocks": {
+        "ticker_icon_text_1": {
+          "type": "icon_text",
+          "settings": {
+            "icon": "truck",
+            "text": "Example: free shipping over $50"
+          }
+        },
+        "ticker_text_1": {
+          "type": "text",
+          "settings": {
+            "text": "Example: <strong>replace</strong> with your own"
+          }
+        },
+        "ticker_rich_1": {
+          "type": "rich",
+          "settings": {
+            "icon": "rotate-ccw",
+            "heading": "Example: 30-day returns",
+            "text": "Example: the window in your refund policy"
+          }
+        },
+        "ticker_review_1": {
+          "type": "review",
+          "settings": {
+            "quote": "Example: replace with a real customer's words",
+            "name": "Example name"
+          }
+        },
+        "ticker_icon_text_2": {
+          "type": "icon_text",
+          "settings": {
+            "icon": "message-circle",
+            "text": "Example: replies within one business day"
+          }
+        }
+      },
+      "block_order": [
+        "ticker_icon_text_1",
+        "ticker_text_1",
+        "ticker_rich_1",
+        "ticker_review_1",
+        "ticker_icon_text_2"
+      ],
+      "settings": {
+        "width": "full",
+        "pad_top": 16,
+        "pad_bottom": 16,
+        "speed": 40
+      }
+    },
     "icon_bar": {
       "type": "anvil-icon-bar",
       "blocks": {
@@ -213,7 +266,7 @@
           "settings": {
             "icon": "truck",
             "label": "Example: free shipping over $50",
-            "caption": "Replace with the threshold from your shipping rates"
+            "caption": "Example: the threshold from your shipping rates"
           }
         },
         "returns": {
@@ -221,7 +274,7 @@
           "settings": {
             "icon": "rotate-ccw",
             "label": "Example: 30-day returns",
-            "caption": "Replace with the window in your refund policy"
+            "caption": "Example: the window in your refund policy"
           }
         },
         "secure": {
@@ -229,7 +282,7 @@
           "settings": {
             "icon": "lock",
             "label": "Example: secure checkout",
-            "caption": "Replace with what protects shoppers, in plain words"
+            "caption": "Example: what protects shoppers, in plain words"
           }
         },
         "support": {
@@ -237,7 +290,7 @@
           "settings": {
             "icon": "message-circle",
             "label": "Example: fast support",
-            "caption": "Replace with real hours, such as replies within 24 hours"
+            "caption": "Example: real hours, such as replies within 24 hours"
           }
         }
       },
@@ -252,28 +305,534 @@
         "pad_bottom": 32
       }
     },
+    "stats": {
+      "type": "anvil-stats",
+      "blocks": {
+        "stats_stat_1": {
+          "type": "stat",
+          "settings": {
+            "value": "12,500",
+            "suffix": "+",
+            "label": "Example: orders shipped — replace with your real count"
+          }
+        },
+        "stats_stat_2": {
+          "type": "stat",
+          "settings": {
+            "value": "30",
+            "suffix": "days",
+            "label": "Example: return window — match your refund policy"
+          }
+        },
+        "stats_stat_3": {
+          "type": "stat",
+          "settings": {
+            "value": "98",
+            "suffix": "%",
+            "label": "Example: orders dispatched within 48 hours — use your own data"
+          }
+        },
+        "stats_stat_4": {
+          "type": "stat",
+          "settings": {
+            "value": "15",
+            "label": "Example: countries we deliver to — list only those you ship to"
+          }
+        }
+      },
+      "block_order": [
+        "stats_stat_1",
+        "stats_stat_2",
+        "stats_stat_3",
+        "stats_stat_4"
+      ],
+      "settings": {
+        "heading": "By the <strong>numbers</strong>",
+        "footnote": "Example note: say where these figures come from and when you last checked them."
+      }
+    },
+    "features": {
+      "type": "anvil-feature-grid",
+      "blocks": {
+        "features_card_1": {
+          "type": "card",
+          "settings": {
+            "heading": "Example: first benefit",
+            "text": "<p>Example: replace with one real benefit and the detail that proves it, such as a material or a measurement.</p>"
+          }
+        },
+        "features_card_2": {
+          "type": "card",
+          "settings": {
+            "heading": "Example: second benefit",
+            "text": "<p>Example: say what the shopper gets, in plain words. Only state what is true for your product.</p>"
+          }
+        },
+        "features_card_3": {
+          "type": "card",
+          "settings": {
+            "heading": "Example: third benefit",
+            "text": "<p>Example: add a link below if a page explains this feature in more depth.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "features_card_1",
+        "features_card_2",
+        "features_card_3"
+      ],
+      "settings": {
+        "heading": "What makes it <strong>different</strong>"
+      }
+    },
+    "compare": {
+      "type": "anvil-compare-table",
+      "blocks": {
+        "compare_row_1": {
+          "type": "row",
+          "settings": {
+            "label": "Example: free shipping",
+            "note": "Example: a fact from your shipping rates",
+            "ours_type": "check",
+            "theirs_type": "cross"
+          }
+        },
+        "compare_row_2": {
+          "type": "row",
+          "settings": {
+            "label": "Example: return window",
+            "ours_type": "text",
+            "ours_text": "Example: 30 days",
+            "theirs_type": "text",
+            "theirs_text": "Example: 14 days"
+          }
+        },
+        "compare_row_3": {
+          "type": "row",
+          "settings": {
+            "label": "Example: warranty",
+            "ours_type": "check",
+            "ours_text": "Example: 2 years",
+            "theirs_type": "check",
+            "theirs_text": "Example: 1 year"
+          }
+        },
+        "compare_row_4": {
+          "type": "row",
+          "settings": {
+            "label": "Example: main material",
+            "ours_type": "text",
+            "ours_text": "Example: solid oak",
+            "theirs_type": "text",
+            "theirs_text": "Example: veneer"
+          }
+        },
+        "compare_row_5": {
+          "type": "row",
+          "settings": {
+            "label": "Example: email support",
+            "ours_type": "check",
+            "theirs_type": "check"
+          }
+        }
+      },
+      "block_order": [
+        "compare_row_1",
+        "compare_row_2",
+        "compare_row_3",
+        "compare_row_4",
+        "compare_row_5"
+      ],
+      "settings": {
+        "heading": "How we <strong>compare</strong>",
+        "width": "narrow",
+        "anchor": "compare"
+      }
+    },
+    "before_after": {
+      "type": "anvil-before-after",
+      "settings": {
+        "heading": "See the <strong>difference</strong>",
+        "caption": "Example: say what changed, over what time, and whether results vary. Replace it with your own."
+      }
+    },
+    "testimonials": {
+      "type": "anvil-testimonials",
+      "blocks": {
+        "testimonials_card_1": {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: replace with words a real customer sent you, and ask before you publish them.</p>",
+            "name": "Example name",
+            "role": "Example: their city"
+          }
+        },
+        "testimonials_card_2": {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: a specific detail, such as what they bought and what changed for them, helps shoppers more than general praise.</p>",
+            "name": "Example name",
+            "role": "Example: what they bought"
+          }
+        },
+        "testimonials_card_3": {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: keep the customer's own words. Shorten it if you need to, but never change what they meant.</p>",
+            "name": "Example name",
+            "role": "Example: their job"
+          }
+        },
+        "testimonials_card_4": {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: add a card image only if the customer sent you the photo or agreed to share it.</p>",
+            "name": "Example name",
+            "role": "Example: how long they have used it"
+          }
+        }
+      },
+      "block_order": [
+        "testimonials_card_1",
+        "testimonials_card_2",
+        "testimonials_card_3",
+        "testimonials_card_4"
+      ],
+      "settings": {
+        "heading": "What customers <strong>say</strong>"
+      }
+    },
+    "videos": {
+      "type": "anvil-product-videos",
+      "blocks": {
+        "videos_video_1": {
+          "type": "video",
+          "settings": {
+            "title": "Example: unboxing, replace with your own"
+          }
+        },
+        "videos_video_2": {
+          "type": "video",
+          "settings": {
+            "title": "Example: how it works"
+          }
+        },
+        "videos_video_3": {
+          "type": "video",
+          "settings": {
+            "title": "Example: a customer clip shared with permission"
+          }
+        },
+        "videos_video_4": {
+          "type": "video",
+          "settings": {
+            "title": "Example: care and storage"
+          }
+        }
+      },
+      "block_order": [
+        "videos_video_1",
+        "videos_video_2",
+        "videos_video_3",
+        "videos_video_4"
+      ],
+      "settings": {
+        "heading": "See it <strong>in action</strong>"
+      }
+    },
+    "timeline": {
+      "type": "anvil-timeline",
+      "blocks": {
+        "timeline_step_1": {
+          "type": "step",
+          "settings": {
+            "icon": "shopping-bag",
+            "label": "Example: day 1",
+            "text": "<p>Example: replace with what happens right after checkout, such as the confirmation email shoppers receive.</p>",
+            "heading": "Example: order placed"
+          }
+        },
+        "timeline_step_2": {
+          "type": "step",
+          "settings": {
+            "icon": "package",
+            "label": "Example: days 1–2",
+            "text": "<p>Example: replace with the processing time stated in your shipping policy.</p>",
+            "heading": "Example: packed"
+          }
+        },
+        "timeline_step_3": {
+          "type": "step",
+          "settings": {
+            "icon": "truck",
+            "label": "Example: days 3–7",
+            "text": "<p>Example: replace with how the tracking link reaches shoppers and your carrier's usual transit time.</p>",
+            "heading": "Example: shipped"
+          }
+        },
+        "timeline_step_4": {
+          "type": "step",
+          "settings": {
+            "icon": "home",
+            "label": "Example: delivered",
+            "text": "<p>Example: replace with what shoppers should do if a parcel is late or damaged, and link your shipping policy.</p>",
+            "heading": "Example: at the door"
+          }
+        }
+      },
+      "block_order": [
+        "timeline_step_1",
+        "timeline_step_2",
+        "timeline_step_3",
+        "timeline_step_4"
+      ],
+      "settings": {
+        "heading": "How it <strong>works</strong>"
+      }
+    },
+    "marquee": {
+      "type": "anvil-image-marquee",
+      "blocks": {
+        "marquee_image_1": {
+          "type": "image"
+        },
+        "marquee_image_2": {
+          "type": "image"
+        },
+        "marquee_image_3": {
+          "type": "image"
+        },
+        "marquee_image_4": {
+          "type": "image"
+        },
+        "marquee_image_5": {
+          "type": "image"
+        },
+        "marquee_image_6": {
+          "type": "image"
+        },
+        "marquee_image_7": {
+          "type": "image"
+        },
+        "marquee_image_8": {
+          "type": "image"
+        }
+      },
+      "block_order": [
+        "marquee_image_1",
+        "marquee_image_2",
+        "marquee_image_3",
+        "marquee_image_4",
+        "marquee_image_5",
+        "marquee_image_6",
+        "marquee_image_7",
+        "marquee_image_8"
+      ],
+      "settings": {
+        "width": "full"
+      }
+    },
+    "gallery": {
+      "type": "anvil-image-gallery",
+      "blocks": {
+        "gallery_image_1": {
+          "type": "image"
+        },
+        "gallery_image_2": {
+          "type": "image"
+        },
+        "gallery_image_3": {
+          "type": "image"
+        },
+        "gallery_image_4": {
+          "type": "image"
+        },
+        "gallery_image_5": {
+          "type": "image"
+        },
+        "gallery_image_6": {
+          "type": "image"
+        }
+      },
+      "block_order": [
+        "gallery_image_1",
+        "gallery_image_2",
+        "gallery_image_3",
+        "gallery_image_4",
+        "gallery_image_5",
+        "gallery_image_6"
+      ],
+      "settings": {
+        "heading": "In <strong>pictures</strong>"
+      }
+    },
+    "image_text": {
+      "type": "anvil-image-text",
+      "blocks": {
+        "image_text_eyebrow_1": {
+          "type": "eyebrow",
+          "settings": {
+            "text": "Example eyebrow"
+          }
+        },
+        "image_text_heading_1": {
+          "type": "heading",
+          "settings": {
+            "heading": "Example: say what <strong>changes</strong> for the shopper",
+            "size": "lg"
+          }
+        },
+        "image_text_text_1": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Example: describe one real benefit in two or three sentences. Only state what is true for your store.</p>"
+          }
+        },
+        "image_text_checklist_1": {
+          "type": "checklist"
+        },
+        "image_text_button_1": {
+          "type": "button",
+          "settings": {}
+        }
+      },
+      "block_order": [
+        "image_text_eyebrow_1",
+        "image_text_heading_1",
+        "image_text_text_1",
+        "image_text_checklist_1",
+        "image_text_button_1"
+      ],
+      "settings": {}
+    },
+    "multicolumn": {
+      "type": "anvil-multicolumn",
+      "blocks": {
+        "multicolumn_column_1": {
+          "type": "column",
+          "settings": {
+            "media": "image",
+            "heading": "Example: what it does",
+            "text": "<p>Example: say in a sentence or two what the product does for the shopper. Only state what is true.</p>"
+          }
+        },
+        "multicolumn_column_2": {
+          "type": "column",
+          "settings": {
+            "media": "image",
+            "heading": "Example: what it is made of",
+            "text": "<p>Example: name the real materials or ingredients and leave out claims you cannot back up.</p>"
+          }
+        },
+        "multicolumn_column_3": {
+          "type": "column",
+          "settings": {
+            "media": "image",
+            "heading": "Example: how to use it",
+            "text": "<p>Example: give one simple step or tip, in your own words.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "multicolumn_column_1",
+        "multicolumn_column_2",
+        "multicolumn_column_3"
+      ],
+      "settings": {
+        "heading": "What sets it <strong>apart</strong>"
+      }
+    },
+    "guarantees": {
+      "type": "anvil-guarantees",
+      "blocks": {
+        "guarantees_item_1": {
+          "type": "item",
+          "settings": {
+            "icon": "rotate-ccw",
+            "text": "<p>Example: replace with the return window and conditions in your refund policy.</p>",
+            "heading": "Example: 30-day returns",
+            "link_type": "refund"
+          }
+        },
+        "guarantees_item_2": {
+          "type": "item",
+          "settings": {
+            "icon": "truck",
+            "text": "<p>Example: replace with the delivery times your shipping policy states.</p>",
+            "heading": "Example: tracked shipping",
+            "link_type": "shipping"
+          }
+        },
+        "guarantees_item_3": {
+          "type": "item",
+          "settings": {
+            "icon": "lock",
+            "text": "<p>Example: describe in plain words what protects a payment in your store.</p>",
+            "heading": "Example: secure checkout"
+          }
+        }
+      },
+      "block_order": [
+        "guarantees_item_1",
+        "guarantees_item_2",
+        "guarantees_item_3"
+      ],
+      "settings": {
+        "heading": "What we <strong>promise</strong>"
+      }
+    },
+    "bundle": {
+      "type": "anvil-bundle",
+      "blocks": {
+        "bundle_slot_1": {
+          "type": "slot",
+          "settings": {
+            "page_product": true
+          }
+        },
+        "bundle_slot_2": {
+          "type": "slot"
+        },
+        "bundle_slot_3": {
+          "type": "slot"
+        },
+        "bundle_slot_4": {
+          "type": "slot"
+        }
+      },
+      "block_order": [
+        "bundle_slot_1",
+        "bundle_slot_2",
+        "bundle_slot_3",
+        "bundle_slot_4"
+      ],
+      "settings": {
+        "heading": "Build your <strong>bundle</strong>",
+        "subheading": "<p>Example: pick any three — replace with the real terms of your offer.</p>"
+      }
+    },
     "faq": {
       "type": "anvil-faq",
       "blocks": {
         "faq_1": {
           "type": "item",
           "settings": {
-            "question": "Example question — What is it made of?",
-            "answer": "<p>Example answer — describe the real materials and where to find care instructions.</p>"
+            "question": "Example: What is it made of?",
+            "answer": "<p>Example: describe the real materials and where to find care instructions.</p>"
           }
         },
         "faq_2": {
           "type": "item",
           "settings": {
-            "question": "Example question — What is your returns policy?",
-            "answer": "<p>Example answer — summarise your actual returns window and conditions here and link to your returns policy page.</p>"
+            "question": "Example: What is your returns policy?",
+            "answer": "<p>Example: summarise your actual returns window and conditions here and link to your returns policy page.</p>"
           }
         },
         "faq_3": {
           "type": "item",
           "settings": {
-            "question": "Example question — Can I change or cancel an order?",
-            "answer": "<p>Example answer — say how quickly a shopper must contact you, how to reach you, and what happens once an order has shipped.</p>"
+            "question": "Example: Can I change or cancel an order?",
+            "answer": "<p>Example: say how quickly a shopper must contact you, how to reach you, and what happens once an order has shipped.</p>"
           }
         }
       },
@@ -289,11 +848,112 @@
         "json_ld": false,
         "open_first": true
       }
+    },
+    "reviews": {
+      "type": "anvil-review-wall",
+      "blocks": {
+        "reviews_review_1": {
+          "type": "review",
+          "settings": {
+            "name": "Example: Alex R.",
+            "quote": "Example: replace with words a real customer wrote, copied exactly."
+          }
+        },
+        "reviews_review_2": {
+          "type": "review",
+          "settings": {
+            "name": "Example: Sam K.",
+            "quote": "Example: this one is longer, so you can see how the wall shortens long reviews. Shoppers open the full text with Read more, so you never need to cut a review down yourself. Replace it with a real review, word for word, and add the link to where the customer posted it."
+          }
+        },
+        "reviews_review_3": {
+          "type": "review",
+          "settings": {
+            "name": "Example: Jordan P.",
+            "quote": "Example: a short, specific review reads best. Replace it with a real one."
+          }
+        },
+        "reviews_review_4": {
+          "type": "review",
+          "settings": {
+            "name": "Example: Riley M.",
+            "quote": "Example: add the customer's photo only if they shared it with their review and agreed to its use. This example is long on purpose too: a review that runs past the line limit ends with Read more, and the whole text opens in a dialog. Screen readers read the whole review either way. Replace this text with the customer's own words, exactly as they wrote them."
+          }
+        },
+        "reviews_review_5": {
+          "type": "review",
+          "settings": {
+            "name": "Example: Casey T.",
+            "quote": "Example: the date field takes the day the customer posted, written as YYYY-MM-DD. Replace this with a real review."
+          }
+        },
+        "reviews_review_6": {
+          "type": "review",
+          "settings": {
+            "name": "Example: Morgan L.",
+            "quote": "Example: set the stars this customer gave and add the link to this review; stars show only with that link. Replace this with a real review."
+          }
+        },
+        "reviews_review_7": {
+          "type": "review",
+          "settings": {
+            "name": "Example: Taylor B.",
+            "quote": "Example: reviews after the first six wait behind the Show more button. Replace this with a real review."
+          }
+        },
+        "reviews_review_8": {
+          "type": "review",
+          "settings": {
+            "name": "Example: Jamie D.",
+            "quote": "Example: delete any example you do not replace before you publish. Replace this with a real review."
+          }
+        }
+      },
+      "block_order": [
+        "reviews_review_1",
+        "reviews_review_2",
+        "reviews_review_3",
+        "reviews_review_4",
+        "reviews_review_5",
+        "reviews_review_6",
+        "reviews_review_7",
+        "reviews_review_8"
+      ],
+      "settings": {
+        "heading": "Customer <strong>reviews</strong>",
+        "anchor": "reviews"
+      }
+    },
+    "related": {
+      "type": "anvil-related-products",
+      "settings": {
+        "heading": "More to <strong>explore</strong>",
+        "intent": "related",
+        "limit": 4,
+        "layout": "grid",
+        "cols_desktop": "4"
+      }
     }
   },
   "order": [
     "main",
+    "ticker",
     "icon_bar",
-    "faq"
+    "stats",
+    "features",
+    "compare",
+    "before_after",
+    "testimonials",
+    "videos",
+    "timeline",
+    "marquee",
+    "gallery",
+    "image_text",
+    "multicolumn",
+    "guarantees",
+    "bundle",
+    "faq",
+    "reviews",
+    "related"
   ]
 }

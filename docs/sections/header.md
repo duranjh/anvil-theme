@@ -3,7 +3,7 @@
 _Section card, 2026-10-14 (fix pass). Group-only section (`enabled_on.groups: ["header"]`) with the reduced chassis (CONVENTIONS §4). CSS: `assets/anvil-header.css`. Spec: SPEC §2.2._
 
 ## Purpose
-Logo, main menu (dropdowns or mega panels), search, account and cart on one bar; a menu drawer on phones; optional transparent mode over the homepage's first section.
+Logo, main menu (dropdowns or mega panels), search, account and cart on one bar; a menu drawer on phones; optional transparent mode over the first section of the homepage or of the templates the merchant lists.
 
 ## Settings
 Reduced chassis first: `color_scheme`, `pad_top`, `pad_bottom`, `pad_mobile`, `show_on`. Then:
@@ -15,9 +15,10 @@ Reduced chassis first: `color_scheme`, `pad_top`, `pad_bottom`, `pad_mobile`, `s
 | `menu` | link_list | `main-menu` | the menu |
 | `menu_position` | select `left` / `center` / `below` | `center` | desktop menu placement; with a centred logo `left` and `center` both sit left |
 | `sticky` | select `always` / `scroll-up` / `never` | `scroll-up` | sticky behaviour; never hidden while focus is inside |
-| `transparent_home` | checkbox | false | transparent over the homepage's first section until the page scrolls |
+| `transparent_mode` | select `none` / `home` / `custom` | `none` | transparent over the first section until the page scrolls: off, on the homepage, or on the templates listed in `transparent_templates` |
+| `transparent_templates` | text | blank | comma-separated template names (`product`, `page.landing`, `collection`…); shown with `custom` |
 | `transparent_scheme` | color_scheme | `scheme-4` | text colour while transparent; a dark scheme also switches to `settings.logo_light` |
-| `show_search`, `search_mode` | checkbox, select `link` / `modal` | true, `modal` | search link or dialog; the dialog shows predictive results when Theme settings > Search is on |
+| `show_search`, `search_mode` | checkbox, select `link` / `modal` / `inline` | true, `modal` | search link, dialog, or a field in the bar on desktop (a link below 990 px); the dialog and the field show predictive results when Theme settings > Search is on |
 | `show_account` | checkbox | true | account link (when customer accounts are enabled) |
 | `drawer_layout` | select `list` / `tiles` | `list` | phone menu: expandable groups or large tiles |
 | `drawer_socials` | checkbox | false | social pills in the phone menu |
@@ -31,7 +32,7 @@ Reduced chassis first: `color_scheme`, `pad_top`, `pad_bottom`, `pad_mobile`, `s
 - Phone menu: `<anvil-drawer close-at="990">` around a `<details>`. With JS it is a modal panel (focus confined, page inert, Esc/overlay close) that closes itself when the viewport reaches 990 px; without JS the panel drops down under the bar and the burger stays visible to close it.
 - Cart link: hidden "Cart" text + the bubble's hidden "N items" give "Cart, 3 items"; `aria-haspopup="dialog"` when the drawer is on. Search link: `aria-haspopup="dialog"` in modal mode.
 - Logo: `image_tag` with width/height attributes and CSS width `var(--av-logo-w)`, so the box is reserved before the image loads.
-- Transparent: the section overlaps the first section by a height Liquid computes from padding and logo size (`margin-bottom: -Npx`, three breakpoints), so nothing shifts when scripts run; the bar starts with `av-is-transparent` and loses it once scrolled.
+- Transparent: the section overlaps the first section by a height Liquid computes from padding and logo size (`margin-bottom: -Npx`, three breakpoints), so nothing shifts when scripts run; the same height is written to `--av-header-overlap` on `:root`, and the first section of `<main>` gets `--av-overlap-pad` from it, which the heroes and the image banner add to their top padding so content clears the bar (DECISIONS 110). The bar starts with `av-is-transparent` and loses it once scrolled.
 
 ## Honesty / accessibility notes
 No claims are rendered by the header. Every icon-only control has visually hidden text. Touch targets 44 px.
@@ -39,3 +40,7 @@ No claims are rendered by the header. Every icon-only control has visually hidde
 ## Uncertain
 - The transparent overlap is an estimate when the logo is taller than its width/aspect ratio suggests (SVG with padding); check on a real logo.
 - `color_brightness` on a scheme background decides "dark" (< 128).
+
+## Fix pass (2026-10-15)
+- Setting ids follow the theme-wide vocabulary (CONVENTIONS §5; DECISIONS 82–100); the tables above use the new ids: `transparent_home` → `transparent_mode`. Saved templates were migrated.
+- Availability: `enabled_on` "groups": ["header"] (CONVENTIONS §4).

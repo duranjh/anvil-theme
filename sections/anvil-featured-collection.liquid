@@ -1,0 +1,375 @@
+{%- liquid
+  assign s = section.settings
+
+  comment
+    Source: a collection, or a hand-picked product list. Nothing chosen renders example cards (CONVENTIONS §12);
+    a chosen source with no products renders nothing for shoppers and a note in the editor.
+  endcomment
+  assign use_list = false
+  if s.source == 'products'
+    assign use_list = true
+  endif
+  assign coll = s.collection
+  assign limit = s.limit | default: 8
+  assign has_source = false
+  assign item_count = 0
+  assign items = nil
+  if use_list
+    if s.products != blank
+      assign has_source = true
+      assign items = s.products
+    endif
+  elsif coll != blank
+    assign has_source = true
+    assign items = coll.products
+  endif
+  if has_source
+    assign item_count = items.size | at_most: limit
+  endif
+
+  assign cols_d = s.cols_desktop | default: '4' | plus: 0 | at_least: 2 | at_most: 6
+  assign cols_m = s.cols_mobile | default: '2' | plus: 0 | at_least: 1 | at_most: 2
+
+  comment
+    Example cards fill at least one desktop row and never exceed the product count. The slider gets two more than
+    a desktop view, so the example row scrolls and shows its arrows and dots at every width.
+  endcomment
+  assign ph_count = 0
+  unless has_source
+    assign ph_count = cols_d | at_least: 4 | at_most: limit
+    if s.layout == 'slider'
+      assign ph_count = cols_d | plus: 2 | at_most: limit
+    endif
+  endunless
+
+  assign show_body = true
+  if has_source and item_count == 0
+    assign show_body = false
+  endif
+
+  # The first desktop row loads eagerly in the first two template sections (snippets/anvil-above-fold).
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+
+  comment
+    The card titles are h3, so a section without a visible heading gets a visually hidden h2 (CONVENTIONS §3).
+    The same words name the slider region.
+  endcomment
+  assign list_label = s.heading | strip_html | strip
+  if list_label == blank
+    if has_source and use_list == false
+      assign list_label = coll.title | escape
+    endif
+  endif
+  if list_label == blank
+    assign list_label = 'anvil.featured_collection.label' | t
+  endif
+
+  comment
+    View all: the merchant's link, else the chosen collection, else all products while nothing is chosen.
+    A hand-picked list has no page of its own, so it needs a typed link.
+  endcomment
+  assign view_all_label = s.view_all_label | strip | escape
+  assign view_all_url = s.view_all_url
+  if view_all_url == blank
+    if has_source == false
+      assign view_all_url = routes.all_products_collection_url
+    elsif use_list == false
+      assign view_all_url = coll.url
+      capture view_all_context
+        echo ' <span class="av-visually-hidden">'
+        echo 'anvil.featured_collection.view_all_context' | t: title: coll.title
+        echo '</span>'
+      endcapture
+      assign view_all_label = view_all_label | append: view_all_context
+    endif
+  endif
+  assign show_view_all = false
+  if s.show_view_all and view_all_url != blank and s.view_all_label != blank
+    assign show_view_all = true
+  endif
+  # View all button look (only link_arrow draws the arrow).
+  assign va_style = s.view_all_style | default: 'secondary'
+  assign va_icon = ''
+  if va_style == 'link_arrow'
+    assign va_style = 'link'
+    assign va_icon = 'arrow-right'
+  endif
+-%}
+{%- if show_body or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-featured-collection' %}>
+  <div class="av-section__inner">
+    {%- if show_body -%}
+      {% render 'anvil-section-head', section: section, fallback: list_label %}
+      {{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+      {%- if s.layout == 'slider' -%}
+        {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      {%- endif -%}
+      <div class="av-featured-collection">
+        {%- if has_source == false and request.design_mode -%}
+          {%- comment -%}
+            The pickers cannot hide themselves (visible_if does not support collection or product_list settings),
+            so the note names the picker the current source reads.
+          {%- endcomment -%}
+          {%- if use_list -%}
+            <p class="av-featured-collection__note av-example-note">{{ 'anvil.featured_collection.choose_list' | t }}</p>
+          {%- else -%}
+            <p class="av-featured-collection__note av-example-note">{{ 'anvil.editor.choose_products' | t }}</p>
+          {%- endif -%}
+        {%- endif -%}
+        {%- render 'anvil-product-row',
+          products: items,
+          limit: limit,
+          placeholders: ph_count,
+          layout: s.layout,
+          cols_desktop: cols_d,
+          cols_mobile: cols_m,
+          show_arrows: s.show_arrows,
+          show_dots: s.show_dots,
+          label: list_label,
+          fold: fold,
+          width: s.width,
+          show_vendor: s.show_vendor,
+          show_rating: s.show_rating,
+          quick_add: s.quick_add,
+          image_ratio: s.image_ratio,
+          hover_image: s.hover_image,
+          uid: section.id
+        -%}
+        {%- if show_view_all -%}
+          <div class="av-featured-collection__foot av-align--{{ s.head_align | default: 'center' }}">
+            {%- render 'anvil-button', label: view_all_label, url: view_all_url, style: va_style, size: 'md', icon: va_icon -%}
+          </div>
+        {%- endif -%}
+      </div>
+    {%- else -%}
+      {% render 'anvil-section-head', section: section %}
+      {%- assign empty_note = 'anvil.editor.collection_empty' | t -%}
+      {% render 'anvil-editor-empty', text: empty_note %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* The product row (grid or slider) is snippets/anvil-product-row with its rules in assets/anvil-card.css. */
+.av-featured-collection__note{margin:0 0 var(--av-space-4);text-align:center}
+.av-featured-collection__foot{margin-top:var(--av-space-6)}
+@media (min-width: 750px){
+.av-featured-collection__foot{margin-top:var(--av-space-7)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Featured collection",
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Featured collection" },
+    {
+      "type": "select",
+      "id": "source",
+      "label": "Products from",
+      "options": [
+        { "value": "collection", "label": "A collection" },
+        { "value": "products", "label": "Hand-picked products" }
+      ],
+      "default": "collection",
+      "info": "Then choose the collection, or pick the products, in the matching setting below. Example cards show until you do."
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection",
+      "info": "Used when Products from is A collection. Products show in the collection's sort order."
+    },
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "Products",
+      "limit": 24,
+      "info": "Used when Products from is Hand-picked products. Products show in the order you pick them."
+    },
+    {
+      "type": "range",
+      "id": "limit",
+      "label": "Product count",
+      "min": 2,
+      "max": 24,
+      "step": 1,
+      "default": 8,
+      "info": "The most products shown. A shorter collection or list shows fewer."
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "grid", "label": "Grid" },
+        { "value": "slider", "label": "Slider" }
+      ],
+      "default": "grid",
+      "info": "Slider shows one row that shoppers swipe or scroll; it works without JavaScript."
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5", "label": "5" },
+        { "value": "6", "label": "6" }
+      ],
+      "default": "4",
+      "info": "In a slider this is the number in view. Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "2",
+      "info": "In a slider this is the number in view."
+    },
+    { "type": "header", "content": "Product cards" },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" }
+      ],
+      "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "hover_image",
+      "label": "Show second image on hover",
+      "default": true,
+      "info": "Only on devices that can hover. Phones never download the second image."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "Show product rating",
+      "default": false,
+      "info": "Stars appear only for products rated by a review app (the reviews.rating metafield). Nothing shows otherwise."
+    },
+    {
+      "type": "checkbox",
+      "id": "quick_add",
+      "label": "Show quick add",
+      "default": false,
+      "info": "Products with one variant get an Add to cart button. Products with options get a link to choose them."
+    },
+    {
+      "type": "header",
+      "content": "Slider",
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true,
+      "visible_if": "{{ section.settings.layout == 'slider' }}",
+      "info": "On tablets and desktops, beside the row while it scrolls. Phones swipe. Arrows stay on while dots are off."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "Show dots",
+      "default": true,
+      "visible_if": "{{ section.settings.layout == 'slider' }}",
+      "info": "The row has no scrollbar, so turning dots off keeps the arrows on: mouse users need one of them to see more products."
+    },
+    { "type": "header", "content": "View all button" },
+    {
+      "type": "checkbox",
+      "id": "show_view_all",
+      "label": "Show \"View all\" button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "view_all_label",
+      "label": "Button label",
+      "default": "View all",
+      "visible_if": "{{ section.settings.show_view_all }}"
+    },
+    {
+      "type": "url",
+      "id": "view_all_url",
+      "label": "Button link",
+      "visible_if": "{{ section.settings.show_view_all }}",
+      "info": "Blank links the chosen collection, or all products while none is chosen. Hand-picked products need a link here."
+    },
+    {
+      "type": "select",
+      "id": "view_all_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" },
+        { "value": "link", "label": "Text link" },
+        { "value": "link_arrow", "label": "Text link with arrow" }
+      ],
+      "default": "secondary",
+      "visible_if": "{{ section.settings.show_view_all }}"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Featured collection",
+      "settings": {
+        "heading": "Featured <strong>products</strong>",
+        "layout": "grid",
+        "limit": 8,
+        "cols_desktop": "4"
+      }
+    },
+    {
+      "name": "Product slider",
+      "settings": {
+        "heading": "Shop the <strong>collection</strong>",
+        "layout": "slider",
+        "limit": 12,
+        "cols_desktop": "4",
+        "show_arrows": true,
+        "show_dots": true
+      }
+    }
+  ]
+}
+{% endschema %}

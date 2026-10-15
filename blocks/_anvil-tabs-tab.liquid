@@ -1,0 +1,223 @@
+{% doc %}
+  Private theme block for sections/anvil-tabs.liquid: one tab. The section draws the tab button in its strip from
+  this block's title and icon; this file draws the matching panel (role="tabpanel") holding theme blocks (@theme,
+  @app). Ids follow the section's rule: panel id = the link id setting (handleized) or av-tabs-<section id>-<block id>,
+  labelled by the button av-tabs-tab-<section id>-<block id>. The first tab with a title starts open (the first tab in
+  the editor); the other panels render hidden and <anvil-tabs> (assets/anvil-tabs.js) switches them. Without
+  JavaScript every panel shows, each under its own h3 title (the section always has an h2, visually hidden when
+  its heading is blank). A tab without a title renders nothing on the storefront, since its button would have no
+  name. The panel is the block's only root element and the only one carrying block.shopify_attributes.
+
+  Settings (id · type · values · default):
+  - title · text · default "Example tab"
+  - icon · select · none | info | check-circle | … · default "none"
+  - icon_image · image_picker
+  - anchor · text
+  - layout · select · stack | split · default "stack"
+  - valign · select · center | top · default "center"
+  - width · select · full | narrow · default "full"
+  - align · text_alignment · default "left" (app blocks and the no-JS title only)
+  - gap · range · 0–64 step 4px · default 24
+  Accepts child blocks: @theme, @app
+
+  @example
+  {"type": "_anvil-tabs-tab"}
+{% enddoc %}
+{%- liquid
+  assign b = block.settings
+  assign title = b.title | strip
+  assign show = true
+  if title == blank
+    if request.design_mode
+      assign title = 'anvil.editor.tab_no_title' | t
+    else
+      assign show = false
+    endif
+  endif
+
+  # Same rule as the section's strip: the first tab with a title opens, or the
+  # first tab of all in the editor (untitled tabs stay visible there).
+  assign open_id = ''
+  for item in section.blocks
+    assign item_title = item.settings.title | strip
+    if request.design_mode or item_title != blank
+      assign open_id = item.id
+      break
+    endif
+  endfor
+
+  assign panel_id = b.anchor | handleize
+  if panel_id == blank
+    assign panel_id = 'av-tabs-' | append: section.id | append: '-' | append: block.id
+  endif
+  assign tab_id = 'av-tabs-tab-' | append: section.id | append: '-' | append: block.id
+
+  assign panel_class = 'av-tabs__panel av-tabs__panel--' | append: b.layout | append: ' av-tabs__panel--' | append: b.align
+  if b.valign == 'top'
+    assign panel_class = panel_class | append: ' av-tabs__panel--v-start'
+  endif
+  if b.width == 'narrow'
+    assign panel_class = panel_class | append: ' av-tabs__panel--narrow'
+  endif
+-%}
+{%- if show -%}
+  <div class="{{ panel_class }}" id="{{ panel_id }}" role="tabpanel" aria-labelledby="{{ tab_id }}"{% if block.id != open_id %} hidden{% endif %} style="--av-tabs-gap: {{ b.gap }}px;" {{ block.shopify_attributes }}>
+    <h3 class="av-tabs__title">{{ title | escape }}</h3>
+    <div class="av-tabs__content">
+      {% content_for 'blocks' %}
+    </div>
+  </div>
+{%- endif -%}
+{% schema %}
+{
+  "name": "Tab",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Tab title",
+      "default": "Example tab",
+      "info": "Shoppers pick the tab by this name. A tab without a title is hidden from shoppers."
+    },
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "Icon",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "info", "label": "Info" },
+        { "value": "check-circle", "label": "Check in circle" },
+        { "value": "badge-check", "label": "Badge check" },
+        { "value": "help-circle", "label": "Question mark" },
+        { "value": "book-open", "label": "Open book" },
+        { "value": "file-text", "label": "Document" },
+        { "value": "layers", "label": "Layers" },
+        { "value": "ruler", "label": "Ruler" },
+        { "value": "scale", "label": "Scale" },
+        { "value": "leaf", "label": "Leaf" },
+        { "value": "droplet", "label": "Droplet" },
+        { "value": "recycle", "label": "Recycle" },
+        { "value": "sun", "label": "Sun" },
+        { "value": "snowflake", "label": "Snowflake" },
+        { "value": "flame", "label": "Flame" },
+        { "value": "shirt", "label": "Shirt" },
+        { "value": "utensils", "label": "Cutlery" },
+        { "value": "home", "label": "Home" },
+        { "value": "box", "label": "Box" },
+        { "value": "package", "label": "Package" },
+        { "value": "truck", "label": "Truck" },
+        { "value": "globe", "label": "Globe" },
+        { "value": "map-pin", "label": "Map pin" },
+        { "value": "rotate-ccw", "label": "Return arrow" },
+        { "value": "shield-check", "label": "Shield check" },
+        { "value": "lock", "label": "Lock" },
+        { "value": "wrench", "label": "Wrench" },
+        { "value": "settings", "label": "Gear" },
+        { "value": "zap", "label": "Lightning" },
+        { "value": "sparkles", "label": "Sparkles" },
+        { "value": "star", "label": "Star" },
+        { "value": "heart", "label": "Heart" },
+        { "value": "thumbs-up", "label": "Thumbs up" },
+        { "value": "award", "label": "Award" },
+        { "value": "trophy", "label": "Trophy" },
+        { "value": "gift", "label": "Gift" },
+        { "value": "tag", "label": "Tag" },
+        { "value": "percent", "label": "Percent" },
+        { "value": "users", "label": "People" },
+        { "value": "message-circle", "label": "Chat bubble" },
+        { "value": "clock", "label": "Clock" },
+        { "value": "calendar", "label": "Calendar" },
+        { "value": "play", "label": "Play" },
+        { "value": "video", "label": "Video" },
+        { "value": "camera", "label": "Camera" },
+        { "value": "image", "label": "Image" }
+      ],
+      "default": "none"
+    },
+    {
+      "type": "image_picker",
+      "id": "icon_image",
+      "label": "Custom icon image",
+      "info": "Replaces the icon. Square images work best. Upload only artwork you are entitled to use."
+    },
+    {
+      "type": "text",
+      "id": "anchor",
+      "label": "Tab link id",
+      "info": "Letters, numbers and hyphens, different from every other id on the page. With \"Open tabs from links\" on, a link ending in #your-id opens this tab."
+    },
+    { "type": "header", "content": "Panel" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "stack", "label": "Stacked" },
+        { "value": "split", "label": "Two columns from tablets up" }
+      ],
+      "default": "stack"
+    },
+    {
+      "type": "select",
+      "id": "valign",
+      "label": "Vertical alignment in two columns",
+      "options": [
+        { "value": "center", "label": "Middle" },
+        { "value": "top", "label": "Top" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "select",
+      "id": "width",
+      "label": "Content width",
+      "options": [
+        { "value": "full", "label": "Container" },
+        { "value": "narrow", "label": "Narrow" }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "text_alignment",
+      "id": "align",
+      "label": "App block alignment",
+      "default": "left",
+      "info": "Aligns app blocks and the title shown without JavaScript. Theme blocks keep their own alignment setting."
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between blocks",
+      "min": 0,
+      "max": 64,
+      "step": 4,
+      "unit": "px",
+      "default": 24
+    }
+  ],
+  "blocks": [
+    { "type": "@theme" },
+    { "type": "@app" }
+  ],
+  "presets": [
+    {
+      "name": "Tab",
+      "settings": {
+        "title": "Example tab"
+      },
+      "blocks": [
+        {
+          "type": "anvil-heading",
+          "settings": {
+            "heading": "Example: your heading",
+            "tag": "h3",
+            "size": "sm"
+          }
+        },
+        { "type": "anvil-text" }
+      ]
+    }
+  ]
+}
+{% endschema %}

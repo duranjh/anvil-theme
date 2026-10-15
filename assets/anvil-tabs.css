@@ -10,8 +10,16 @@ anvil-tabs [role="tablist"] {
   display: flex;
   gap: var(--av-space-1);
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
   border-bottom: var(--av-border-w-card) solid var(--av-border);
+}
+
+/* Mouse users get a thin scrollbar when the row overflows; touch screens keep it hidden. */
+@media (hover: hover) and (pointer: fine) {
+  anvil-tabs [role="tablist"] {
+    scrollbar-width: thin;
+  }
 }
 
 anvil-tabs [role="tablist"]::-webkit-scrollbar {
@@ -20,6 +28,8 @@ anvil-tabs [role="tablist"]::-webkit-scrollbar {
 
 .av-tabs--center anvil-tabs [role="tablist"] {
   justify-content: center;
+  /* A centred row that overflows must still scroll back to its first tab; browsers without `safe` keep the line above. */
+  justify-content: safe center;
 }
 
 anvil-tabs [role="tab"] {
@@ -38,6 +48,11 @@ anvil-tabs [role="tab"] {
 
 anvil-tabs [role="tab"][aria-selected="true"] {
   color: var(--av-fg);
+}
+
+/* The scrolling row clips anything drawn outside a tab, so the focus ring is drawn inside it. */
+anvil-tabs [role="tab"]:focus-visible {
+  outline-offset: -4px;
 }
 
 anvil-tabs [role="tab"]::after {
@@ -68,6 +83,10 @@ anvil-tabs [role="tab"][aria-selected="true"]::after {
   border-color: var(--av-btn-border);
   background: var(--av-btn-bg);
   color: var(--av-btn-fg);
+}
+
+.av-tabs--pills anvil-tabs [role="tab"][aria-selected="true"]:focus-visible {
+  outline-color: var(--av-btn-fg);
 }
 
 .av-tabs--pills anvil-tabs [role="tab"]::after {

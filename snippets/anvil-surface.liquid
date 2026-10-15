@@ -1,0 +1,23 @@
+{% doc %}
+  Card surface classes for a section's `card_style` setting (DECISIONS 83). Prints nothing for a card without a box
+  ("No box", or "Same as theme cards" while Theme settings > Cards is flat), else `av-surface av-surface--<style>`.
+  The surface rules (border, one tint, shadow with a medium floor, theme cards copied exactly) live in
+  assets/anvil-base.css; sections add their own padding. Capture the output: a blank result means "no box".
+
+  @param {string} [style] - theme | flat | outlined | tinted | raised (default theme)
+
+  @example
+  {%- capture surface -%}{% render 'anvil-surface', style: s.card_style %}{%- endcapture -%}
+  <li class="av-foo__card {{ surface }}">…</li>
+{% enddoc %}
+{%- liquid
+  assign surface_style = style | default: 'theme'
+  if surface_style == 'theme'
+    if settings.card_style == blank or settings.card_style == 'flat'
+      assign surface_style = 'flat'
+    endif
+  endif
+  if surface_style != 'flat'
+    echo 'av-surface av-surface--' | append: surface_style
+  endif
+-%}

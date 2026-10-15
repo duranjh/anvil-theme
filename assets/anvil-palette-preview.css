@@ -1,0 +1,45 @@
+/* anvil-palette-preview.css: sections/anvil-palette-preview.liquid. Loaded only in the theme editor (the section renders
+   nothing on the storefront), so shoppers never download it. Swatch and sample colours arrive as inline custom
+   properties from the scheme settings; everything else uses the section scheme's tokens. */
+.av-palette-preview{display:grid;gap:var(--av-space-5);container-type:inline-size}
+.av-palette-preview__intro,.av-palette-preview__legend{margin:0;max-width:72ch;font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted)}
+.av-palette-preview__grid{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-5);margin:0;padding:0;list-style:none}
+.av-palette-preview__card{display:flex;flex-direction:column;gap:var(--av-space-4);min-width:0;margin:0;padding:var(--av-space-4);container-type:inline-size;border:1px solid rgb(var(--av-fg-rgb) / 0.2);border-radius:var(--av-radius-card)}
+.av-palette-preview__head{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2)}
+.av-palette-preview__name{margin:0;font-size:var(--av-text-lg);line-height:1.2}
+.av-palette-preview__id{font-size:var(--av-text-xs);color:var(--av-fg-muted);overflow-wrap:anywhere}
+.av-palette-preview__tag{padding:2px var(--av-space-2);font-size:var(--av-text-xs);font-weight:600;line-height:1.4;border:1px solid currentColor;border-radius:var(--av-radius-badge)}
+/* The panel carries .av-scheme--<id>, so inside it every token is that scheme's own. It composes the real .av-btn,
+   .av-badge and .av-field__input; pointer-events:none keeps those samples from showing a pointer or hover state. */
+.av-palette-preview__panel{pointer-events:none;display:grid;gap:var(--av-space-3);padding:var(--av-space-5) var(--av-space-4);border:1px solid rgb(var(--av-fg-rgb) / 0.15);border-radius:var(--av-radius-card)}
+.av-palette-preview__aa{margin:0;font-family:var(--av-font-heading);font-weight:var(--av-heading-weight);font-size:var(--av-text-3xl);line-height:1}
+.av-palette-preview__copy,.av-palette-preview__actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2) var(--av-space-4);margin:0}
+.av-palette-preview__muted{color:var(--av-fg-muted)}
+.av-palette-preview__link{color:var(--av-accent);text-decoration:underline;text-underline-offset:0.15em}
+.av-palette-preview__swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr));gap:var(--av-space-3);margin:0}
+.av-palette-preview__swatch{min-width:0}
+.av-palette-preview__swatch dt{font-size:var(--av-text-xs);font-weight:600;line-height:1.3}
+.av-palette-preview__swatch dd{display:flex;align-items:center;gap:var(--av-space-2);margin:var(--av-space-1) 0 0;font-size:var(--av-text-xs);color:var(--av-fg-muted);overflow-wrap:anywhere}
+.av-palette-preview__chip{flex:none;width:1.5rem;height:1.5rem;background:var(--av-palette-preview-c);border:1px solid rgb(var(--av-fg-rgb) / 0.3);border-radius:var(--av-radius-badge)}
+.av-palette-preview__note{margin:0;font-size:var(--av-text-sm);line-height:1.5}
+.av-palette-preview__table{width:100%;border-collapse:collapse;font-size:var(--av-text-sm);line-height:1.35}
+.av-palette-preview__table th,.av-palette-preview__table td{padding:var(--av-space-2) var(--av-space-1);text-align:start;vertical-align:middle;border-top:1px solid rgb(var(--av-fg-rgb) / 0.15)}
+.av-palette-preview__table thead th{border-top:0;font-size:var(--av-text-xs);font-weight:600;color:var(--av-fg-muted)}
+.av-palette-preview__table tbody th{font-weight:400}
+.av-palette-preview__table .av-palette-preview__ratio{text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums}
+.av-palette-preview__pair{display:flex;align-items:center;gap:var(--av-space-2)}
+.av-palette-preview__sample{flex:none;display:inline-flex;align-items:center;justify-content:center;width:2.25rem;height:1.5rem;font-size:var(--av-text-xs);font-weight:700;line-height:1;color:var(--av-palette-preview-fg);background:var(--av-palette-preview-bg);border:1px solid rgb(var(--av-fg-rgb) / 0.2);border-radius:var(--av-radius-badge)}
+.av-palette-preview__sample--edge::after{content:"";width:1.25rem;height:0.75rem;border:1px solid var(--av-palette-preview-fg);border-radius:var(--av-radius-input)}
+.av-palette-preview__verdict{display:inline-flex;align-items:center;gap:var(--av-space-1);padding:2px var(--av-space-2);font-size:var(--av-text-xs);font-weight:600;line-height:1.3;border:1px solid transparent;border-radius:var(--av-radius-pill)}
+.av-palette-preview__verdict svg{flex:none}
+.av-palette-preview__verdict--pass{background:rgb(var(--av-fg-rgb) / 0.08)}
+.av-palette-preview__verdict--warn{border-color:currentColor}
+.av-palette-preview__verdict--fail{color:var(--av-bg);background:var(--av-fg)}
+.av-palette-preview__verdict--unset{color:var(--av-fg-muted)}
+/* Columns follow the space the section has (narrow width included), not the viewport. */
+@container (min-width: 700px){.av-palette-preview__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@container (min-width: 1400px){.av-palette-preview__grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Verdicts stay on one line once the card has room; on a phone they may wrap instead of widening the table. */
+@container (min-width: 22rem){.av-palette-preview__verdict{white-space:nowrap}}
+/* The swatches exist to show real colours, so forced-colours mode leaves them alone. */
+@media (forced-colors: active){.av-palette-preview__chip,.av-palette-preview__sample{forced-color-adjust:none}}

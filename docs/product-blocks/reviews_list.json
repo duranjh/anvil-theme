@@ -7,7 +7,7 @@
     {"type": "select", "id": "quotes_style", "label": "Style", "options": [{"value": "card", "label": "Cards"}, {"value": "plain", "label": "Plain"}], "default": "card"},
     {"type": "text", "id": "testimonials_disclosure", "label": "Disclosure line", "default": "Quotes shared by customers; entered by the store.", "info": "Always shown under the quotes so shoppers know you entered them. If you clear it, a standard disclosure is shown."},
     {"type": "header", "content": "Quote 1"},
-    {"type": "textarea", "id": "quote_1_text", "label": "Quote", "default": "Example quote — replace with words a customer actually sent you.", "info": "Use real words from a real customer, with their permission. Leave empty to hide this quote."},
+    {"type": "textarea", "id": "quote_1_text", "label": "Quote", "default": "Example: replace with words a customer actually sent you.", "info": "Use real words from a real customer, with their permission. Leave empty to hide this quote."},
     {"type": "text", "id": "quote_1_name", "label": "Name", "default": "Example customer"},
     {"type": "image_picker", "id": "quote_1_image", "label": "Photo", "info": "Only with the customer's permission."},
     {"type": "header", "content": "Quote 2"},

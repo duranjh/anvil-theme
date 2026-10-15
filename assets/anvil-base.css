@@ -112,6 +112,8 @@
   --av-shadow-lg: 0 24px 48px -12px rgb(var(--av-shadow-rgb) / calc(var(--av-shadow-a) * 1.6)), 0 8px 16px -8px rgb(var(--av-shadow-rgb) / var(--av-shadow-a));
   --av-focus-ring: 0 0 0 2px var(--av-bg), 0 0 0 4px var(--av-accent);
   --av-control-h: 44px;
+  --av-inline-control: 32px;
+  --av-surface-tint: 0.05;
   --av-control-h-sm: 36px;
   --av-control-h-lg: 52px;
   /* anvil-core.js writes --av-header-offset on :root from the sticky header's height */
@@ -463,79 +465,69 @@ h6,
   }
 }
 
-/* 6. Grid helpers ----------------------------------------------------------- */
-.av-grid {
-  display: grid;
-  gap: var(--av-grid-gap);
-  grid-template-columns: repeat(var(--av-cols-mobile, 1), minmax(0, 1fr));
-  container-type: inline-size;
-}
+/* 6. Grid helpers -----------------------------------------------------------
+   One column rule for every card grid (DECISIONS 82). Sections compose
+   `av-grid av-grid--c<desktop> av-grid--m<phones>` instead of their own column
+   math. Desktop (990 px and up) shows --av-cols; tablets (750–989 px) show
+   --av-cols-tablet, which the --c classes set to min(cols, 3) with 4 → 2;
+   phones show --av-cols-mobile. `av-grid--flex` is the same grid as a wrapping
+   flex row (for "centre an unfinished last row", `av-grid--center`). The gap is
+   the theme's grid gap unless the section sets --av-grid-space. */
+.av-grid { --av-grid-n: var(--av-cols-mobile, 1); display: grid; gap: var(--av-grid-space, var(--av-grid-gap)); grid-template-columns: repeat(var(--av-grid-n), minmax(0, 1fr)); margin: 0; }
+.av-grid--flex { display: flex; flex-wrap: wrap; }
+.av-grid--flex > * { flex: 0 0 calc((100% - (var(--av-grid-n) - 1) * var(--av-grid-space, var(--av-grid-gap))) / var(--av-grid-n)); min-width: 0; }
+.av-grid--center { justify-content: center; }
+.av-grid--c1 { --av-cols: 1; --av-cols-tablet: 1; }
+.av-grid--c2 { --av-cols: 2; --av-cols-tablet: 2; }
+.av-grid--c3 { --av-cols: 3; --av-cols-tablet: 3; }
+.av-grid--c4 { --av-cols: 4; --av-cols-tablet: 2; }
+.av-grid--c5 { --av-cols: 5; --av-cols-tablet: 3; }
+.av-grid--c6 { --av-cols: 6; --av-cols-tablet: 3; }
+.av-grid--c7 { --av-cols: 7; --av-cols-tablet: 4; }
+.av-grid--c8 { --av-cols: 8; --av-cols-tablet: 4; }
+.av-grid--m2 { --av-cols-mobile: 2; }
+.av-grid--m3 { --av-cols-mobile: 3; }
+.av-grid--m4 { --av-cols-mobile: 4; }
 
-.av-grid--2 {
-  --av-cols: 2;
-}
-
-.av-grid--3 {
-  --av-cols: 3;
-}
-
-.av-grid--4 {
-  --av-cols: 4;
-}
-
-.av-grid--mobile-2 {
-  --av-cols-mobile: 2;
-}
-
-.av-grid--tight {
-  gap: var(--av-space-3);
-}
-
-.av-flex {
-  display: flex;
-  gap: var(--av-space-3);
-  align-items: center;
-}
-
-.av-flex--wrap {
-  flex-wrap: wrap;
-}
-
-.av-flex--between {
-  justify-content: space-between;
-}
-
-.av-flex--center {
-  justify-content: center;
-}
-
-.av-stack > * + * {
-  margin-top: var(--av-stack-gap, var(--av-space-4));
-}
-
-.av-align--left {
-  text-align: left;
-}
-
-.av-align--center {
-  text-align: center;
-}
-
-.av-align--right {
-  text-align: right;
-}
+.av-align--left { text-align: left; }
+.av-align--center { text-align: center; }
+.av-align--right { text-align: right; }
 
 @media (min-width: 750px) {
   .av-grid {
-    grid-template-columns: repeat(var(--av-cols-tablet, min(var(--av-cols, 2), 2)), minmax(0, 1fr));
+    --av-grid-n: var(--av-cols-tablet, min(var(--av-cols, 2), 2));
   }
 }
 
 @media (min-width: 990px) {
   .av-grid {
-    grid-template-columns: repeat(var(--av-cols, 3), minmax(0, 1fr));
+    --av-grid-n: var(--av-cols, 3);
   }
 }
+
+/* Card surfaces (DECISIONS 83): --theme copies Theme settings > Cards (body
+   class av-cards--*); Outlined and Shadow keep a 1 px / medium-shadow floor. */
+.av-surface { border-radius: var(--av-radius-card); }
+.av-surface--outlined { border: max(1px, var(--av-border-w-card)) solid var(--av-border); }
+.av-surface--tinted { background: rgb(var(--av-fg-rgb) / var(--av-surface-tint)); }
+.av-surface--raised { background: var(--av-bg); box-shadow: var(--av-surface-shadow, var(--av-shadow-md)); }
+.av-cards--outlined .av-surface--theme { border: var(--av-border-w-card) solid var(--av-border); }
+.av-cards--raised .av-surface--theme { background: var(--av-bg); box-shadow: var(--av-shadow-card); }
+/* Icon frames (icon_style), sized from --av-icon-size. */
+.av-icon-frame { display: inline-grid; flex: none; place-items: center; color: var(--av-accent); }
+.av-icon-frame > svg, .av-icon-frame > img { display: block; width: var(--av-icon-size, 24px); height: var(--av-icon-size, 24px); object-fit: contain; }
+.av-icon-frame--circle, .av-icon-frame--square, .av-icon-frame--ring, .av-icon-frame--solid { width: calc(var(--av-icon-size, 24px) * 1.75); height: calc(var(--av-icon-size, 24px) * 1.75); border-radius: 50%; }
+.av-icon-frame--circle, .av-icon-frame--square { background: rgb(var(--av-accent-rgb) / 0.12); }
+.av-icon-frame--square { border-radius: var(--av-radius-card); }
+.av-icon-frame--ring { border: 2px solid currentColor; }
+.av-icon-frame--solid { background: var(--av-accent); color: var(--av-on-accent); }
+.av-icon-frame--text { color: inherit; }
+.av-icon-frame--text.av-icon-frame--circle, .av-icon-frame--text.av-icon-frame--square { background: rgb(var(--av-fg-rgb) / 0.08); }
+.av-icon-frame--text.av-icon-frame--solid { background: var(--av-fg); color: var(--av-bg); }
+/* Transparent header height (--av-header-overlap) for the first section's top padding (heroes). */
+.av-main > .shopify-section:first-child { --av-overlap-pad: var(--av-header-overlap, 0px); }
+/* Editor-only empty note (snippets/anvil-editor-empty). */
+.av-editor-empty { margin: 0; padding: var(--av-space-6) var(--av-space-4); border: 1px dashed var(--av-border); border-radius: var(--av-radius-card); color: var(--av-fg-muted); font-size: var(--av-text-xs); font-style: italic; text-align: center; }
 
 /* 7. Buttons ---------------------------------------------------------------- */
 .av-btn {
@@ -655,6 +647,13 @@ h6,
 
 .av-btn--has-icon {
   padding-inline: var(--av-space-4) var(--av-space-5);
+}
+
+/* A text link keeps no control height or padding at any size or with an icon; 24 px keeps the target size
+   (WCAG 2.5.8). Higher specificity than the size classes above, so source order no longer matters. */
+.av-btn.av-btn--link {
+  min-height: 24px;
+  padding: 0;
 }
 
 /* Loading state: text goes transparent, a ring spins in its place */
@@ -1040,72 +1039,6 @@ select.av-dropdown--underline {
   display: none;
 }
 
-/* Horizontal scroll rows (sliders fall back to this without JS) */
-.av-scroll-row {
-  display: flex;
-  gap: var(--av-grid-gap);
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-
-.av-scroll-row::-webkit-scrollbar {
-  display: none;
-}
-
-.av-scroll-row > * {
-  flex: none;
-  scroll-snap-align: start;
-}
-
-/* Aspect-ratio boxes */
-.av-ratio {
-  position: relative;
-  aspect-ratio: var(--av-ratio, 1 / 1);
-  overflow: hidden;
-}
-
-.av-ratio > img,
-.av-ratio > video,
-.av-ratio > iframe,
-.av-ratio > svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: var(--av-fit, cover);
-}
-
-.av-ratio--1x1 {
-  --av-ratio: 1 / 1;
-}
-
-.av-ratio--4x5 {
-  --av-ratio: 4 / 5;
-}
-
-.av-ratio--3x4 {
-  --av-ratio: 3 / 4;
-}
-
-.av-ratio--16x9 {
-  --av-ratio: 16 / 9;
-}
-
-.av-ratio--21x9 {
-  --av-ratio: 21 / 9;
-}
-
-.av-ratio--adapt {
-  aspect-ratio: auto;
-}
-
-.av-ratio--adapt > img,
-.av-ratio--adapt > video {
-  position: static;
-  height: auto;
-}
-
 /* Placeholder SVG from placeholder_svg_tag */
 .av-placeholder {
   display: block;
@@ -1247,6 +1180,16 @@ select.av-dropdown--underline {
 
   html:not([data-animations="off"]) .av-lift {
     transition: transform var(--av-dur) var(--av-ease);
+  }
+
+  /* Image zoom on hover (DECISIONS 98): .av-hover-zoom on the hovered element; the media box inside clips the
+     image (.av-media__img, or .av-hover-zoom__img on a section's own <img>). */
+  html:not([data-animations="off"]) .av-hover-zoom :is(.av-media__img, .av-hover-zoom__img) {
+    transition: transform calc(var(--av-dur) * 2) var(--av-ease);
+  }
+
+  html:not([data-animations="off"]) .av-hover-zoom:hover :is(.av-media__img, .av-hover-zoom__img) {
+    transform: scale(1.04);
   }
 
   html:not([data-animations="off"]) .av-btn.av-is-loading::after,
@@ -1510,6 +1453,7 @@ select.av-dropdown--underline {
 .av-media--1-1 { --av-media-ratio: 1 / 1; }
 .av-media--4-5 { --av-media-ratio: 4 / 5; }
 .av-media--3-4 { --av-media-ratio: 3 / 4; }
+.av-media--9-16 { --av-media-ratio: 9 / 16; }
 .av-media--16-9 { --av-media-ratio: 16 / 9; }
 .av-media--21-9 { --av-media-ratio: 21 / 9; }
 
@@ -1643,8 +1587,9 @@ select.av-dropdown--underline {
   white-space: nowrap;
 }
 
+/* --av-rating-empty lets a coloured band (a highlighted table column) set the empty-star colour. */
 .av-stars__row--base {
-  color: rgb(var(--av-fg-rgb) / 0.25);
+  color: var(--av-rating-empty, rgb(var(--av-fg-rgb) / 0.25));
 }
 
 .av-stars__row--fill {

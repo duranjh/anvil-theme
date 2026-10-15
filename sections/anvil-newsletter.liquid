@@ -1,0 +1,330 @@
+{%- liquid
+  assign s = section.settings
+
+  # Shopify writes the form id into the form's action as a fragment (/contact#<id>), so after posting, the browser
+  # lands back on this form, on the success redirect as well as the error page. The id is unique per section.
+  assign form_id = 'anvil-newsletter-' | append: section.id
+  assign errors_id = form_id | append: '-errors'
+  assign success_id = form_id | append: '-success'
+  assign print_id = form_id | append: '-print'
+
+  assign layout = s.layout | default: 'inline'
+  assign align = s.head_align | default: 'center'
+  assign height = s.height | default: 'auto'
+  assign content_w = s.content_width | default: 640
+
+  # The button must always have a name, so a blank label falls back to the locale string.
+  assign button_label = s.button_label | strip | escape
+  if button_label == blank
+    assign button_label = 'anvil.newsletter.submit' | t
+  endif
+  assign success_text = s.success_text | strip
+  if success_text == blank
+    assign success_text = 'anvil.newsletter.success' | t
+  endif
+  assign button_style = s.button_style | default: 'primary'
+  assign full_button = false
+  if layout == 'stacked'
+    assign full_button = true
+  endif
+
+  assign has_print = false
+  if s.small_print != blank
+    assign has_print = true
+  endif
+
+  # Background image: decorative (alt=""), eager in the first two template sections (snippets/anvil-above-fold),
+  # where it can be the largest paint; anything in a section group stays lazy. The editor renders with a nil index;
+  # a template section there loads eagerly without a priority hint.
+  assign has_image = false
+  if s.image != blank
+    assign has_image = true
+  endif
+  assign load = 'lazy'
+  assign fetch = 'auto'
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  if fold contains 'lcp'
+    assign load = 'eager'
+    assign fetch = 'high'
+  elsif fold contains 'eager'
+    assign load = 'eager'
+    if section.index != nil
+      assign fetch = 'high'
+    endif
+  endif
+  case s.width
+    when 'full'
+      assign cap = 0
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 0
+    else
+      assign cap = settings.page_width | default: 0
+  endcase
+  assign img_sizes = '100vw'
+  if cap > 0
+    assign img_sizes = '(min-width: ' | append: cap | append: 'px) ' | append: cap | append: 'px, 100vw'
+  endif
+  assign overlay_a = s.overlay | default: 0 | divided_by: 100.0
+
+  assign root_class = 'av-newsletter av-newsletter--' | append: layout | append: ' av-newsletter--' | append: align
+  assign root_class = root_class | append: ' av-newsletter--h-' | append: height
+  if has_image
+    assign root_class = root_class | append: ' av-newsletter--image'
+    if s.width != 'full'
+      assign root_class = root_class | append: ' av-media-frame'
+    endif
+  endif
+
+  assign content_class = 'av-newsletter__content'
+  if s.box
+    assign box_scheme = s.box_scheme.id | default: 'scheme-1'
+    assign content_class = content_class | append: ' av-box av-scheme av-scheme--' | append: box_scheme
+  endif
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-newsletter' %}>
+  <div class="av-section__inner{% if has_image and s.width == 'full' %} av-section__inner--bleed{% endif %}">
+    <div class="{{ root_class }}" style="--av-newsletter-w: {{ content_w }}px;">
+      {%- if has_image -%}
+        <div class="av-newsletter__media">
+          {{ s.image | image_url: width: 2200 | image_tag: widths: '750, 1100, 1500, 1800, 2200', sizes: img_sizes, loading: load, fetchpriority: fetch, alt: '', class: 'av-newsletter__img' }}
+        </div>
+        {%- if overlay_a > 0 -%}
+          <div class="av-overlay" style="--av-overlay-strength: {{ overlay_a }};{% if s.overlay_color == 'scheme' %} --av-overlay-rgb: var(--av-bg-rgb);{% endif %}"></div>
+        {%- endif -%}
+      {%- endif -%}
+      <div class="{{ content_class }}">
+        {% render 'anvil-section-head', section: section %}
+        {%- form 'customer', id: form_id, class: 'av-newsletter__form' -%}
+          {%- liquid
+            assign email_invalid = false
+            assign described = ''
+            if form.errors
+              if form.errors contains 'email'
+                assign email_invalid = true
+              endif
+              assign described = errors_id
+            endif
+            # A role="status" region present at page load is not announced (live regions announce changes), so the
+            # success message is also tied to the field: tabbing back into it reads the confirmation.
+            if form.posted_successfully?
+              assign described = success_id
+            endif
+            if has_print
+              assign described = described | append: ' ' | append: print_id | strip
+            endif
+          -%}
+          {%- if form.posted_successfully? -%}
+            <p class="av-newsletter__notice av-form-message av-form-message--success" id="{{ success_id }}" role="status">
+              {%- render 'anvil-icon', name: 'check-circle', size: 20, class: 'av-form-message__icon' -%}
+              <span>{{ success_text | escape }}</span>
+            </p>
+          {%- elsif form.errors -%}
+            <div class="av-newsletter__notice av-form-message av-form-message--error" id="{{ errors_id }}" role="alert">
+              {%- render 'anvil-icon', name: 'alert-circle', size: 20, class: 'av-form-message__icon' -%}
+              <div>{{ form.errors | default_errors }}</div>
+            </div>
+          {%- endif -%}
+          <input type="hidden" name="contact[tags]" value="newsletter">
+          <div class="av-newsletter__field av-field">
+            <label class="av-field__label{% unless s.show_label %} av-visually-hidden{% endunless %}" for="{{ form_id }}-email">{{ 'anvil.newsletter.label' | t }}</label>
+            <div class="av-newsletter__row">
+              <input class="av-field__input av-newsletter__input" id="{{ form_id }}-email" type="email" name="contact[email]" value="{{ form.email | escape }}"{% if s.placeholder != blank %} placeholder="{{ s.placeholder | escape }}"{% endif %} autocomplete="email" autocapitalize="off" spellcheck="false" required{% if email_invalid %} aria-invalid="true"{% endif %}{% if described != blank %} aria-describedby="{{ described }}"{% endif %}>
+              {% render 'anvil-button', label: button_label, style: button_style, size: 'md', type: 'submit', full: full_button, class: 'av-newsletter__button' %}
+            </div>
+          </div>
+        {%- endform -%}
+        {%- if has_print -%}
+          <div class="av-newsletter__print av-rte" id="{{ print_id }}">{{ s.small_print }}</div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+.av-newsletter{position:relative;display:flex;flex-direction:column;justify-content:center}
+.av-newsletter--h-sm{min-height:240px}
+.av-newsletter--h-md{min-height:320px}
+.av-newsletter--h-lg{min-height:400px}
+.av-newsletter--image{overflow:hidden;padding:var(--av-space-8) var(--av-gutter)}
+.av-newsletter__media{position:absolute;inset:0}
+.av-newsletter__img{display:block;width:100%;height:100%;object-fit:cover}
+.av-newsletter__content{position:relative;z-index:1;width:100%;max-width:var(--av-newsletter-w,640px);margin-inline:auto}
+.av-newsletter--left .av-newsletter__content{margin-left:0;margin-right:auto;text-align:left}
+.av-newsletter--right .av-newsletter__content{margin-left:auto;margin-right:0;text-align:right}
+.av-newsletter--center .av-newsletter__content{text-align:center}
+.av-newsletter__content.av-box{padding:var(--av-space-6) var(--av-space-5)}
+.av-newsletter__content > .av-section-head{margin-bottom:var(--av-space-5)}
+.av-newsletter__form{display:grid;gap:var(--av-space-3);text-align:start;scroll-margin-top:var(--av-space-8)}
+.av-newsletter__row{display:flex;flex-direction:column;gap:var(--av-space-2)}
+.av-newsletter--inline .av-newsletter__row{flex-flow:row wrap}
+.av-newsletter--inline .av-newsletter__input{flex:999 1 12rem;min-width:0}
+.av-newsletter--inline .av-newsletter__button{flex:1 0 auto}
+.av-newsletter__content .av-newsletter__print{margin-top:var(--av-space-4);font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted)}
+.av-newsletter__content .av-newsletter__print a{color:inherit;text-decoration:underline;text-underline-offset:0.15em}
+.av-newsletter--image .av-newsletter__content:not(.av-box) .av-newsletter__notice{background:rgb(var(--av-bg-rgb))}
+@media (min-width: 750px){
+.av-newsletter--h-sm{min-height:320px}
+.av-newsletter--h-md{min-height:440px}
+.av-newsletter--h-lg{min-height:560px}
+.av-newsletter--image{padding-block:var(--av-space-9)}
+.av-newsletter__content.av-box{padding:var(--av-space-7)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Newsletter",
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Newsletter" },
+    { "type": "paragraph", "content": "Each signup creates a customer with the email and the tag \"newsletter\" and subscribes them to email marketing (pending until they confirm, if double opt-in is on under Settings > Customer privacy). Promise a discount or gift only when a real code exists and reaches every subscriber, for example through a Shopify Email automation." },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Form layout",
+      "options": [
+        { "value": "inline", "label": "Field and button on one line" },
+        { "value": "stacked", "label": "Button below the field" }
+      ],
+      "default": "inline"
+    },
+    {
+      "type": "range",
+      "id": "content_width",
+      "label": "Content width on desktop",
+      "min": 360,
+      "max": 960,
+      "step": 20,
+      "unit": "px",
+      "default": 640,
+      "info": "Heading alignment also places the heading, form and small print on the left, centre or right."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_label",
+      "label": "Show the field label",
+      "info": "A visible label stays on screen while shoppers type. Screen readers hear it either way.",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "placeholder",
+      "label": "Field placeholder",
+      "default": "Your email address"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Subscribe",
+      "info": "Name a discount or gift here only if a real code exists and reaches every subscriber."
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" }
+      ],
+      "default": "primary"
+    },
+    {
+      "type": "text",
+      "id": "success_text",
+      "label": "Success message",
+      "default": "Thanks for signing up.",
+      "info": "Shown after a signup. Mention a discount, or a confirmation email (double opt-in), only if every subscriber really receives it."
+    },
+    {
+      "type": "richtext",
+      "id": "small_print",
+      "label": "Small print",
+      "default": "<p>Example: say what you send and how often, link your privacy policy and explain how to unsubscribe.</p>",
+      "info": "Consent wording and a privacy policy link. Any discount named here must exist and reach every subscriber."
+    },
+    { "type": "header", "content": "Background" },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Background image",
+      "info": "Optional and decorative: screen readers skip it, so keep any message in the heading or text. Over a busy image, the card option keeps the form and small print readable."
+    },
+    {
+      "type": "range",
+      "id": "overlay",
+      "label": "Image overlay",
+      "min": 0,
+      "max": 90,
+      "step": 5,
+      "unit": "%",
+      "default": 40,
+      "info": "Raise it until the text reads clearly over the busiest part of the image, on phones too.",
+      "visible_if": "{{ section.settings.image != blank }}"
+    },
+    {
+      "type": "select",
+      "id": "overlay_color",
+      "label": "Overlay colour",
+      "options": [
+        { "value": "shadow", "label": "Theme shadow colour" },
+        { "value": "scheme", "label": "Colour scheme background" }
+      ],
+      "default": "scheme",
+      "info": "Theme shadow colour suits a scheme with light text; the scheme background suits any scheme.",
+      "visible_if": "{{ section.settings.image != blank }}"
+    },
+    {
+      "type": "select",
+      "id": "height",
+      "label": "Minimum height",
+      "options": [
+        { "value": "auto", "label": "Fit content" },
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" }
+      ],
+      "default": "auto"
+    },
+    {
+      "type": "checkbox",
+      "id": "box",
+      "label": "Show content box",
+      "default": false,
+      "info": "Puts the heading, form and small print on a solid panel in its own colour scheme, so they stay readable over a background image."
+    },
+    {
+      "type": "color_scheme",
+      "id": "box_scheme",
+      "label": "Content box colour scheme",
+      "default": "scheme-1",
+      "visible_if": "{{ section.settings.box }}"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Newsletter",
+      "settings": {
+        "heading": "Join the <strong>list</strong>",
+        "subheading": "<p>Example: new arrivals and restock news, about twice a month. Replace with what you really send.</p>"
+      }
+    }
+  ]
+}
+{% endschema %}

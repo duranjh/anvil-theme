@@ -25,9 +25,21 @@
     assign scheme_dark = true
   endif
 
+  # Transparent over the first section: on the homepage, or on the templates the merchant lists (a template is named
+  # like "index", "collection" or "page.landing", the name plus any suffix).
   assign transparent = false
-  if s.transparent_home and template.name == 'index'
+  assign transparent_mode = s.transparent_mode | default: 'none'
+  if transparent_mode == 'home' and template.name == 'index'
     assign transparent = true
+  elsif transparent_mode == 'custom'
+    assign tpl_full = template.name
+    if template.suffix != blank
+      assign tpl_full = template.name | append: '.' | append: template.suffix
+    endif
+    assign tpl_list = s.transparent_templates | remove: ' ' | downcase | split: ','
+    if tpl_list contains tpl_full or tpl_list contains template.name
+      assign transparent = true
+    endif
   endif
   assign over_dark = false
   if transparent
@@ -107,15 +119,25 @@
     }
     {%- endif %}
     {%- if transparent %}
+    {%- comment -%} --av-header-overlap: the first section adds it to its top padding (heroes) so content clears the header. {%- endcomment %}
+    :root {
+      --av-header-overlap: {{ overlap_m }}px;
+    }
     #shopify-section-{{ section.id }} {
       margin-bottom: -{{ overlap_m }}px;
     }
     @media (min-width: 750px) {
+      :root {
+        --av-header-overlap: {{ overlap_t }}px;
+      }
       #shopify-section-{{ section.id }} {
         margin-bottom: -{{ overlap_t }}px;
       }
     }
     @media (min-width: 990px) {
+      :root {
+        --av-header-overlap: {{ overlap_d }}px;
+      }
       #shopify-section-{{ section.id }} {
         margin-bottom: -{{ overlap_d }}px;
       }
@@ -352,8 +374,37 @@
         </nav>
 
         <div class="av-header__actions">
+          {%- if s.show_search and s.search_mode == 'inline' -%}
+            {%- comment -%}
+              Inline search: a field in the bar from 990 px with results under it while the shopper types; narrower
+              screens keep the search icon, which opens the search page.
+            {%- endcomment -%}
+            {%- capture inline_form -%}
+              <form class="av-header__search-form" action="{{ routes.search_url }}" method="get" role="search">
+                <label class="av-visually-hidden" for="anvil-header-search-inline">{{ 'anvil.search.placeholder' | t }}</label>
+                <input class="av-field__input" id="anvil-header-search-inline" type="search" name="q" placeholder="{{ 'anvil.search.placeholder' | t }}" autocomplete="off"{% if settings.predictive_search_enabled %} data-anvil-predictive-input aria-controls="anvil-predictive-inline" aria-expanded="false"{% endif %}>
+                <input type="hidden" name="options[prefix]" value="last">
+                <button type="submit" class="av-header__icon">
+                  <span class="av-visually-hidden">{{ 'anvil.search.submit' | t }}</span>
+                  {% render 'anvil-icon', name: 'search', size: 24 %}
+                </button>
+              </form>
+            {%- endcapture -%}
+            <div class="av-header__search-inline">
+              {%- if settings.predictive_search_enabled -%}
+                <anvil-predictive-search class="av-predictive av-enhance" section-url="{{ routes.predictive_search_url }}">
+                  {{ inline_form }}
+                  <div class="av-predictive__results av-header__search-pop" id="anvil-predictive-inline" data-anvil-predictive-results hidden></div>
+                  <p class="av-visually-hidden" role="status" aria-live="polite" data-anvil-predictive-live></p>
+                </anvil-predictive-search>
+                <script type="module" src="{{ 'anvil-predictive-search.js' | asset_url }}"></script>
+              {%- else -%}
+                {{ inline_form }}
+              {%- endif -%}
+            </div>
+          {%- endif -%}
           {%- if s.show_search -%}
-            <a class="av-header__icon" href="{{ routes.search_url }}"{% if s.search_mode == 'modal' %} data-anvil-open="anvil-search-dialog" aria-haspopup="dialog"{% endif %}>
+            <a class="av-header__icon{% if s.search_mode == 'inline' %} av-header__search-link{% endif %}" href="{{ routes.search_url }}"{% if s.search_mode == 'modal' %} data-anvil-open="anvil-search-dialog" aria-haspopup="dialog"{% endif %}>
               <span class="av-visually-hidden">{{ 'anvil.a11y.search' | t }}</span>
               {% render 'anvil-icon', name: 'search', size: 24 %}
             </a>
@@ -481,18 +532,32 @@
       "default": "scroll-up"
     },
     {
-      "type": "checkbox",
-      "id": "transparent_home",
-      "label": "Transparent over the first section on the homepage",
-      "info": "The header sits on top of the first section until the page scrolls. Give that section enough top padding so its content clears the header.",
-      "default": false
+      "type": "select",
+      "id": "transparent_mode",
+      "label": "Transparent over the first section",
+      "options": [
+        { "value": "none", "label": "Off" },
+        { "value": "home", "label": "On the homepage" },
+        { "value": "custom", "label": "On the templates I list" }
+      ],
+      "default": "none",
+      "info": "The header sits on top of the first section until the page scrolls. Hero sections add the header's height to their top padding there, so their content clears it."
+    },
+    {
+      "type": "text",
+      "id": "transparent_templates",
+      "label": "Templates",
+      "placeholder": "index, page.landing, collection",
+      "info": "Template names separated by commas, as in the editor's template menu: index, product, collection, page, or a named one such as page.landing. Use it only on templates that open with an image or hero section.",
+      "visible_if": "{{ section.settings.transparent_mode == 'custom' }}"
     },
     {
       "type": "color_scheme",
       "id": "transparent_scheme",
       "label": "Text colour while transparent",
       "info": "The header uses this scheme's text colour over the first section. A dark scheme also switches to the light logo from Theme settings.",
-      "default": "scheme-4"
+      "default": "scheme-4",
+      "visible_if": "{{ section.settings.transparent_mode != 'none' }}"
     },
     {
       "type": "checkbox",
@@ -504,10 +569,11 @@
       "type": "select",
       "id": "search_mode",
       "label": "Search opens",
-      "info": "Results while typing are switched on under Theme settings > Search.",
+      "info": "Results while typing are switched on under Theme settings > Search. The field shows from 990 px; narrower screens keep the search icon, which opens the search page.",
       "options": [
         { "value": "link", "label": "The search page" },
-        { "value": "modal", "label": "A search dialog" }
+        { "value": "modal", "label": "A search dialog" },
+        { "value": "inline", "label": "A field in the header (desktop)" }
       ],
       "default": "modal"
     },
@@ -591,9 +657,7 @@
       ]
     }
   ],
-  "enabled_on": {
-    "groups": ["header"]
-  },
+  "enabled_on": { "groups": ["header"] },
   "presets": [
     {
       "name": "Header",

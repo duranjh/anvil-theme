@@ -1,0 +1,460 @@
+{%- liquid
+  assign s = section.settings
+
+  # Layout. Phones always stack the image above the list (SPEC §4.2). From 750 px
+  # the list sits beside the image (left or right) or under it in columns (top).
+  assign side = s.image_side | default: 'left'
+  assign img_w = s.image_width | default: 55
+  assign valign = s.valign | default: 'center'
+  assign dot_color = s.dot_color | default: 'accent'
+  assign dot_size = s.dot_size | default: 'md'
+
+  # Media in the first two template sections (snippets/anvil-above-fold) loads eagerly; in the first section it is
+  # the likely LCP image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign media_loading = 'eager'
+  assign media_priority = false
+  if fold == 'lazy'
+    assign media_loading = 'lazy'
+  elsif fold == 'lcp'
+    assign media_priority = true
+  endif
+
+  # Dot colour, size and pulse are the hotspots component's own modifiers (assets/anvil-hotspots.css). Dots always
+  # show numbers here, matching the numbered list.
+  assign root_class = 'av-hotspots av-hotspots--' | append: side
+  assign root_class = root_class | append: ' av-hotspots--v-' | append: valign
+  assign root_class = root_class | append: ' av-hotspots--c-' | append: dot_color
+  assign root_class = root_class | append: ' av-hotspots-dots--' | append: dot_color | append: ' av-hotspots-dots--' | append: dot_size
+  if s.dot_pulse
+    assign root_class = root_class | append: ' av-hotspots-dots--pulse'
+  endif
+  if s.list_text == false
+    assign root_class = root_class | append: ' av-hotspots--titles'
+  endif
+
+  assign empty_label = 'anvil.editor.block_empty' | t
+  assign n = 0
+  assign has_item_title = false
+  assign spots_html = ''
+  assign items_html = ''
+-%}
+{%- comment -%}
+  One loop builds both halves: the dots and popovers that sit over the image, and
+  the numbered list under or beside it. The list is the accessible source; the dots
+  repeat it. block.shopify_attributes goes on the dot, inside <anvil-hotspots>, so
+  selecting a block in the editor opens its popover (the component listens for
+  shopify:block:select). A spot with neither title nor description is skipped on the
+  storefront and keeps a placeholder in the editor so it stays selectable.
+  The component also closes the open popover on a tap on the image away from every
+  dot and popover.
+{%- endcomment -%}
+{%- for block in section.blocks -%}
+  {%- liquid
+    assign b = block.settings
+    assign title = b.heading | strip
+    assign text_plain = b.text | strip_html | strip
+    assign placeholder = false
+    assign show = true
+    if title == blank and text_plain == blank
+      if request.design_mode
+        assign placeholder = true
+      else
+        assign show = false
+      endif
+    endif
+  -%}
+  {%- if show -%}
+    {%- liquid
+      assign n = n | plus: 1
+      assign x = 50
+      if b.x != nil
+        assign x = b.x
+      endif
+      assign y = 50
+      if b.y != nil
+        assign y = b.y
+      endif
+      assign pop_id = 'anvil-hotspot-' | append: section.id | append: '-' | append: block.id
+    -%}
+    {%- capture spot -%}
+      <div class="av-hotspots__spot-wrap" style="--av-spot-x: {{ x }}%; --av-spot-y: {{ y }}%;" {{ block.shopify_attributes }}>
+        <button type="button" class="av-hotspots__spot av-enhanced-only" data-spot aria-expanded="false" aria-controls="{{ pop_id }}">
+          <span class="av-hotspots__num" aria-hidden="true">{{ n }}</span>
+          <span class="av-visually-hidden">
+            {{- n }}.
+            {% if placeholder %}{{ empty_label }}{% elsif title != blank %}{{ title | escape }}{% else %}{{ text_plain | truncatewords: 10 }}{% endif -%}
+          </span>
+        </button>
+        <span class="av-hotspots__marker av-fallback-only" aria-hidden="true">{{ n }}</span>
+      </div>
+      <div class="av-hotspots__pop" id="{{ pop_id }}" style="--av-spot-x: {{ x }}%; --av-spot-y: {{ y }}%;" hidden>
+        <p class="av-hotspots__pop-title">
+          <span class="av-hotspots__pop-num" aria-hidden="true">{{ n }}</span>
+          {%- if placeholder -%}
+            <span class="av-example-note">{{ empty_label }}</span>
+          {%- elsif title != blank -%}
+            <span>{{ title | escape }}</span>
+          {%- endif -%}
+        </p>
+        {%- if text_plain != blank -%}
+          <div class="av-hotspots__pop-text av-rte">{{ b.text }}</div>
+        {%- endif -%}
+      </div>
+    {%- endcapture -%}
+    {%- comment -%}
+      List titles are content headings (h3) under the section h2. A spot with a description and no title gets
+      av-hotspots__text--lead, so the titles-only list still shows its description as its label.
+    {%- endcomment -%}
+    {%- capture item -%}
+      <li class="av-hotspots__item">
+        <span class="av-hotspots__badge">{{ n }}</span>
+        <div class="av-hotspots__body">
+          {%- if placeholder -%}
+            <h3 class="av-hotspots__title av-example-note">{{ empty_label }}</h3>
+          {%- elsif title != blank -%}
+            <h3 class="av-hotspots__title">{{ title | escape }}</h3>
+          {%- endif -%}
+          {%- if text_plain != blank -%}
+            <div class="av-hotspots__text av-rte{% if title == blank %} av-hotspots__text--lead{% endif %}">{{ b.text }}</div>
+          {%- endif -%}
+        </div>
+      </li>
+    {%- endcapture -%}
+    {%- if placeholder or title != blank -%}
+      {%- assign has_item_title = true -%}
+    {%- endif -%}
+    {%- liquid
+      assign spots_html = spots_html | append: spot
+      assign items_html = items_html | append: item
+    -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- liquid
+  assign show_list = false
+  if items_html != '' or request.design_mode
+    assign show_list = true
+  endif
+  unless show_list
+    assign root_class = root_class | append: ' av-hotspots--solo'
+  endunless
+
+  # Image sizes. Beside the list the image takes img_w % of the inner width from
+  # 750 px; above it (or alone), the whole inner width. Both are capped by the page
+  # or narrow width unless the section is full width. Beside the list the srcset
+  # stops at 1100 (the half-width cap), plus 1500 at full width. The side layout
+  # starts at 750 px, so the capped size never applies below that (cap_bp).
+  case s.width
+    when 'full'
+      assign cap = 0
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 800
+    else
+      assign cap = settings.page_width | default: 1400
+  endcase
+  if side == 'top' or show_list == false
+    assign img_widths = '375, 550, 750, 1100, 1500, 1800, 2200'
+    assign img_sizes = '100vw'
+    if cap > 0
+      assign img_sizes = '(min-width: ' | append: cap | append: 'px) ' | append: cap | append: 'px, 100vw'
+    endif
+  else
+    assign img_widths = '375, 550, 750, 900, 1100'
+    assign img_sizes = '(min-width: 750px) ' | append: img_w | append: 'vw, 100vw'
+    if cap > 0
+      assign cap_bp = cap | at_least: 750
+      assign media_px = cap | times: img_w | divided_by: 100
+      assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: media_px | append: 'px, ' | append: img_sizes
+    else
+      assign img_widths = img_widths | append: ', 1500'
+    endif
+  endif
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-hotspots' %}>
+  <div class="av-section__inner">
+    {%- liquid
+      assign fallback = ''
+      if has_item_title
+        assign fallback = 'anvil.hotspots.heading' | t
+      endif
+    -%}
+    {% render 'anvil-section-head', section: section, fallback: fallback %}
+    {{ 'anvil-hotspots.css' | asset_url | stylesheet_tag }}
+    <div class="{{ root_class }}" style="--av-hotspots-media: {{ img_w }}%;">
+      <div class="av-hotspots__figure">
+        <anvil-hotspots class="av-hotspots__stage av-enhance">
+          {%- render 'anvil-media',
+            image: s.image,
+            ratio: 'adapt',
+            widths: img_widths,
+            sizes: img_sizes,
+            loading: media_loading,
+            priority: media_priority,
+            placeholder: 'product-1',
+            class: 'av-hotspots__img'
+          -%}
+          {{- spots_html -}}
+        </anvil-hotspots>
+      </div>
+      {%- if items_html != '' -%}
+        <ol class="av-hotspots__list" role="list">
+          {{- items_html -}}
+        </ol>
+      {%- else -%}
+        {% render 'anvil-editor-empty' %}
+      {%- endif -%}
+    </div>
+    {%- if n > 0 or request.design_mode -%}
+      <script type="module" src="{{ 'anvil-hotspots.js' | asset_url }}"></script>
+    {%- endif -%}
+  </div>
+</div>
+{% stylesheet %}
+/* Dot colour, size and pulse: the component's .av-hotspots-dots--* modifiers (assets/anvil-hotspots.css). The list
+   badges follow the dot colour here. */
+.av-hotspots{--av-hotspots-badge-bg:var(--av-hotspots-dot-bg,var(--av-accent));--av-hotspots-badge-fg:var(--av-hotspots-dot-fg,var(--av-on-accent));--av-hotspots-badge-border:var(--av-hotspots-badge-bg);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-6)}
+.av-hotspots--c-light{--av-hotspots-badge-bg:transparent;--av-hotspots-badge-border:var(--av-fg)}
+/* The figure is the popovers' width container; z-index keeps an open popover above the next section. */
+.av-hotspots__figure{position:relative;z-index:1;container:av-hotspots / inline-size;min-width:0}
+.av-hotspots .av-hotspots__stage>*{--av-hotspots-x:clamp(16px,var(--av-spot-x,50%),calc(100% - 16px));--av-hotspots-y:clamp(16px,var(--av-spot-y,50%),calc(100% - 16px))}
+.av-hotspots .av-hotspots__spot-wrap{left:var(--av-hotspots-x);top:var(--av-hotspots-y)}
+/* A focused dot paints above an open popover (z-index 2): WCAG 2.4.11. */
+.av-hotspots .av-hotspots__spot-wrap:focus-within{z-index:3}
+.av-hotspots__marker{display:grid;place-items:center;width:calc(44px - 2 * var(--av-hotspots-inset,8px));height:calc(44px - 2 * var(--av-hotspots-inset,8px));border-radius:var(--av-radius-pill);background:var(--av-hotspots-dot-bg,var(--av-accent));color:var(--av-hotspots-dot-fg,var(--av-on-accent));box-shadow:var(--av-shadow-sm);font-size:var(--av-text-xs);font-weight:700;line-height:1}
+.av-hotspots-dots--lg .av-hotspots__marker{font-size:var(--av-text-sm)}
+/* Popovers sit in the stage, under the dot or above it low down: a panel as wide as a narrow image, a 280 px card
+   from 560 px of image width. */
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop{top:calc(var(--av-hotspots-y) + var(--av-space-5));bottom:auto;left:var(--av-space-2);right:var(--av-space-2);width:auto;translate:none}
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop.av-is-flip-y{top:auto;bottom:calc(100% - var(--av-hotspots-y) + var(--av-space-5))}
+@container av-hotspots (min-width: 560px){
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop{left:var(--av-hotspots-x);right:auto;width:min(280px,60%);translate:-50% 0}
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop.av-is-left{left:max(0px,calc(var(--av-hotspots-x) - 22px));translate:none}
+.av-hotspots .av-hotspots__stage>.av-hotspots__pop.av-is-right{left:auto;right:max(0px,calc(100% - var(--av-hotspots-x) - 22px));translate:none}
+}
+.av-hotspots .av-hotspots__pop-title{display:flex;align-items:center;gap:var(--av-space-2)}
+.av-hotspots__pop-num,.av-hotspots__badge{flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:var(--av-radius-pill);font-family:var(--av-font-body);font-size:var(--av-text-xs);font-weight:700;line-height:1}
+.av-hotspots__pop-num{background:var(--av-accent);color:var(--av-on-accent)}
+.av-hotspots .av-hotspots__pop-text{font-size:var(--av-text-sm);line-height:1.5}
+.av-hotspots__list{display:grid;gap:var(--av-space-4);align-content:start;margin:0;padding:0;list-style:none}
+.av-hotspots__item{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--av-space-3);align-items:start;margin:0}
+.av-hotspots__badge{width:28px;height:28px;border:2px solid var(--av-hotspots-badge-border);background:var(--av-hotspots-badge-bg);color:var(--av-hotspots-badge-fg)}
+.av-hotspots__body{display:flex;flex-direction:column;gap:var(--av-space-1);min-width:0;padding-top:2px}
+.av-hotspots__title{font-weight:600;font-size:var(--av-text-md);line-height:1.35;overflow-wrap:anywhere}
+.av-hotspots .av-hotspots__text{font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted)}
+/* Titles-only list: copy stays for screen readers, and shows while a link in it has focus or when the spot has no title. */
+.av-hotspots--titles:has(.av-hotspots__stage:defined) .av-hotspots__text:not(:focus-within,.av-hotspots__text--lead){position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media (min-width: 750px){
+.av-hotspots{gap:var(--av-space-7)}
+.av-hotspots--left:not(.av-hotspots--solo){grid-template-columns:minmax(0,var(--av-hotspots-media,55%)) minmax(0,1fr)}
+.av-hotspots--right:not(.av-hotspots--solo){grid-template-columns:minmax(0,1fr) minmax(0,var(--av-hotspots-media,55%))}
+.av-hotspots--right .av-hotspots__figure{order:2}
+.av-hotspots--v-center{align-items:center}
+.av-hotspots--v-top{align-items:start}
+.av-hotspots--top .av-hotspots__list{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--av-space-5) var(--av-space-6)}
+}
+@media (min-width: 990px){
+.av-hotspots{gap:var(--av-space-8)}
+.av-hotspots--top{gap:var(--av-space-7)}
+.av-hotspots--top .av-hotspots__list{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Image hotspots",
+  "max_blocks": 12,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Image hotspots" },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image",
+      "info": "Use a photo of the real product. It is never cropped, so the dots stay on target at every screen size."
+    },
+    {
+      "type": "select",
+      "id": "image_side",
+      "label": "Image position on desktop",
+      "options": [
+        { "value": "left", "label": "Left of the list" },
+        { "value": "right", "label": "Right of the list" },
+        { "value": "top", "label": "Above the list" }
+      ],
+      "default": "left",
+      "info": "On phones the list always sits under the image."
+    },
+    {
+      "type": "range",
+      "id": "image_width",
+      "label": "Image width on desktop",
+      "min": 40,
+      "max": 70,
+      "step": 5,
+      "unit": "%",
+      "default": 55,
+      "info": "Used when the image sits beside the list."
+    },
+    {
+      "type": "select",
+      "id": "valign",
+      "label": "List alignment",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "center", "label": "Middle" }
+      ],
+      "default": "center",
+      "info": "Used when the image sits beside the list."
+    },
+    { "type": "header", "content": "Dots" },
+    {
+      "type": "select",
+      "id": "dot_color",
+      "label": "Dot colour",
+      "options": [
+        { "value": "accent", "label": "Accent colour" },
+        { "value": "light", "label": "Background colour" },
+        { "value": "dark", "label": "Text colour" },
+        { "value": "button", "label": "Button colour" }
+      ],
+      "default": "accent",
+      "info": "The numbers in the list follow the same colour."
+    },
+    {
+      "type": "select",
+      "id": "dot_size",
+      "label": "Dot size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" }
+      ],
+      "default": "md",
+      "info": "Every size keeps a 44 px tap area."
+    },
+    {
+      "type": "checkbox",
+      "id": "dot_pulse",
+      "label": "Pulse closed dots",
+      "default": false,
+      "info": "A ring keeps pulsing around each closed dot, with no pause button, so it can distract some shoppers (WCAG 2.2.2). It never runs for shoppers who ask for reduced motion or when theme animations are off."
+    },
+    { "type": "header", "content": "List" },
+    {
+      "type": "checkbox",
+      "id": "list_text",
+      "label": "Show descriptions in the list",
+      "default": true,
+      "info": "When off, the list shows numbers and titles (a spot without a title keeps its description). Descriptions open from the dots and stay readable to screen readers."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "spot",
+      "name": "Hotspot",
+      "limit": 12,
+      "settings": [
+        {
+          "type": "range",
+          "id": "x",
+          "label": "Horizontal position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 50,
+          "info": "0 is the left edge of the image, 100 the right edge."
+        },
+        {
+          "type": "range",
+          "id": "y",
+          "label": "Vertical position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 50,
+          "info": "0 is the top edge of the image, 100 the bottom edge."
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Example: a feature the product really has",
+          "info": "Name a part or feature the product in the image really has."
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Description",
+          "default": "<p>Example: say what this part does. Describe only what is true for your product.</p>",
+          "info": "Shown in the list and when a shopper opens the dot. Materials, sizes, certifications and test results must match the real product."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Image hotspots",
+      "settings": {
+        "heading": "A closer <strong>look</strong>"
+      },
+      "blocks": [
+        {
+          "type": "spot",
+          "settings": {
+            "x": 32,
+            "y": 26,
+            "text": "<p>Example: name the real material and why it matters. Replace this with a fact about your product.</p>",
+            "heading": "Example: the main material"
+          }
+        },
+        {
+          "type": "spot",
+          "settings": {
+            "x": 70,
+            "y": 38,
+            "text": "<p>Example: explain how this part works in one or two short sentences.</p>",
+            "heading": "Example: a part shoppers ask about"
+          }
+        },
+        {
+          "type": "spot",
+          "settings": {
+            "x": 44,
+            "y": 64,
+            "text": "<p>Example: give the real measurement from your product page.</p>",
+            "heading": "Example: a size or fit detail"
+          }
+        },
+        {
+          "type": "spot",
+          "settings": {
+            "x": 76,
+            "y": 80,
+            "text": "<p>Example: say how to clean or use it, as your care instructions do.</p>",
+            "heading": "Example: care or use"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

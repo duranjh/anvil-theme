@@ -13,7 +13,8 @@ The ignore globs are anchored with a leading slash (`/dev/**`, `/docs/**`, `/scr
 ## 1. Quick start
 ```sh
 npm run check                 # shopify theme check --fail-level warning (whole theme)
-npm run lint                  # cleanroom-lint → asset-audit → chassis-lint → check-limits
+npm run lint                  # cleanroom-lint → asset-audit → chassis-lint → check-limits → check-schema-ranges → check-templates → sections-index --check
+npm run templates:check       # templates/*.json and sections/*-group.json against the section schemas
 npm test                      # node --test 'tests/*.test.mjs' (gift engine, ship dates)
 npm run blocks                # rebuild the product section schemas from docs/product-blocks/
 npm run blocks:check          # fail when those schemas drifted (CI runs it with --strict)
@@ -31,7 +32,7 @@ Every script prints findings as `path:line: message` (file-level findings use li
 Three rules from `docs/FORBIDDEN.md`:
 1. **Forbidden tokens.** The token list is parsed from `docs/FORBIDDEN.md` at run time (the three token headings; back-ticked entries are extended regexes, everything else a literal), so the doc stays the single source and this script never has to contain a token itself. Matching is case-insensitive over the whole repo except `.git/`, the ignored build folders (`node_modules/`, `.harness/`, `dev/`, `.shopify/`, `dist/`), `docs/FORBIDDEN.md`, the script itself and — unless `--strict` / `CLEANROOM_STRICT=1` — the provenance prose that has to name what we are independent from: the top-level `docs/*.md`, `docs/agent-prompts/`, `README.md`, `NOTICE`, `CHANGELOG.md`, `LICENSE`. Everything that ships in the zip, plus `scripts/`, `.github/`, `docs/sections/`, `docs/spec/`, is always scanned.
    Hyphenated class-name tokens are matched only when they do not continue a longer kebab-case identifier, so Anvil's own `--av-*` / `.av-*` names never trip on a reference theme's class fragment while the verbatim class still does.
-2. **File prefixes.** Every file in `sections/ snippets/ blocks/ assets/` is `anvil-*`, `_anvil-*` or `main-*`, except the Shopify-fixed names (`header-group.json`, `footer-group.json`, `overlay-group.json`, `apps.liquid` in `sections/`; `_blocks.liquid` in `blocks/`). No sub-directories.
+2. **File prefixes.** Every file in `sections/ snippets/ blocks/ assets/` is `anvil-*`, `_anvil-*` or `main-*`, except the Shopify-fixed names (`header-group.json`, `footer-group.json`, `overlay-group.json`, `apps.liquid` in `sections/`). No sub-directories.
 3. **Sizes.** Liquid, asset, JSON-template and section-group files ≤ 256 KB; `config/settings_schema.json` ≤ 512 KB; `config/settings_data.json` and `locales/*.json` ≤ 1.5 MB (Shopify's own limits).
 
 ### `scripts/asset-audit.py [--root DIR]`
@@ -44,7 +45,7 @@ For every other `sections/anvil-*.liquid` with `presets` (addable sections):
 - skeleton: `{% render 'anvil-section-attrs', section: section, type: '<file name>' %}`, `{% render 'anvil-section-head', section: section %}`, an `av-section__inner` wrapper (`assign s = section.settings` is a warning);
 - the 13 chassis settings with exact ids and types (`heading` inline_richtext, `subheading` richtext, `head_align` text_alignment, `head_size`/`accent_style`/`width`/`pad_mobile`/`reveal`/`show_on` select with the exact option values, `color_scheme` color_scheme, `pad_top`/`pad_bottom` range 0–120 step 4 px, `anchor` text). Defaults, order and "chassis first" drift are warnings;
 - `presets` non-empty and named; schema `name` ≤ 25 chars; ≤ 40 non-header settings; `enabled_on`/`disabled_on` not both;
-- blocks: `{{ block.shopify_attributes }}` on every local block (either on the loop wrapper or inside each `when` branch), `{% render block %}` for `@app`, `{% content_for 'blocks' %}` when `@theme` is offered, no local + `@theme` mix, `max_blocks` present (warning).
+- blocks: `{{ block.shopify_attributes }}` on every local block (either on the loop wrapper or inside each `when` branch), `{% render block %}` for `@app`, `{% content_for 'blocks' %}` when `@theme` or a theme block is offered, no local + `@theme` mix, `max_blocks` present (warning). A `blocks` entry without a `name` whose type starts with `_` or names a file in `blocks/` is a theme-block reference (DECISIONS 69): it needs `content_for 'blocks'` and skips the loop and `max_blocks` checks. Selector lists split on top-level commas only, so `:is(a, b)` stays one selector.
 
 For every `sections/*.liquid` and `blocks/*.liquid` (`main-*`, static and group sections included):
 - no literal `<img>` (use `image_tag` via `anvil-media`);
@@ -59,11 +60,20 @@ Gzip budgets (DECISIONS 20): the core modules `anvil-core`, `-events`, `-cart-ap
 ### `scripts/sync-block-schemas.py [--check] [--strict]`
 Rebuilds the `{% schema %}` of `sections/main-product.liquid` and `sections/anvil-featured-product.liquid` from `docs/product-blocks/` (WAVE1-CONTRACTS §2): the shell settings (`_section-main-product.json`), every `_settings-*.json` in name order, every `<type>.json` in the order of WAVE1-CONTRACTS §1, then `@app`. Featured product gets the full chassis, a `product` setting and no `sticky_atc` / `quantity_gifts`. Edit the fragments, never the generated schema. `--check` exits 1 on drift and writes nothing; `--strict` also fails on a missing fragment. Broken fragments (bad JSON, wrong type, duplicate or chassis setting ids) always exit 1.
 
+### `scripts/check-templates.py [--root DIR] [FILE ...]`
+Validates every `templates/*.json`, `templates/customers/*.json` and `sections/*-group.json` (or the files given) against the section and theme block schemas, the checks Theme Check does not make and Shopify only makes on upload or in the editor: section types exist and `order` matches; at most 25 sections and 1,250 blocks; `enabled_on` / `disabled_on` and section `limit`; every setting id exists, select and radio values are options, ranges are numbers inside min..max on a step, checkboxes are booleans, `text_alignment` is left/center/right, colour schemes exist in `config/settings_data.json`, richtext starts with a block tag, resource settings (image, product, collection, video…) carry no example value; block types are local blocks, theme blocks the parent offers (`@theme` or by name; private `_` blocks only by name; static blocks allowed), app blocks only with `@app`; nested blocks follow the parent theme block's own list; `block_order` matches; `max_blocks` (static blocks excluded); nesting ≤ 8; every `anvil-faq` ships `json_ld: false`. Exit 1 with `path section/block setting: message` lines.
+
+### `scripts/sections-index.py [--root DIR] [--check]`
+Writes `docs/SECTIONS.md` from the section schemas, templates and section groups: every addable section (editor name, file, where `enabled_on` / `disabled_on` lets it go, its blocks, the templates and groups that ship it, its card), the template sections and the group/layout sections. `--check` writes nothing and exits 1 when the file is out of date; run it without `--check` after changing a schema's name, presets, blocks or groups, or a template.
+
+### `scripts/check-schema-ranges.py [--root DIR]`
+Validates every `range` setting in `config/settings_schema.json`, section and block schemas and `docs/product-blocks/*.json` the way Shopify's upload does: step ≥ 0.1, at most 101 steps, a whole number of steps, a default on a step inside the range.
+
 ### `scripts/paths-lint.sh [--root DIR] [--base REF] GLOB...`
 Fails when `git status --porcelain -uall` (and, with `--base`, `git diff --name-only REF`) lists a path outside the allowed globs. Globs are shell patterns matched against repo-relative paths; `*` crosses `/`.
 
 ### `scripts/scratch-template.py <slug> [--slot N] [--stage DIR] [--preset N] [--no-copy] [--json]`
-Reads `sections/anvil-<slug>.liquid`, takes `presets[0]` (or `--preset N`) and writes `templates/page.anvil-scratch-<slot>.json` rendering `main-page` + the section with the preset settings and blocks (nested blocks included, alphanumeric ids). The stage directory (default `.harness/stage/<slot>/`) is a fresh copy of the theme folders so a push with `--only` can run from it without touching the working tree. Prints the stage dir, the template path and the `--only` list. No store content is created: `?view=anvil-scratch-<slot>` renders the template on any existing page.
+Reads `sections/anvil-<slug>.liquid`, takes `presets[0]` (or `--preset N`) and writes `templates/page.anvil-scratch-<slot>.json` rendering `main-page` + the section with the preset settings and blocks (nested blocks included, alphanumeric ids; a static block keeps its preset id, which its `content_for 'block'` call needs). The stage directory (default `.harness/stage/<slot>/`) is a fresh copy of the theme folders so a push with `--only` can run from it without touching the working tree. Prints the stage dir, the template path and the `--only` list. No store content is created: `?view=anvil-scratch-<slot>` renders the template on any existing page.
 
 ### `scripts/agent-prompt.py <slug> [--out FILE] [--archive] [--write-chassis-api FILE] [--strict]`
 Assembles the implementation brief: role + hard rules → `docs/CONVENTIONS.md` → `docs/spec/<slug>.md` → CHASSIS-API (the `{% doc %}` headers of `snippets/anvil-*.liquid` and `blocks/*.liquid`, extracted live; the product block snippets `snippets/anvil-pb-*.liquid` are left out, only the dispatcher renders them) → `docs/FORBIDDEN.md` → the exemplars `sections/anvil-icon-bar.liquid` and `sections/anvil-faq.liquid` in full → the output contract (allowed paths, definition of done, `npm run gate -- <slug>`, the notes to return). Refuses to emit a prompt that mentions a local volume path or the course-theme folder. `--archive` writes `docs/agent-prompts/<slug>.md`; `--write-chassis-api docs/CHASSIS-API.md` also writes the extracted API on its own.
@@ -75,7 +85,7 @@ Joins the `docs/SPEC.md` §4.2 table (human names) with the `docs/DESIGN-section
 The per-section gate (`npm run gate -- <slug>`). Static gates always all run, then one summary:
 - **G0 paths-lint** with the slug's allowed paths (`sections/anvil-<slug>.liquid`, `blocks/_anvil-<slug>-*.liquid`, `assets/anvil-<slug>*`, `docs/sections/<slug>.md`, plus `--allow`). `--no-paths` or `GATE_SKIP_PATHS=1` skips it (dirty wave branches).
 - **G1** `shopify theme check --fail-level warning` on the whole theme.
-- **G2** cleanroom-lint, asset-audit, chassis-lint, check-limits.
+- **G2** cleanroom-lint, asset-audit, chassis-lint, check-limits, check-schema-ranges, check-templates, sections-index --check.
 - **G3/G4** run only when the static gates passed and `DEV_THEME_ID`, `STORE`, `THEME_TOKEN` are set; otherwise they print SKIP. G3 stages the scratch template and pushes with `shopify theme push --path <stage> --theme $DEV_THEME_ID --only … --nodelete --json --no-input` (token via `SHOPIFY_CLI_THEME_TOKEN`) under a repo-wide lock (`.harness/push.lock`, `mkdir`-based so it works on macOS too) with ≥ 5 s between pushes. G4 runs `scripts/screenshot.mjs` on `https://$STORE/pages/$SCRATCH_PAGE?view=anvil-scratch-<slot>&preview_theme_id=$DEV_THEME_ID&pb=0` (`SCRATCH_PAGE` defaults to `contact`; set `STORE_PASSWORD` for a password-protected dev store).
 Logs, PNGs and JSON reports land in `.harness/reports/<slug>/`. Exit 1 when any gate fails; skips are not failures.
 
@@ -92,12 +102,12 @@ Runs `screenshot.mjs` in `MODE=a11y` over `/`, `/collections/all`, `/cart`, `/se
 Shallow-clones the two public Shopify reference themes into a cache **outside** the repository (`~/.cache/anvil-similarity` by default; a cache inside the tree is refused), builds normalised 6-line shingles of every `.liquid/.css/.js` on both sides and reports any shared window as `our/file:line ~ ref/file:line`. It never copies reference files into the theme, never prints their content, and refuses to run unless `CI=true` (or `--local-ok`, which an implementation session must never pass). This script is the only place those repositories are ever touched. `--allow REGEX` silences a reviewed false positive; `--min-chars` (default 90) drops boilerplate windows.
 
 ## 3. CI and release
-- `.github/workflows/ci.yml` — on every push and pull request: Node 22, `npm i -g @shopify/cli`, `shopify theme check --fail-level warning`, cleanroom-lint, asset-audit, chassis-lint, check-limits, `scripts/sync-block-schemas.py --check --strict` and `node --test 'tests/*.test.mjs'` (Node 22 reads a bare `tests/` as a file name, so the glob is quoted); a second job runs similarity.
+- `.github/workflows/ci.yml` — on every push and pull request: Node 22, `npm i -g @shopify/cli`, `shopify theme check --fail-level warning`, cleanroom-lint, asset-audit, chassis-lint, check-limits, `scripts/check-schema-ranges.py`, `scripts/check-templates.py`, `scripts/sync-block-schemas.py --check --strict` and `node --test 'tests/*.test.mjs'` (Node 22 reads a bare `tests/` as a file name, so the glob is quoted); a second job runs similarity.
 - `.github/workflows/release.yml` — on tags `v*`: asserts `theme_info.theme_version` equals the tag, extracts the matching `## [X.Y.Z]` section from `CHANGELOG.md`, runs `scripts/package.sh`, attaches `dist/*.zip` to a GitHub Release through `softprops/action-gh-release@v2`.
 - `.github/workflows/lighthouse.yml` — `workflow_dispatch`: `Shopify/lighthouse-ci-action@v1` with minimum scores performance 0.80 / accessibility 0.95. Secrets: `SHOP_CLIENT_ID`, `SHOP_CLIENT_SECRET` (a Dev Dashboard app with `read_products` + `write_themes`), `SHOP_STORE`, `SHOP_PASSWORD` (password-protected stores only), optional `LHCI_GITHUB_APP_TOKEN`. Point it at a development store.
 
 ## 4. Dev theme
-`shopify.theme.toml` declares `[environments.voreau-dev]` (`store = "ftsegk-n1.myshopify.com"`, `theme = "REPLACE_WITH_DEV_THEME_ID"`). Create the dev theme once with `shopify theme push --unpublished --theme "ANVIL dev - DO NOT PUBLISH"`, paste its id into the TOML and into `DEV_THEME_ID` for the gate. Never add `live`/`allow-live`. Tokens go in `THEME_TOKEN` (env), never in the TOML.
+`shopify.theme.toml` declares `[environments.voreau-dev]` (`store = "ftsegk-n1.myshopify.com"`, `theme = "189166714959"`, the unpublished "ANVIL dev - DO NOT PUBLISH" theme created 2026-10-15; agents without the owner's CLI session cannot list it, which is not evidence that it is missing). Pass the same id as `DEV_THEME_ID` for the gate; only the orchestrator pushes to it. Never add `live`/`allow-live`. Tokens go in `THEME_TOKEN` (env), never in the TOML.
 
 ## 5. Working as an implementation agent
 1. `npm run prompt -- <slug>` gives you the brief; the card comes from `npm run spec-cards`.

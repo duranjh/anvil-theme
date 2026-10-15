@@ -27,7 +27,10 @@
       "account": "Account",
       "choose_slide": "Choose slide",
       "new_window": "(opens in a new tab)",
-      "scroll_table": "Scrollable table"
+      "scroll_table": "Scrollable table",
+      "highlights": "Highlights",
+      "learn_more": "Learn more",
+      "slide": "Slide"
     },
     "pagination": {
       "label": "Pagination",
@@ -58,7 +61,9 @@
       "video": "Video",
       "play": "Play video",
       "pause": "Pause video",
-      "load": "Load video"
+      "load": "Load video",
+      "mute": "Mute",
+      "play_title": "Play video: {{ title }}"
     },
     "card": {
       "add_to_cart": "Add to cart",
@@ -67,7 +72,8 @@
       "quick_add": "Quick add",
       "view": "View product",
       "example_product": "Example product",
-      "example_vendor": "Example vendor"
+      "example_vendor": "Example vendor",
+      "example_collection": "Example collection"
     },
     "countdown": {
       "days": "Days",
@@ -111,6 +117,7 @@
       "code_applied": "Code applied",
       "code_saved": "Code saved. It applies when you add items.",
       "checkout_locked": "Accept the terms to continue to checkout",
+      "terms_default": "I have read and agree to the store policies",
       "gift": "Gift",
       "applied_at_checkout": "Discount applied at checkout",
       "taxes_shipping_note": "Shipping and taxes calculated at checkout",
@@ -248,10 +255,49 @@
       "gift_empty": "Choose a gift product with an available variant to show this block.",
       "ship_bar_hidden": "The free shipping bar is hidden: set a minimum in your store currency, and add a line for each market that uses another currency.",
       "checkpoints_hidden": "Add checkpoint amounts, lowest first. The bar only shows in your store currency.",
-      "gift_not_ready": "Pick an available gift product and the cart total that unlocks it. A sold-out gift is never promised, and the gift is only added in your store currency."
+      "gift_not_ready": "Pick an available gift product and the cart total that unlocks it. A sold-out gift is never promised, and the gift is only added in your store currency.",
+      "audio_no_file": "Add an audio file link in this section's settings. Shoppers see nothing until you do.",
+      "audio_not_file": "This link does not end in an audio file type such as .mp3, so it may not play.",
+      "bundle_list_mode": "Products come from the product list, so the slot blocks are not shown. Switch “Products from” to use them.",
+      "bundle_short": {
+        "one": "This bundle asks for {{ count }} product but only {{ available }} can be picked here. Add products or lower “Products to pick”.",
+        "other": "This bundle asks for {{ count }} products but only {{ available }} can be picked here. Add products or lower “Products to pick”."
+      },
+      "bundle_badge_hidden": "Badge hidden from shoppers: tick “Badge is backed by sales data” in the section settings to show it.",
+      "columns_over_four": "A row holds up to 4 columns, so extra columns start a new row. Set Columns per row on desktop to choose the row length.",
+      "untitled_row": "Untitled row: add a label in this block's settings. Shoppers do not see rows without one.",
+      "compare_stars_no_source": "Add a source link to show these stars. Until then shoppers see the text or a dash.",
+      "compare_rating_missing": "No review rating found: pick a product with a rating from your review app, or use this section on a product page. Shoppers see the text or a dash.",
+      "custom_liquid_blank": "Add Liquid or HTML in this section's settings to show it here.",
+      "custom_liquid_silent": "Your code printed nothing on this page. Check its conditions, or preview a page where they apply. Shoppers never see this note.",
+      "custom_liquid_invisible": "This code shows no text or media here. If it only loads a script (a chat widget or tracking tag, for example), set Top padding and Bottom padding to 0 so shoppers do not see an empty band. Shoppers never see this note.",
+      "feature_grid_link_hidden": "Add a heading or a button label to show this card's link. Shoppers do not see this note.",
+      "choose_products": "Choose a collection or products in this section's settings to replace the example cards.",
+      "collection_empty": "This collection or product list has no products to show, so shoppers do not see this section.",
+      "slide_link_name": "Add a slide link name or image alt text. Without one, screen readers announce this link as “Open slide {{ index }}”. Shoppers never see this note.",
+      "image_marquee_link_needs_alt": {
+        "one": "1 linked image has no alt text, so it is not a link yet. Add alt text to the block or the image.",
+        "other": "{{ count }} linked images have no alt text, so they are not links yet. Add alt text to the block or the image."
+      },
+      "logo_link_needs_alt": "Add alt text to a linked logo so its link works. Shoppers never see this note.",
+      "slider_autoplay_video": "Auto-advance is off because a slide holds a video, so videos never slide away on their own. Shoppers never see this note.",
+      "popup_pages": "Shoppers don't see this popup on this page because of the Pages setting. The editor shows it so you can edit it.",
+      "pricing_badge_hidden": "Badge hidden from shoppers: tick “Badge is backed by sales data” in this plan to show it.",
+      "pricing_note_example": "This plan's price now comes from the linked product. Update the price note so it matches how this product is billed.",
+      "related_products_example": "Example cards. The editor always shows these. Shoppers see Shopify's recommendations for this product here, and nothing at all when there are none.",
+      "review_wall_no_source": "Stars stay hidden on reviews without their own link. Add the link to where the customer posted each review so shoppers can check its stars.",
+      "review_wall_summary_preview": "Editor preview: shoppers see this line once you add the platform link. Type the rating and count exactly as the platform shows them.",
+      "social_cards_no_counts": "Counts and the network icon show only on posts that link to the original. Type each count as that post shows it; counts never update by themselves.",
+      "tab_no_title": "Untitled tab (hidden from shoppers)",
+      "track_order_template": "Enter your carrier's tracking address, starting with https:// and containing {number}, to show the tracking form.",
+      "track_order_embed": "Paste the embed code from your tracking app to show it here.",
+      "track_order_accounts": "Customer accounts are turned off (Settings > Customer accounts), so shoppers do not see the order link.",
+      "video_empty": "Pick a video, or paste a YouTube or Vimeo link, to show it here.",
+      "video_no_cover": "Add a cover image. Nothing is fetched from YouTube or Vimeo before play, so shoppers see a plain placeholder until they press play."
     },
     "faq": {
-      "untitled_question": "Untitled question — add the question text in this block's settings"
+      "untitled_question": "Untitled question — add the question text in this block's settings",
+      "heading": "Questions and answers"
     },
     "announcement": {
       "apply": "Apply",
@@ -389,7 +435,6 @@
       "sort_by": "Sort by"
     },
     "footer": {
-      "example_collection": "Example collection",
       "payment_methods": "Payment methods"
     },
     "gift_card": {
@@ -436,7 +481,8 @@
     },
     "trust": {
       "payment_methods": "Payment methods",
-      "quotes_disclosure": "Quotes shared by customers; entered by the store."
+      "quotes_disclosure": "Quotes shared by customers; entered by the store.",
+      "original_review": "See the original review"
     },
     "meta": {
       "tags": "Tagged \"{{ tags }}\"",
@@ -445,6 +491,214 @@
     "breadcrumbs": {
       "home": "Home",
       "collections": "Collections"
+    },
+    "audio": {
+      "label": "Music player",
+      "controls": "Player controls",
+      "error": "This track can't be played right now."
+    },
+    "before_after": {
+      "slider_label": "Before and after comparison",
+      "before": "Before",
+      "after": "After"
+    },
+    "bundle": {
+      "label": "Bundle deal",
+      "pick_exact": {
+        "one": "Pick {{ count }} product",
+        "other": "Pick {{ count }} products"
+      },
+      "pick_min": {
+        "one": "Pick at least {{ count }} product",
+        "other": "Pick at least {{ count }} products"
+      },
+      "add_to_bundle": "Add to bundle",
+      "progress": "{{ picked }} of {{ total }} picked",
+      "picked": "{{ picked }} picked",
+      "limit": {
+        "one": "You can pick {{ count }} product. Untick one to swap.",
+        "other": "You can pick {{ count }} products. Untick one to swap."
+      },
+      "no_js": "Turn on JavaScript to add these products together, or open each product to add it on its own.",
+      "sold_out": "These products are sold out."
+    },
+    "collage": {
+      "link_needs_name": "Add a caption or a link description so this link has a name. Until then the tile is not a link.",
+      "no_video": "Add a video or a YouTube or Vimeo link so this tile can play."
+    },
+    "collapsible": {
+      "untitled_row": "Untitled row: add a heading or pick a page.",
+      "no_content": "Add text or pick a page to show this row to shoppers.",
+      "heading": "More information"
+    },
+    "collection_list": {
+      "label": "Collections",
+      "view_all": "View all",
+      "choose_collection": "Pick a collection so this card links to it. Until then shoppers see it without a link."
+    },
+    "compare_table": {
+      "caption": "{{ ours }} compared with {{ theirs }}",
+      "feature": "Feature",
+      "others": "Others",
+      "yes": "Yes",
+      "no": "No",
+      "not_stated": "Not stated",
+      "source": "Source"
+    },
+    "feature_grid": {
+      "heading": "Features"
+    },
+    "featured_collection": {
+      "label": "Featured products",
+      "view_all_context": "({{ title }})",
+      "choose_list": "Products from is set to Hand-picked products: pick them under Products to replace the example cards."
+    },
+    "guarantees": {
+      "heading": "Guarantees"
+    },
+    "hero_slideshow": {
+      "label": "Slideshow",
+      "slide_link": "Open slide {{ index }}"
+    },
+    "hotspots": {
+      "heading": "Product features"
+    },
+    "image_gallery": {
+      "label": "Image gallery",
+      "enlarge": "Enlarge image {{ index }} of {{ total }}",
+      "viewer": "Image viewer",
+      "previous": "Previous image",
+      "next": "Next image",
+      "count": "Image {{ index }} of {{ total }}"
+    },
+    "image_marquee": {
+      "label": "Scrolling images",
+      "row": "Scrolling images, row {{ number }}"
+    },
+    "media_slider": {
+      "label": "Image and video slider"
+    },
+    "popup": {
+      "label": "Pop-up message"
+    },
+    "pricing": {
+      "heading": "Plans",
+      "included_prefix": "Included:",
+      "excluded_prefix": "Not included:"
+    },
+    "product_videos": {
+      "heading": "Product videos"
+    },
+    "related_products": {
+      "label": "Recommended products"
+    },
+    "review_wall": {
+      "read_more": "Read more",
+      "read_more_by": "Read more of the review by {{ name }}",
+      "show_more": "Show more reviews",
+      "dialog_title": "Customer review"
+    },
+    "shoppable_image": {
+      "spot_label": "Product {{ index }}: {{ title }}"
+    },
+    "social_cards": {
+      "label": "Customer posts",
+      "view_post": "View post",
+      "disclosure": "Posts entered by the store; counts as they were when each post was added.",
+      "thousands": "{{ value }}K",
+      "millions": "{{ value }}M",
+      "likes": {
+        "one": "like",
+        "other": "likes"
+      },
+      "comments": {
+        "one": "comment",
+        "other": "comments"
+      },
+      "shares": {
+        "one": "share",
+        "other": "shares"
+      }
+    },
+    "stats": {
+      "source_link": "(source)"
+    },
+    "stories": {
+      "viewer": "Stories",
+      "story": "Story {{ index }}",
+      "count": "Story {{ index }} of {{ total }}",
+      "pause": "Pause stories",
+      "previous": "Previous story",
+      "next": "Next story",
+      "paid": "Paid partnership",
+      "gifted": "Gifted product"
+    },
+    "tabs": {
+      "list_label": "Content tabs"
+    },
+    "testimonials": {
+      "label": "Customer testimonials",
+      "verified": "Verified purchase"
+    },
+    "timeline": {
+      "heading": "Timeline"
+    },
+    "track_order": {
+      "number_label": "Tracking number",
+      "submit": "Track",
+      "orders": "My orders",
+      "opens_on": "Results open on {{ carrier }}.",
+      "opens_on_new_tab": "Results open on {{ carrier }} in a new tab.",
+      "carrier_site": "Track your parcel on {{ carrier }}"
+    },
+    "palette_preview": {
+      "title": "Theme colours preview",
+      "intro": "Every colour scheme from Theme settings > Colors, painted as the theme draws it, with the WCAG 2 contrast ratio of each colour pair. Only you see this, in the theme editor.",
+      "scheme_name": "Scheme {{ number }}",
+      "used_page": "Page colours",
+      "used_cards": "Product cards",
+      "sample_text": "Body text",
+      "sample_link": "Link",
+      "sample_button": "Button",
+      "color_background": "Background",
+      "color_text": "Text",
+      "color_text_muted": "Muted text",
+      "color_border": "Borders",
+      "color_accent": "Accent",
+      "color_on_accent": "Text on accent",
+      "color_button": "Button background",
+      "color_button_text": "Button text",
+      "color_button_border": "Button border",
+      "checks_caption": "Contrast checks for {{ name }}",
+      "col_pair": "Colour pair",
+      "col_ratio": "Ratio",
+      "col_result": "Result",
+      "pair_text": "Text on background",
+      "pair_muted": "Muted text on background",
+      "pair_accent": "Links and focus ring on background",
+      "pair_on_accent": "Text on accent",
+      "pair_button": "Button text on button",
+      "pair_button_hover": "Button colour as hover text (outline style)",
+      "pair_field": "Field borders on background",
+      "pair_error": "Error text on background",
+      "pair_success": "Success text on background",
+      "pair_rating": "Rating stars on background",
+      "pair_badge_sale": "Sale badge text on badge",
+      "pair_badge_soldout": "Sold-out badge text on badge",
+      "pair_badge_custom": "Custom badge text on badge",
+      "badges_title": "Badges",
+      "badges_note": "Badge colours are set once for the whole theme in Theme settings > Colors, so they are checked here on their own: badge text on badge colour.",
+      "gradient_note": "This scheme has a background gradient. The ratios use its solid background colour, so check text over the gradient by eye.",
+      "level_aaa": "Passes AAA",
+      "level_aa": "Passes AA",
+      "level_large": "Large text only",
+      "level_fail": "Fails",
+      "level_ui": "Passes 3:1",
+      "level_ui_fail": "Below 3:1",
+      "level_unset": "Not set",
+      "level_check": "Has transparency, check by eye",
+      "legend": "Text needs 4.5:1 for AA or 7:1 for AAA; large text (24 px, or about 19 px bold) needs 3:1. Field borders and icons need 3:1. Ratios are rounded down to two decimals. A colour with transparency is measured over its scheme's solid background.",
+      "restyle": "To change these colours, edit the schemes in Theme settings > Colors, or switch the theme style."
     }
   },
   "date_formats": {

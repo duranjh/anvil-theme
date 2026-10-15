@@ -62,3 +62,7 @@ Preset "Icon bar" ships four items that read as obvious examples: free shipping 
 - The `auto` desktop count is computed from `section.blocks.size`, so a hidden (disabled) block still counts toward the column number in the editor until it is removed; Shopify excludes disabled blocks from `section.blocks` on the storefront, so the live site is right. Confirm the editor behaviour during the G3 push.
 - No `@app` block: app content is not plausible in a trust row (DESIGN-sections §2 asks for `@app` only where it is).
 - Not verified against a real Shopify render yet: `image_tag` with `alt: ''` on a custom icon (same pattern as `blocks/anvil-icon-text.liquid`, which passed theme check), and the `{% stylesheet %}` per-page subsetting noted as a wave-0 check in `docs/DESIGN-sections.md`.
+
+## Fix pass (2026-10-15)
+- Uses the shared pieces: columns from the shared `.av-grid` rule (DECISIONS 82); the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87); icon frames from `.av-icon-frame` (DECISIONS 92).
+- Availability: `disabled_on` groups ["custom.overlay"] (CONVENTIONS §4, DECISIONS 100).

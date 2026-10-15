@@ -1,0 +1,262 @@
+{%- liquid
+  assign s = section.settings
+
+  # The tab strip is built here from the top-level Tab blocks; their panels are
+  # the same blocks rendered by content_for (blocks/_anvil-tabs-tab.liquid).
+  # Both derive the ids from the block id (or the tab's link id) and both open
+  # the same tab: the first one with a title, or simply the first in the editor.
+  # A tab without a title has no accessible name, so the storefront skips it
+  # (strip and panel); the editor keeps it visible with a placeholder. When no
+  # tab renders, the storefront keeps only the empty section skeleton.
+  # block.shopify_attributes sits only on each panel (the Tab block's root
+  # element, "tag": null); shopify.dev allows one tagged element per block.
+  assign tab_style = s.tab_style | default: 'underline'
+  assign icon_px = s.icon_size | default: 20
+  assign icon_img_px = icon_px | times: 2
+  assign icon_img_widths = icon_px | append: ', ' | append: icon_img_px
+  assign icon_img_sizes = icon_px | append: 'px'
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign icon_loading = 'eager'
+  if fold contains 'lazy'
+    assign icon_loading = 'lazy'
+  endif
+
+  assign wrap_class = 'av-tabs av-tabs--' | append: tab_style
+  if s.text_align == 'center'
+    assign wrap_class = wrap_class | append: ' av-tabs--center'
+  endif
+
+  assign list_label = s.heading | strip_html | strip
+  if list_label == blank
+    assign list_label = 'anvil.tabs.list_label' | t
+  endif
+  assign untitled_label = 'anvil.editor.tab_no_title' | t
+  assign selected = false
+-%}
+{%- capture tabs_html -%}
+  {%- for block in section.blocks -%}
+    {%- liquid
+      assign b = block.settings
+      assign title = b.title | strip
+      if title == blank
+        if request.design_mode
+          assign title = untitled_label
+        else
+          continue
+        endif
+      endif
+
+      assign panel_id = b.anchor | handleize
+      if panel_id == blank
+        assign panel_id = 'av-tabs-' | append: section.id | append: '-' | append: block.id
+      endif
+      assign tab_id = 'av-tabs-tab-' | append: section.id | append: '-' | append: block.id
+
+      assign is_on = false
+      unless selected
+        assign is_on = true
+        assign selected = true
+      endunless
+    -%}
+    <button type="button" class="av-tabs__tab" role="tab" id="{{ tab_id }}" aria-controls="{{ panel_id }}" aria-selected="{{ is_on }}" tabindex="{% if is_on %}0{% else %}-1{% endif %}">
+      <span class="av-tabs__label">
+        {%- if b.icon_image != blank -%}
+          <span class="av-tabs__icon">{{ b.icon_image | image_url: width: icon_img_px | image_tag: widths: icon_img_widths, sizes: icon_img_sizes, loading: icon_loading, alt: '' }}</span>
+        {%- elsif b.icon != blank and b.icon != 'none' -%}
+          <span class="av-tabs__icon">{% render 'anvil-icon', name: b.icon, size: icon_px %}</span>
+        {%- endif -%}
+        <span class="av-tabs__text">{{ title | escape }}</span>
+      </span>
+    </button>
+  {%- endfor -%}
+{%- endcapture -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-tabs' %}>
+  <div class="av-section__inner">
+    {%- if tabs_html != blank or request.design_mode -%}
+      {%- assign fallback = list_label | escape_once -%}
+      {% render 'anvil-section-head', section: section, fallback: fallback %}
+      {%- if section.blocks.size == 0 -%}
+        {% render 'anvil-editor-empty' %}
+      {%- endif -%}
+      {%- if tabs_html != blank -%}
+        {{ 'anvil-tabs.css' | asset_url | stylesheet_tag }}
+      {%- endif -%}
+      <div class="{{ wrap_class }}" style="--av-tabs-icon: {{ icon_px }}px;">
+        <anvil-tabs{% if s.hash_sync %} hash-sync{% endif %}>
+          {%- if tabs_html != blank -%}
+            <div class="av-tabs__strip" role="tablist" aria-label="{{ list_label | escape_once }}">{{ tabs_html }}</div>
+          {%- endif -%}
+          {% content_for 'blocks' %}
+        </anvil-tabs>
+      </div>
+      {%- if tabs_html != blank -%}
+        <script type="module" src="{{ 'anvil-tabs.js' | asset_url }}"></script>
+      {%- endif -%}
+    {%- endif -%}
+  </div>
+</div>
+{% stylesheet %}
+/* Strip and panels come from the shared <anvil-tabs> component (assets/anvil-tabs.css: underline by default,
+   .av-tabs--pills, .av-tabs--center, safe centring, inner focus ring, thin scrollbar for mice). This file lays out
+   what sits inside a tab and inside a panel. */
+.av-tabs__label{display:inline-flex;align-items:center;gap:var(--av-space-2)}
+.av-tabs__icon{display:inline-flex;flex:none;width:var(--av-tabs-icon,20px);height:var(--av-tabs-icon,20px)}
+.av-tabs__icon>svg,.av-tabs__icon>img{display:block;width:100%;height:100%;object-fit:contain}
+.av-tabs__title{display:none;margin:0 0 var(--av-space-4);font-size:var(--av-text-lg);line-height:1.3}
+.av-tabs__content{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-tabs-gap,24px);align-items:center}
+.av-tabs__content>*{min-width:0}
+.av-tabs__panel--v-start .av-tabs__content{align-items:start}
+.av-tabs__panel--narrow .av-tabs__content{max-width:var(--av-narrow-width);margin-inline:auto}
+.av-tabs__panel--narrow .av-tabs__title{max-width:var(--av-narrow-width);margin-inline:auto}
+.av-tabs__panel--left{text-align:left}
+.av-tabs__panel--center{text-align:center}
+.av-tabs__panel--right{text-align:right}
+/* Without JavaScript the tab buttons cannot switch anything: the component shows every panel, so the strip
+   steps aside and each panel shows its own title instead. */
+@media (scripting: none){
+.av-tabs__strip{display:none}
+.av-tabs__title{display:block}
+}
+@media (min-width: 750px){
+.av-tabs__panel--split .av-tabs__content{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:max(var(--av-tabs-gap,24px),var(--av-space-6))}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Content tabs",
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Content tabs" },
+    {
+      "type": "select",
+      "id": "tab_style",
+      "label": "Tab style",
+      "options": [
+        { "value": "underline", "label": "Underline" },
+        { "value": "pills", "label": "Pills" }
+      ],
+      "default": "underline"
+    },
+    {
+      "type": "select",
+      "id": "text_align",
+      "label": "Tab alignment",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Centre" }
+      ],
+      "default": "center",
+      "info": "A row of tabs wider than the screen scrolls sideways on every device. Keep tab titles short."
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Tab icon size",
+      "min": 16,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "default": 20
+    },
+    {
+      "type": "checkbox",
+      "id": "hash_sync",
+      "label": "Open tabs from links",
+      "info": "A link ending in #tab-link-id opens that tab, and choosing a tab puts its id in the address bar so the view can be shared. Set the link id in each tab.",
+      "default": false
+    }
+  ],
+  "blocks": [
+    { "type": "_anvil-tabs-tab" }
+  ],
+  "presets": [
+    {
+      "name": "Content tabs",
+      "settings": {
+        "heading": "Take a closer <strong>look</strong>"
+      },
+      "blocks": [
+        {
+          "type": "_anvil-tabs-tab",
+          "settings": {
+            "title": "Example: Details",
+            "icon": "info",
+            "width": "narrow"
+          },
+          "blocks": [
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: what the product is for",
+                "tag": "h3",
+                "size": "sm"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: describe what the product does and who it suits. Replace it with details that are true for your product.</p>"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-tabs-tab",
+          "settings": {
+            "title": "Example: Materials",
+            "icon": "leaf",
+            "layout": "split"
+          },
+          "blocks": [
+            {
+              "type": "anvil-image",
+              "settings": {
+                "image_ratio": "4:5"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: list what the product is made of, as printed on its label or supplier sheet. Replace it before publishing.</p>"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-tabs-tab",
+          "settings": {
+            "title": "Example: Care",
+            "icon": "droplet",
+            "width": "narrow"
+          },
+          "blocks": [
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<ul><li>Example step — replace with the first care instruction on the label</li><li>Example step — replace with the second one</li><li>Example step — replace with how to store it</li></ul>"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,565 @@
+{%- liquid
+  assign s = section.settings
+  assign total = section.blocks.size | at_most: 5
+
+  assign layout = s.layout | default: 'big_left' | replace: '_', '-'
+  assign tile_height = s.height | default: 'md'
+  assign gap = s.gap | default: 12
+
+  # sizes: the page or narrow width caps the mosaic, so wide screens never fetch more than a tile's share of it.
+  case s.width
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 0
+    when 'full'
+      assign cap = 0
+    else
+      assign cap = settings.page_width | default: 0
+  endcase
+
+  # First two template sections (snippets/anvil-above-fold): the first three tiles load eagerly (on desktop the whole
+  # mosaic is usually in view); in the first section the first tile is the likely LCP image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign eager_ok = true
+  if fold == 'lazy'
+    assign eager_ok = false
+  endif
+  assign lcp_ok = false
+  if fold == 'lcp'
+    assign lcp_ok = true
+  endif
+
+  # First pass: which shared files the tiles need and whether any tile prints an h3 (product and collection titles),
+  # so a visually hidden h2 keeps the outline when the section heading is blank. It runs inside this tag, so the
+  # rendering loop below stays the only for-loop tag over section.blocks (chassis lint).
+  assign has_titles = false
+  assign need_card = false
+  assign need_form = false
+  assign need_video = false
+  for block in section.blocks
+    case block.type
+      when 'product'
+        assign has_titles = true
+        assign need_card = true
+        if block.settings.quick_add and block.settings.product != blank
+          assign need_form = true
+        endif
+      when 'collection'
+        assign has_titles = true
+      when 'video'
+        if block.settings.video != blank or block.settings.video_url != blank
+          assign need_video = true
+        endif
+    endcase
+  endfor
+
+  # Phones: the first tile is full width, the others sit two per row; an odd number of them leaves the last one
+  # full width. The same rule picks each tile's sizes below.
+  assign rest_odd = total | minus: 1 | modulo: 2
+
+  assign root_class = 'av-collage av-collage--n' | append: total | append: ' av-collage--' | append: layout | append: ' av-collage--h-' | append: tile_height
+  if s.radius == 'none'
+    assign root_class = root_class | append: ' av-collage--square'
+  endif
+
+  assign play_label = 'anvil.media.play' | t
+  assign video_label = 'anvil.media.video' | t
+  assign close_label = 'anvil.a11y.close' | t
+  capture icon_play
+    render 'anvil-icon', name: 'play', size: 28
+  endcapture
+  capture icon_arrow
+    render 'anvil-icon', name: 'arrow-right', size: 16
+  endcapture
+  capture icon_close
+    render 'anvil-icon', name: 'x', size: 20
+  endcapture
+-%}
+{%- if total > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-collage' %}>
+  <div class="av-section__inner">
+    {%- liquid
+      assign fallback = ''
+      if has_titles
+        assign fallback = 'anvil.a11y.highlights' | t
+      endif
+    -%}
+    {% render 'anvil-section-head', section: section, fallback: fallback %}
+    {%- if total > 0 -%}
+      {%- if need_card -%}
+        {{ 'anvil-card.css' | asset_url | stylesheet_tag }}
+      {%- endif -%}
+      {%- if need_video -%}
+        {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+      {%- endif -%}
+      <ul class="{{ root_class }}" style="--av-collage-gap: {{ gap }}px;">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign b = block.settings
+            assign i = forloop.index
+
+            # The tile's share of the mosaic width: share_d on tablets and desktop (per cent), share_m on phones (vw).
+            if i == 1
+              assign share_m = 100
+              if total == 1
+                assign share_d = 100
+              elsif total < 4
+                assign share_d = 60
+              else
+                assign share_d = 50
+              endif
+            else
+              assign share_m = 50
+              if rest_odd == 1 and forloop.last
+                assign share_m = 100
+              endif
+              if total < 4
+                assign share_d = 40
+              elsif total == 4 and i == 2
+                assign share_d = 50
+              else
+                assign share_d = 25
+              endif
+            endif
+            assign tile_sizes = '(min-width: 750px) ' | append: share_d | append: 'vw, ' | append: share_m | append: 'vw'
+            if cap > 0
+              # The cap query never starts below 750 px (Narrow width can be 600 px), so phone-layout viewports
+              # keep their phone share.
+              assign cap_px = cap | times: share_d | divided_by: 100
+              if cap > 750
+                assign tile_sizes = '(min-width: ' | append: cap | append: 'px) ' | append: cap_px | append: 'px, ' | append: tile_sizes
+              else
+                assign tile_sizes = '(min-width: 750px) ' | append: cap_px | append: 'px, ' | append: share_m | append: 'vw'
+              endif
+            endif
+            if share_d == 100
+              assign tile_widths = '750, 1100, 1500, 1800, 2200'
+            elsif share_d >= 50 or share_m == 100
+              assign tile_widths = '450, 600, 750, 900, 1100'
+            else
+              assign tile_widths = '300, 450, 600, 750, 900'
+            endif
+
+            assign load = 'lazy'
+            if eager_ok and i <= 3
+              assign load = 'eager'
+            endif
+            assign prio = false
+            if lcp_ok and i == 1
+              assign prio = true
+            endif
+
+            assign tile_class = 'av-collage__tile av-collage__tile--' | append: block.type
+            assign caption = b.caption | strip
+            assign link_tag = 'div'
+            assign link_note = false
+            assign link_label = ''
+            assign img_silent = false
+            assign has_video = false
+            case block.type
+              when 'image'
+                # A link is named by its own text: the caption (visible), else the link description (visually hidden);
+                # the image is then hidden from assistive tech so it does not add to the name (WAI: image and text in
+                # one link). With neither, the image's alt text names the link; with nothing, it is not a link.
+                assign link_label = b.link_name | strip
+                assign img_alt = b.image.alt | strip
+                if b.link != blank
+                  if caption != blank or link_label != blank
+                    assign link_tag = 'a'
+                    assign img_silent = true
+                  elsif img_alt != blank
+                    assign link_tag = 'a'
+                  elsif request.design_mode
+                    assign link_note = true
+                  endif
+                endif
+              when 'collection'
+                if b.collection != blank
+                  assign link_tag = 'a'
+                endif
+              when 'video'
+                if b.video != blank or b.video_url != blank
+                  assign has_video = true
+                endif
+            endcase
+            # Linked tiles zoom their image on hover (the shared .av-hover-zoom: motion allowed, animations on).
+            if link_tag == 'a' or has_video
+              assign tile_class = tile_class | append: ' av-collage__tile--link av-hover-zoom'
+            endif
+          -%}
+          <li class="{{ tile_class }}" {{ block.shopify_attributes }}>
+            {%- case block.type -%}
+              {%- when 'image' -%}
+                {%- liquid
+                  assign ph_name = 'lifestyle-1'
+                  if i > 1
+                    assign ph_name = 'lifestyle-2'
+                  endif
+                -%}
+                <{{ link_tag }} class="av-collage__fill"{% if link_tag == 'a' %} href="{{ b.link }}"{% endif %}>
+                  <div{% if img_silent %} aria-hidden="true"{% endif %}>
+                    {%- render 'anvil-media', image: b.image, ratio: 'adapt', widths: tile_widths, sizes: tile_sizes, loading: load, priority: prio, placeholder: ph_name, class: 'av-collage__media' -%}
+                  </div>
+                  {%- if caption != blank -%}
+                    <span class="av-collage__label">{{ caption | escape }}{% if link_tag == 'a' %}{{ icon_arrow }}{% endif %}</span>
+                  {%- elsif img_silent -%}
+                    <span class="av-visually-hidden">{{ link_label | escape }}</span>
+                  {%- endif -%}
+                </{{ link_tag }}>
+                {%- if link_note -%}
+                  <p class="av-collage__note av-example-note">{{ 'anvil.collage.link_needs_name' | t }}</p>
+                {%- endif -%}
+
+              {%- when 'product' -%}
+                {%- render 'anvil-product-card', product: b.product, quick_add: b.quick_add, show_rating: true, image_ratio: '1:1', sizes: tile_sizes, loading: load, priority: prio, heading_tag: 'h3', placeholder_index: i, uid: block.id, class: 'av-card--fill' -%}
+
+              {%- when 'collection' -%}
+                {%- liquid
+                  assign coll = b.collection
+                  assign coll_img = b.image
+                  if coll_img == blank and coll != blank
+                    assign coll_img = coll.featured_image
+                  endif
+                  assign ph_index = i | modulo: 6 | plus: 1
+                  assign ph_name = 'collection-' | append: ph_index
+                -%}
+                <{{ link_tag }} class="av-collage__fill"{% if link_tag == 'a' %} href="{{ coll.url }}"{% endif %}>
+                  {%- comment -%}
+                    The h3 inside the link names it. anvil-media falls back to the image's own alt (often a product photo's
+                    alt on collection.featured_image), so the wrapper hides the image from assistive tech instead.
+                  {%- endcomment -%}
+                  <div aria-hidden="true">
+                    {%- render 'anvil-media', image: coll_img, ratio: 'adapt', widths: tile_widths, sizes: tile_sizes, loading: load, priority: prio, placeholder: ph_name, class: 'av-collage__media' -%}
+                  </div>
+                  <div class="av-collage__label">
+                    <h3 class="av-collage__title">
+                      {%- if coll != blank -%}{{ coll.title | escape }}{%- else -%}{{ 'anvil.card.example_collection' | t }}{%- endif -%}
+                    </h3>
+                    {%- if link_tag == 'a' -%}{{ icon_arrow }}{%- endif -%}
+                    {%- if b.show_count and coll != blank -%}
+                      <span class="av-collage__count">{{ 'anvil.collection.product_count' | t: count: coll.all_products_count }}</span>
+                    {%- endif -%}
+                  </div>
+                </{{ link_tag }}>
+
+              {%- when 'video' -%}
+                {%- liquid
+                  assign cover = b.cover
+                  if cover == blank and b.video != blank
+                    assign cover = b.video.preview_image
+                  endif
+                -%}
+                {%- render 'anvil-media', image: cover, ratio: 'adapt', widths: tile_widths, sizes: tile_sizes, loading: load, priority: prio, alt: '', placeholder: 'lifestyle-2', class: 'av-collage__media' -%}
+                {%- if has_video -%}
+                  {%- liquid
+                    assign dialog_id = 'anvil-collage-' | append: section.id | append: '-' | append: block.id
+                    assign dialog_name = caption | default: video_label
+                    # Without JavaScript the tile links to the video itself: the uploaded MP4, or the YouTube/Vimeo page.
+                    assign fallback_url = ''
+                    assign player_ratio = '16:9'
+                    assign ratio_num = 1.7778
+                    if b.video != blank
+                      assign mp4 = b.video.sources | where: 'format', 'mp4' | first
+                      assign fallback_url = mp4.url
+                      assign player_ratio = 'adapt'
+                      assign ratio_num = b.video.aspect_ratio | default: 1.7778
+                    else
+                      assign fallback_url = b.video_url
+                    endif
+                  -%}
+                  {%- capture play_inner -%}
+                    <span class="av-media__play" aria-hidden="true">{{ icon_play }}</span>
+                    <span class="av-visually-hidden">{{ play_label }}</span>
+                    {% if caption != blank %}<span class="av-collage__label">{{ caption | escape }}</span>{% endif %}
+                  {%- endcapture -%}
+                  <anvil-dialog id="{{ dialog_id }}" class="av-collage__host av-enhance" data-anvil-collage-video>
+                    {%- if fallback_url != blank -%}
+                      <a class="av-collage__fill av-fallback-only" href="{{ fallback_url }}">{{ play_inner }}</a>
+                    {%- endif -%}
+                    <button type="button" class="av-collage__fill av-enhanced-only" data-anvil-open="{{ dialog_id }}" aria-haspopup="dialog" aria-expanded="false">{{ play_inner }}</button>
+                    <dialog class="av-dialog av-collage__dialog" aria-label="{{ dialog_name | escape }}" style="--av-collage-ratio: {{ ratio_num }};">
+                      <button type="button" class="av-dialog__close" data-anvil-close aria-label="{{ close_label | escape }}">{{ icon_close }}</button>
+                      {%- if b.video != blank -%}
+                        {%- comment -%}
+                          A <video> in the page loads its poster and metadata even inside a closed dialog, so the uploaded
+                          video waits in an inert template; anvil-collage.js puts it in on the first open. The link is the
+                          way to the video if that module never runs.
+                        {%- endcomment -%}
+                        <template data-anvil-collage-player>
+                          {%- render 'anvil-media', video: b.video, ratio: player_ratio, widths: '640, 960, 1280', sizes: '(min-width: 1100px) 1040px, 100vw', class: 'av-collage__player' -%}
+                        </template>
+                        {%- if fallback_url != blank -%}
+                          <a href="{{ fallback_url }}" data-anvil-collage-fallback>{{ play_label }}</a>
+                        {%- endif -%}
+                      {%- else -%}
+                        {%- render 'anvil-media', video_url: b.video_url, image: b.cover, ratio: player_ratio, widths: '640, 960, 1280', sizes: '(min-width: 1100px) 1040px, 100vw', class: 'av-collage__player' -%}
+                      {%- endif -%}
+                    </dialog>
+                  </anvil-dialog>
+                {%- else -%}
+                  {%- if caption != blank -%}
+                    <span class="av-collage__label">{{ caption | escape }}</span>
+                  {%- endif -%}
+                  {%- if request.design_mode -%}
+                    <p class="av-collage__note av-example-note">{{ 'anvil.collage.no_video' | t }}</p>
+                  {%- endif -%}
+                {%- endif -%}
+            {%- endcase -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+      {%- if need_form -%}
+        <script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>
+      {%- endif -%}
+      {%- if need_video -%}
+        <script type="module" src="{{ 'anvil-collage.js' | asset_url }}"></script>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Phones: two columns, the first tile spans both columns and two rows; tablets and desktop: a big tile over two
+   rows beside the others (left or right). Every tile fills its grid area, so nothing shifts while images load. Row
+   heights are minimums: image, collection and video tiles only hold absolutely positioned content and keep them;
+   a product card that needs more room grows its row instead of spilling onto the next tile. */
+.av-collage{--av-collage-row-m:210px;--av-collage-row:280px;--av-collage-radius:var(--av-radius-media);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(var(--av-collage-row-m),auto);gap:var(--av-collage-gap,12px);margin:0;padding:0;list-style:none}
+.av-collage--h-sm{--av-collage-row-m:180px;--av-collage-row:220px}
+.av-collage--h-lg{--av-collage-row-m:250px;--av-collage-row:340px}
+.av-collage--square{--av-collage-radius:0}
+.av-collage__tile{position:relative;min-width:0;min-height:0;margin:0;border-radius:var(--av-collage-radius)}
+.av-collage__tile:focus-within{z-index:1}
+.av-collage__tile:first-child{grid-column:1/-1;grid-row:span 2}
+.av-collage--n2 .av-collage__tile:last-child,.av-collage--n4 .av-collage__tile:last-child{grid-column:1/-1}
+.av-collage .av-media{border-radius:var(--av-collage-radius)}
+.av-collage .av-collage__media{position:absolute;inset:0;height:100%;aspect-ratio:auto}
+.av-collage__fill{position:absolute;inset:0;display:block;margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:start;text-decoration:none}
+.av-collage .av-collage__fill{border-radius:var(--av-collage-radius)}
+.av-collage__host{position:absolute;inset:0;display:block}
+.av-collage__tile--link .av-collage__fill{cursor:pointer}
+.av-collage__label{position:absolute;inset-inline-start:var(--av-space-3);inset-block-end:var(--av-space-3);display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-1) var(--av-space-2);max-width:calc(100% - 2 * var(--av-space-3));box-sizing:border-box;padding:var(--av-space-2) var(--av-space-3);border-radius:var(--av-radius-button);background:var(--av-bg);color:var(--av-fg);box-shadow:var(--av-shadow-sm);font-size:var(--av-text-sm);font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.av-collage__label .av-icon{flex:none}
+.av-collage__title{font-size:var(--av-text-md);line-height:1.25}
+.av-collage__count{flex-basis:100%;font-size:var(--av-text-xs);font-weight:400;color:var(--av-fg-muted)}
+.av-collage__note{position:absolute;inset:var(--av-space-2) var(--av-space-2) auto;margin:0;padding:var(--av-space-2) var(--av-space-3);border-radius:var(--av-radius-button);background:var(--av-bg)}
+/* Product tiles: the card fills the tile; its av-card--fill variant (anvil-card.css) gives the image the room the
+   text leaves, shown whole. */
+.av-collage__tile--product{display:flex;flex-direction:column}
+.av-collage__tile--product>.av-card{flex:1 1 auto;min-height:0}
+/* The top padding keeps the close button off the video; anvil-dialog.css has no padding token yet. */
+.av-collage__dialog.av-dialog{--av-dialog-width:min(1040px,calc((100dvh - 9rem) * var(--av-collage-ratio,1.7778) + 2 * var(--av-space-4)));padding:calc(44px + var(--av-space-3)) var(--av-space-4) var(--av-space-4)}
+@media (min-width:750px){
+.av-collage{grid-template-columns:minmax(0,3fr) minmax(0,2fr);grid-auto-rows:minmax(calc(var(--av-collage-row) * 0.8),auto)}
+.av-collage--big-right{grid-template-columns:minmax(0,2fr) minmax(0,3fr)}
+.av-collage--n1{grid-template-columns:minmax(0,1fr)}
+.av-collage--n4,.av-collage--n5{grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr))}
+.av-collage--n4.av-collage--big-right,.av-collage--n5.av-collage--big-right{grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,2fr)}
+.av-collage__tile:first-child{grid-column:1;grid-row:1/span 2}
+.av-collage--big-right .av-collage__tile:first-child{grid-column:-2}
+.av-collage--n2 .av-collage__tile:last-child{grid-column:auto;grid-row:span 2}
+.av-collage--n4 .av-collage__tile:nth-child(2){grid-column:span 2}
+.av-collage--n4 .av-collage__tile:last-child{grid-column:auto}
+}
+@media (min-width:990px){
+.av-collage{grid-auto-rows:minmax(var(--av-collage-row),auto)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Collage",
+  "max_blocks": 5,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Collage" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Big tile",
+      "options": [
+        { "value": "big_left", "label": "Left" },
+        { "value": "big_right", "label": "Right" }
+      ],
+      "default": "big_left",
+      "info": "The first block is the big tile. On phones it sits on top, full width."
+    },
+    {
+      "type": "select",
+      "id": "height",
+      "label": "Tile height",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between tiles",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "select",
+      "id": "radius",
+      "label": "Tile corners",
+      "options": [
+        { "value": "media", "label": "Theme media corners" },
+        { "value": "none", "label": "Square" }
+      ],
+      "default": "media",
+      "info": "Theme media corners follow Theme settings > Media > Corner radius."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "image",
+      "name": "Image",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Use photos you own or are licensed to use. The image is cropped to fill the tile; keep the subject near the centre."
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "Caption",
+          "info": "Shown on the image. Describe only what the photo really shows."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
+        },
+        {
+          "type": "text",
+          "id": "link_name",
+          "label": "Link description",
+          "info": "Read out by screen readers when there is no caption, for example \"Shop the summer collection\". Without a caption, a description or image alt text the tile is not a link."
+        }
+      ]
+    },
+    {
+      "type": "product",
+      "name": "Product",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product"
+        },
+        {
+          "type": "checkbox",
+          "id": "quick_add",
+          "label": "Show add to cart button",
+          "default": false,
+          "info": "Products with options link to the product page instead. On a small tile its row grows to fit the button."
+        }
+      ]
+    },
+    {
+      "type": "collection",
+      "name": "Collection",
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Collection"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Optional. Replaces the collection image."
+        },
+        {
+          "type": "checkbox",
+          "id": "show_count",
+          "label": "Show product count",
+          "default": false,
+          "info": "Counted by Shopify from the collection."
+        }
+      ]
+    },
+    {
+      "type": "video",
+      "name": "Video",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "cover",
+          "label": "Cover image",
+          "info": "Shown on the tile. Without one, an uploaded video's own preview image is used."
+        },
+        {
+          "type": "video",
+          "id": "video",
+          "label": "Video"
+        },
+        {
+          "type": "video_url",
+          "id": "video_url",
+          "label": "Or a YouTube or Vimeo link",
+          "accept": ["youtube", "vimeo"],
+          "info": "Used when no video is picked above. Nothing loads from YouTube or Vimeo until the shopper presses play."
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "Caption",
+          "info": "Shown on the tile and used as the video window's name. Describe only what the video really shows."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Collage",
+      "settings": {
+        "heading": "Explore the <strong>range</strong>"
+      },
+      "blocks": [
+        {
+          "type": "image",
+          "settings": {
+            "caption": "Example: what this tile shows"
+          }
+        },
+        { "type": "collection" },
+        { "type": "product" },
+        {
+          "type": "video",
+          "settings": {
+            "caption": "Example: what this tile shows"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

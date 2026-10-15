@@ -1,0 +1,812 @@
+{%- liquid
+  assign s = section.settings
+
+  # Type and icon scale. The icon size is also written as --av-ticker-icon so the CSS box matches the
+  # width and height attributes anvil-icon and image_tag write.
+  assign size = s.size | default: 'md'
+  case size
+    when 'sm'
+      assign icon_px = 16
+      assign star_px = 14
+    when 'lg'
+      assign icon_px = 28
+      assign star_px = 20
+    when 'xl'
+      assign icon_px = 40
+      assign star_px = 28
+    else
+      assign size = 'md'
+      assign icon_px = 20
+      assign star_px = 16
+  endcase
+  assign icon_px2 = icon_px | times: 2
+  assign icon_widths = icon_px | append: ', ' | append: icon_px2
+  assign icon_sizes = icon_px | append: 'px'
+  assign img_h = s.image_height | default: 40
+
+  # Media in the first two template sections loads eagerly (snippets/anvil-above-fold).
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign img_loading = 'eager'
+  if fold contains 'lazy'
+    assign img_loading = 'lazy'
+  endif
+
+  assign item_style = s.item_style | default: 'plain'
+  assign ticker_class = 'av-ticker av-ticker--' | append: size | append: ' av-ticker--' | append: item_style
+  if s.font == 'heading'
+    assign ticker_class = ticker_class | append: ' av-ticker--heading'
+  endif
+  if s.uppercase
+    assign ticker_class = ticker_class | append: ' av-ticker--upper'
+  endif
+  if s.icon_color == 'text'
+    assign ticker_class = ticker_class | append: ' av-ticker--icon-text'
+  endif
+  # Full width lets the moving strip run edge to edge. A static strip (animations off in Theme settings, reduced
+  # motion) keeps the gutter: the stylesheet takes the bleed back, so one render serves both.
+  if s.width == 'full'
+    assign ticker_class = ticker_class | append: ' av-ticker--bleed'
+  endif
+
+  # Disclosure under typed reviews: the merchant's words, else the default line.
+  assign disclosure = s.disclosure | strip | escape
+  if disclosure == blank
+    assign disclosure = 'anvil.trust.quotes_disclosure' | t
+  endif
+
+  # The separator is built once and printed after every item (inside its li, so the clones the marquee
+  # makes carry it too and the loop has no seam). It is decorative.
+  assign sep_html = ''
+  if s.sep_image != blank
+    assign sep_w = icon_px | times: s.sep_image.aspect_ratio | ceil | at_least: 1
+    assign sep_w2 = sep_w | times: 2
+    assign sep_widths = sep_w | append: ', ' | append: sep_w2
+    assign sep_sizes = sep_w | append: 'px'
+    capture sep_html
+      echo s.sep_image | image_url: width: sep_w2 | image_tag: widths: sep_widths, sizes: sep_sizes, loading: img_loading, alt: '', class: 'av-ticker__sep-img'
+    endcapture
+  elsif s.sep_icon == 'dot'
+    assign sep_html = '<span class="av-ticker__dot"></span>'
+  elsif s.sep_icon != blank and s.sep_icon != 'none'
+    capture sep_html
+      render 'anvil-icon', name: s.sep_icon, size: icon_px
+    endcapture
+  endif
+  if sep_html != ''
+    assign sep_html = '<span class="av-ticker__sep" aria-hidden="true">' | append: sep_html | append: '</span>'
+  endif
+
+  assign has_review = false
+  # Only the first few rendered items can sit inside the clipped strip on load, so only they load eagerly.
+  assign item_pos = 0
+-%}
+{%- capture items -%}
+  {%- for block in section.blocks -%}
+    {%- liquid
+      assign b = block.settings
+      assign has_body = false
+      assign body_tag = 'div'
+      assign icon_html = ''
+
+      # Which items have something to show, and which may become a link. A link always needs a name, and
+      # a text that already holds a link is never wrapped in a second one.
+      case block.type
+        when 'text'
+          if b.text != blank
+            assign has_body = true
+            if b.link != blank
+              unless b.text contains '<a '
+                assign body_tag = 'a'
+              endunless
+            endif
+          endif
+        when 'icon_text'
+          if b.text != blank
+            assign has_body = true
+            if b.link != blank
+              unless b.text contains '<a '
+                assign body_tag = 'a'
+              endunless
+            endif
+          endif
+        when 'rich'
+          assign rich_heading = b.heading | strip
+          assign rich_text = b.text | strip
+          if rich_heading != blank or rich_text != blank
+            assign has_body = true
+            if b.link != blank
+              assign body_tag = 'a'
+            endif
+          endif
+        when 'review'
+          assign quote = b.quote | strip
+          assign review_name = b.name | strip
+          if quote != blank
+            assign has_body = true
+            assign has_review = true
+          endif
+          # A source link always shows when one is set: on the stars when there is a rating, else on the
+          # name, else on the quote itself.
+          assign show_stars = false
+          assign source_on = 'none'
+          if b.source_url != blank
+            if b.rating > 0
+              assign show_stars = true
+            elsif review_name != blank
+              assign source_on = 'name'
+            else
+              assign source_on = 'quote'
+            endif
+          endif
+        when 'image'
+          assign has_body = true
+          assign caption = b.caption | strip
+          assign img_alt = b.alt | default: b.image.alt | default: '' | strip
+          # Alt text only names something when there is an image to print it on.
+          if b.image == blank
+            assign img_alt = ''
+          endif
+          if b.link != blank
+            if caption != blank or img_alt != blank
+              assign body_tag = 'a'
+            endif
+          endif
+          if body_tag == 'a' and caption != blank
+            assign img_alt = ''
+          endif
+      endcase
+
+      if has_body == false and request.design_mode == false
+        continue
+      endif
+
+      assign item_pos = item_pos | plus: 1
+      assign item_loading = img_loading
+      if item_pos > 4
+        assign item_loading = 'lazy'
+      endif
+
+      if block.type == 'icon_text' or block.type == 'rich'
+        if b.icon_image != blank
+          capture icon_html
+            echo b.icon_image | image_url: width: icon_px2 | image_tag: widths: icon_widths, sizes: icon_sizes, loading: item_loading, alt: ''
+          endcapture
+        elsif b.icon != blank and b.icon != 'none'
+          capture icon_html
+            render 'anvil-icon', name: b.icon, size: icon_px
+          endcapture
+        endif
+      endif
+
+      assign body_class = 'av-ticker__body av-ticker__body--' | append: block.type
+      if body_tag == 'a'
+        assign body_class = body_class | append: ' av-ticker__link'
+      endif
+    -%}
+    <li class="av-ticker__item" {{ block.shopify_attributes }}>
+      {%- if has_body == false -%}
+        <span class="av-ticker__body av-example-note">{{ 'anvil.editor.block_empty' | t }}</span>
+      {%- else -%}
+        {%- case block.type -%}
+          {%- when 'text' -%}
+            <{{ body_tag }} class="{{ body_class }}"{% if body_tag == 'a' %} href="{{ b.link }}"{% endif %}>
+              <span class="av-ticker__text">{{ b.text }}</span>
+            </{{ body_tag }}>
+          {%- when 'icon_text' -%}
+            <{{ body_tag }} class="{{ body_class }}"{% if body_tag == 'a' %} href="{{ b.link }}"{% endif %}>
+              {%- if icon_html != '' -%}<span class="av-ticker__icon">{{ icon_html }}</span>{%- endif -%}
+              <span class="av-ticker__text">{{ b.text }}</span>
+            </{{ body_tag }}>
+          {%- when 'rich' -%}
+            <{{ body_tag }} class="{{ body_class }}"{% if body_tag == 'a' %} href="{{ b.link }}"{% endif %}>
+              {%- if icon_html != '' -%}<span class="av-ticker__icon">{{ icon_html }}</span>{%- endif -%}
+              <span class="av-ticker__stack">
+                {%- if rich_heading != blank -%}<span class="av-ticker__heading">{{ rich_heading | escape }}</span>{%- endif -%}
+                {%- if rich_text != blank -%}<span class="av-ticker__sub">{{ rich_text | escape }}</span>{%- endif -%}
+              </span>
+            </{{ body_tag }}>
+          {%- when 'review' -%}
+            <figure class="{{ body_class }}">
+              {%- if show_stars -%}
+                <a class="av-ticker__stars av-ticker__link" href="{{ b.source_url }}" target="_blank" rel="noopener">
+                  {%- render 'anvil-stars', rating: b.rating, size: star_px -%}
+                  <span class="av-visually-hidden"> {{ 'anvil.a11y.new_window' | t }}</span>
+                </a>
+              {%- endif -%}
+              <blockquote class="av-ticker__quote"><p>
+                {%- if source_on == 'quote' -%}
+                  <a class="av-ticker__src" href="{{ b.source_url }}" target="_blank" rel="noopener">{{ quote | escape }}<span class="av-visually-hidden"> {{ 'anvil.a11y.new_window' | t }}</span></a>
+                {%- else -%}
+                  {{- quote | escape -}}
+                {%- endif -%}
+              </p></blockquote>
+              {%- if review_name != blank -%}
+                <figcaption class="av-ticker__name">
+                  {%- if source_on == 'name' -%}
+                    <a class="av-ticker__src" href="{{ b.source_url }}" target="_blank" rel="noopener">{{ review_name | escape }}<span class="av-visually-hidden"> {{ 'anvil.a11y.new_window' | t }}</span></a>
+                  {%- else -%}
+                    {{- review_name | escape -}}
+                  {%- endif -%}
+                </figcaption>
+              {%- endif -%}
+            </figure>
+          {%- when 'image' -%}
+            <{{ body_tag }} class="{{ body_class }}"{% if body_tag == 'a' %} href="{{ b.link }}"{% endif %}>
+              {%- if b.image != blank -%}
+                {%- liquid
+                  assign img_w = img_h | times: b.image.aspect_ratio | ceil | at_least: 1
+                  assign img_w2 = img_w | times: 2
+                  assign img_widths = img_w | append: ', ' | append: img_w2
+                  assign img_sizes = img_w | append: 'px'
+                -%}
+                {{ b.image | image_url: width: img_w2 | image_tag: widths: img_widths, sizes: img_sizes, loading: item_loading, alt: img_alt, class: 'av-ticker__img' }}
+              {%- else -%}
+                <span class="av-ticker__ph" aria-hidden="true">{{ 'image' | placeholder_svg_tag: 'av-ticker__img av-ticker__placeholder' }}</span>
+              {%- endif -%}
+              {%- if caption != blank -%}<span class="av-ticker__caption">{{ caption | escape }}</span>{%- endif -%}
+            </{{ body_tag }}>
+        {%- endcase -%}
+      {%- endif -%}
+      {{- sep_html -}}
+    </li>
+  {%- endfor -%}
+{%- endcapture -%}
+{%- assign items = items | strip -%}
+{%- if items != blank or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-ticker' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if items != blank -%}
+      {{ 'anvil-marquee.css' | asset_url | stylesheet_tag }}
+      <div class="{{ ticker_class }}" style="--av-ticker-icon: {{ icon_px }}px; --av-ticker-img: {{ img_h }}px;">
+        <anvil-marquee class="av-ticker__strip" speed="{{ s.speed | default: 40 }}" direction="{{ s.direction | default: 'left' }}"{% if s.pause_hover %} pause-on-hover{% endif %} style="--av-marquee-gap: {{ s.gap | default: 32 }}px;">
+          <ul class="av-ticker__track" role="list" data-marquee-track>
+            {{- items -}}
+          </ul>
+        </anvil-marquee>
+        {%- if s.show_disclosure and has_review -%}
+          <p class="av-ticker__note">{{ disclosure }}</p>
+        {%- endif -%}
+      </div>
+      <script type="module" src="{{ 'anvil-marquee.js' | asset_url }}"></script>
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+.av-ticker{font-size:var(--av-text-md);line-height:1.3}
+.av-ticker--sm{font-size:var(--av-text-sm)}
+.av-ticker--lg{font-size:var(--av-text-xl)}
+.av-ticker--xl{font-size:var(--av-text-3xl)}
+.av-ticker--heading .av-ticker__strip{font-family:var(--av-font-heading);font-weight:var(--av-heading-weight);letter-spacing:var(--av-heading-spacing)}
+.av-ticker--upper .av-ticker__strip{text-transform:uppercase;letter-spacing:0.06em}
+.av-ticker--bleed{margin-inline:calc(var(--av-gutter) * -1)}
+/* The pause button the marquee adds is 44 px tall and the strip clips its overflow, so the strip is at least that tall while it moves. */
+@media (prefers-reduced-motion: no-preference){
+.av-ticker__strip:where([data-animations="on"] *){min-height:44px}
+}
+/* Room for the focus ring of a linked item: the strip clips at its padding box. */
+.av-ticker__strip{padding-block:var(--av-space-2);margin-block:calc(var(--av-space-2) * -1)}
+.av-ticker__track{margin:0;padding:0;list-style:none}
+.av-ticker__item{display:flex;flex:none;align-items:center;gap:var(--av-marquee-gap,24px);margin:0;white-space:nowrap}
+.av-ticker__body{display:inline-flex;align-items:center;gap:0.5em;min-width:0;margin:0;color:inherit;text-decoration:none}
+.av-ticker--outline .av-ticker__body{padding:0.4em 1em;border:var(--av-border-w-button) solid var(--av-border);border-radius:var(--av-radius-pill)}
+.av-ticker--filled .av-ticker__body{padding:0.5em 1em;background:rgb(var(--av-fg-rgb) / var(--av-surface-tint));border-radius:var(--av-radius-card)}
+.av-ticker__link:hover .av-ticker__text,.av-ticker__link:hover .av-ticker__heading,.av-ticker__link:hover .av-ticker__caption{text-decoration:underline;text-underline-offset:0.15em}
+.av-ticker__text a{text-decoration:underline;text-underline-offset:0.15em}
+.av-ticker__icon{display:inline-flex;flex:none;color:var(--av-accent)}
+.av-ticker__icon svg,.av-ticker__icon img{display:block;width:var(--av-ticker-icon,20px);height:var(--av-ticker-icon,20px);object-fit:contain}
+.av-ticker__sep{display:inline-flex;flex:none;align-items:center;color:var(--av-accent)}
+.av-ticker--icon-text .av-ticker__icon,.av-ticker--icon-text .av-ticker__sep{color:inherit}
+.av-ticker__sep svg{width:calc(var(--av-ticker-icon,20px) * 0.75);height:calc(var(--av-ticker-icon,20px) * 0.75)}
+.av-ticker__sep-img{width:auto;height:var(--av-ticker-icon,20px);object-fit:contain}
+/* A border, not a background, so the dot stays visible in forced-colours mode. */
+.av-ticker__dot{display:block;width:0;height:0;border:0.18em solid;border-radius:50%}
+.av-ticker__stack{display:flex;flex-direction:column;gap:0.1em;line-height:1.2}
+.av-ticker__heading{font-weight:600}
+.av-ticker__sub{font-size:0.75em;color:var(--av-fg-muted)}
+.av-ticker__stars{display:inline-flex;align-items:center;min-height:24px;color:inherit}
+.av-ticker__quote{margin:0}
+.av-ticker__quote p{margin:0}
+.av-ticker__quote p::before{content:open-quote}
+.av-ticker__quote p::after{content:close-quote}
+.av-ticker__name{font-weight:600}
+.av-ticker__src{color:inherit;text-decoration:underline;text-underline-offset:0.15em}
+.av-ticker__name .av-ticker__src{display:inline-flex;align-items:center;min-height:24px}
+.av-ticker__name::before{content:"\2014\00a0";content:"\2014\00a0" / ""}
+.av-ticker__img{width:auto;height:var(--av-ticker-img,40px);object-fit:contain}
+.av-ticker__ph{display:flex;flex:none}
+.av-ticker__placeholder{width:calc(var(--av-ticker-img,40px) * 1.5);background:rgb(var(--av-fg-rgb) / 0.06);fill:rgb(var(--av-fg-rgb) / 0.35)}
+.av-ticker__note{margin:var(--av-space-3) 0 0;padding-inline:var(--av-gutter);font-family:var(--av-font-body);font-size:var(--av-text-xs);font-weight:400;letter-spacing:normal;text-transform:none;text-align:center;color:var(--av-fg-muted)}
+/* Static wrapping row (reduced motion, animations off): items may wrap their text (a review's name drops under
+   its quote), rows sit closer, and separators are hidden because wrapped rows would leave them at line ends. */
+.av-ticker__strip.av-is-static,.av-ticker__strip:where([data-animations="off"] *){padding-inline:var(--av-space-2)}
+.av-ticker__strip.av-is-static > .av-ticker__track,.av-ticker__strip:where([data-animations="off"] *) > .av-ticker__track{row-gap:var(--av-space-3)}
+.av-ticker__strip.av-is-static .av-ticker__item,.av-ticker__strip:where([data-animations="off"] *) .av-ticker__item{flex:0 1 auto;min-width:0;white-space:normal}
+.av-ticker__strip.av-is-static .av-ticker__body--review,.av-ticker__strip:where([data-animations="off"] *) .av-ticker__body--review{flex-wrap:wrap;justify-content:center;text-align:center}
+.av-ticker__strip.av-is-static .av-ticker__sep,.av-ticker__strip:where([data-animations="off"] *) .av-ticker__sep{display:none}
+html[data-animations="off"] .av-ticker--bleed{margin-inline:0}
+@media (prefers-reduced-motion: reduce){
+.av-ticker--bleed{margin-inline:0}
+.av-ticker__strip{padding-inline:var(--av-space-2)}
+.av-ticker__strip > .av-ticker__track{row-gap:var(--av-space-3)}
+.av-ticker__strip .av-ticker__item{flex:0 1 auto;min-width:0;white-space:normal}
+.av-ticker__strip .av-ticker__body--review{flex-wrap:wrap;justify-content:center;text-align:center}
+.av-ticker__strip .av-ticker__sep{display:none}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Ticker",
+  "max_blocks": 24,
+  "disabled_on": { "groups": ["custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Ticker" },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "Speed",
+      "min": 10,
+      "max": 150,
+      "step": 10,
+      "unit": "px",
+      "default": 40,
+      "info": "Pixels per second, so the strip keeps the same pace however many items it holds. Shoppers can always pause it, and it stands still for those who prefer reduced motion."
+    },
+    {
+      "type": "select",
+      "id": "direction",
+      "label": "Direction",
+      "options": [
+        { "value": "left", "label": "Right to left" },
+        { "value": "right", "label": "Left to right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "checkbox",
+      "id": "pause_hover",
+      "label": "Pause on hover",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between items",
+      "min": 8,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "select",
+      "id": "size",
+      "label": "Size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "xl", "label": "Extra large" }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "select",
+      "id": "font",
+      "label": "Font",
+      "options": [
+        { "value": "body", "label": "Body" },
+        { "value": "heading", "label": "Heading" }
+      ],
+      "default": "body"
+    },
+    {
+      "type": "checkbox",
+      "id": "uppercase",
+      "label": "Uppercase",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "item_style",
+      "label": "Item style",
+      "options": [
+        { "value": "plain", "label": "Plain" },
+        { "value": "outline", "label": "Outlined pill" },
+        { "value": "filled", "label": "Tinted card" }
+      ],
+      "default": "plain"
+    },
+    {
+      "type": "select",
+      "id": "icon_color",
+      "label": "Icon and separator colour",
+      "options": [
+        { "value": "accent", "label": "Accent" },
+        { "value": "text", "label": "Text colour" }
+      ],
+      "default": "accent"
+    },
+    {
+      "type": "range",
+      "id": "image_height",
+      "label": "Image height",
+      "min": 16,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    },
+    { "type": "header", "content": "Separator" },
+    {
+      "type": "select",
+      "id": "sep_icon",
+      "label": "Separator icon",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "dot", "label": "Dot" },
+        { "value": "star", "label": "Star" },
+        { "value": "sparkles", "label": "Sparkles" },
+        { "value": "plus", "label": "Plus" },
+        { "value": "x", "label": "Cross" },
+        { "value": "minus", "label": "Dash" },
+        { "value": "zap", "label": "Lightning" },
+        { "value": "heart", "label": "Heart" },
+        { "value": "flame", "label": "Flame" },
+        { "value": "leaf", "label": "Leaf" },
+        { "value": "sun", "label": "Sun" },
+        { "value": "snowflake", "label": "Snowflake" },
+        { "value": "check", "label": "Check" },
+        { "value": "arrow-right", "label": "Arrow" },
+        { "value": "chevron-right", "label": "Chevron" },
+        { "value": "chevrons-right", "label": "Double chevron" }
+      ],
+      "default": "dot"
+    },
+    {
+      "type": "image_picker",
+      "id": "sep_image",
+      "label": "Custom separator image",
+      "info": "Replaces the separator icon. Upload only artwork you are entitled to use."
+    },
+    { "type": "header", "content": "Reviews" },
+    {
+      "type": "checkbox",
+      "id": "show_disclosure",
+      "label": "Show a disclosure line",
+      "default": true,
+      "info": "When the strip holds typed reviews, a short line under it tells shoppers the store entered the quotes. Turn it off only if every review has a source link."
+    },
+    {
+      "type": "text",
+      "id": "disclosure",
+      "label": "Disclosure text",
+      "info": "Leave empty for the default: “Quotes shared by customers; entered by the store.” Say plainly that the store entered these quotes; do not call them verified, independent or unedited unless that is true.",
+      "visible_if": "{{ section.settings.show_disclosure }}"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "text",
+      "name": "Text",
+      "settings": [
+        {
+          "type": "inline_richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "Example: replace with your own",
+          "info": "Only announce offers, deadlines and facts that are true for your store."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link",
+          "info": "Makes the whole item a link, unless the text already holds one."
+        }
+      ]
+    },
+    {
+      "type": "icon_text",
+      "name": "Icon with text",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "check", "label": "Check" },
+            { "value": "check-circle", "label": "Check in circle" },
+            { "value": "badge-check", "label": "Badge check" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "package", "label": "Package" },
+            { "value": "package-check", "label": "Package checked" },
+            { "value": "plane", "label": "Plane" },
+            { "value": "globe", "label": "Globe" },
+            { "value": "map-pin", "label": "Map pin" },
+            { "value": "rotate-ccw", "label": "Return arrow" },
+            { "value": "refresh-cw", "label": "Refresh" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "shield-check", "label": "Shield check" },
+            { "value": "lock", "label": "Lock" },
+            { "value": "credit-card", "label": "Credit card" },
+            { "value": "wallet", "label": "Wallet" },
+            { "value": "tag", "label": "Tag" },
+            { "value": "percent", "label": "Percent" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "award", "label": "Award" },
+            { "value": "medal", "label": "Medal" },
+            { "value": "trophy", "label": "Trophy" },
+            { "value": "star", "label": "Star" },
+            { "value": "heart", "label": "Heart" },
+            { "value": "hand-heart", "label": "Hand with heart" },
+            { "value": "thumbs-up", "label": "Thumbs up" },
+            { "value": "users", "label": "People" },
+            { "value": "message-circle", "label": "Chat bubble" },
+            { "value": "headphones", "label": "Headphones" },
+            { "value": "mail", "label": "Mail" },
+            { "value": "phone", "label": "Phone" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "calendar", "label": "Calendar" },
+            { "value": "zap", "label": "Lightning" },
+            { "value": "sparkles", "label": "Sparkles" },
+            { "value": "flame", "label": "Flame" },
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "recycle", "label": "Recycle" },
+            { "value": "droplet", "label": "Droplet" },
+            { "value": "sun", "label": "Sun" },
+            { "value": "snowflake", "label": "Snowflake" },
+            { "value": "home", "label": "Home" },
+            { "value": "store", "label": "Store" },
+            { "value": "ruler", "label": "Ruler" },
+            { "value": "info", "label": "Info" }
+          ],
+          "default": "check-circle"
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "Custom icon image",
+          "info": "Replaces the icon. Square images work best. Upload only artwork you are entitled to use."
+        },
+        {
+          "type": "inline_richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "Example: free shipping over $50",
+          "info": "State only what your shipping, refund and support policies promise."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link",
+          "info": "Makes the whole item a link, unless the text already holds one. Linking the policy that backs a claim lets shoppers check it."
+        }
+      ]
+    },
+    {
+      "type": "rich",
+      "name": "Icon, heading and text",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "check", "label": "Check" },
+            { "value": "check-circle", "label": "Check in circle" },
+            { "value": "badge-check", "label": "Badge check" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "package", "label": "Package" },
+            { "value": "package-check", "label": "Package checked" },
+            { "value": "plane", "label": "Plane" },
+            { "value": "globe", "label": "Globe" },
+            { "value": "map-pin", "label": "Map pin" },
+            { "value": "rotate-ccw", "label": "Return arrow" },
+            { "value": "refresh-cw", "label": "Refresh" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "shield-check", "label": "Shield check" },
+            { "value": "lock", "label": "Lock" },
+            { "value": "credit-card", "label": "Credit card" },
+            { "value": "wallet", "label": "Wallet" },
+            { "value": "tag", "label": "Tag" },
+            { "value": "percent", "label": "Percent" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "award", "label": "Award" },
+            { "value": "medal", "label": "Medal" },
+            { "value": "trophy", "label": "Trophy" },
+            { "value": "star", "label": "Star" },
+            { "value": "heart", "label": "Heart" },
+            { "value": "hand-heart", "label": "Hand with heart" },
+            { "value": "thumbs-up", "label": "Thumbs up" },
+            { "value": "users", "label": "People" },
+            { "value": "message-circle", "label": "Chat bubble" },
+            { "value": "headphones", "label": "Headphones" },
+            { "value": "mail", "label": "Mail" },
+            { "value": "phone", "label": "Phone" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "calendar", "label": "Calendar" },
+            { "value": "zap", "label": "Lightning" },
+            { "value": "sparkles", "label": "Sparkles" },
+            { "value": "flame", "label": "Flame" },
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "recycle", "label": "Recycle" },
+            { "value": "droplet", "label": "Droplet" },
+            { "value": "sun", "label": "Sun" },
+            { "value": "snowflake", "label": "Snowflake" },
+            { "value": "home", "label": "Home" },
+            { "value": "store", "label": "Store" },
+            { "value": "ruler", "label": "Ruler" },
+            { "value": "info", "label": "Info" }
+          ],
+          "default": "shield-check"
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "Custom icon image",
+          "info": "Replaces the icon. Square images work best. Upload only artwork you are entitled to use."
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Example heading",
+          "info": "State only what is true for your store; conditions belong in the text below."
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Example: a promise you keep",
+          "info": "For example the order value a free-shipping offer needs, or the window in your refund policy."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link",
+          "info": "Optional. Linking the policy that backs the claim lets shoppers check it."
+        }
+      ]
+    },
+    {
+      "type": "review",
+      "name": "Typed review",
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "You type these quotes in yourself; they are not pulled from a review app. Use real customers' words, with their permission."
+        },
+        {
+          "type": "text",
+          "id": "quote",
+          "label": "Quote",
+          "default": "Example: replace with a real customer's words",
+          "info": "A real customer's words as they wrote them, shared with their permission. Shorten only without changing the meaning."
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Customer name",
+          "default": "Example name",
+          "info": "Show only the name the customer agreed to, for example a first name and initial."
+        },
+        {
+          "type": "range",
+          "id": "rating",
+          "label": "Stars",
+          "min": 0,
+          "max": 5,
+          "step": 0.5,
+          "default": 0,
+          "info": "The rating this customer gave. Stars show only when a source link is set; 0 hides them."
+        },
+        {
+          "type": "url",
+          "id": "source_url",
+          "label": "Link to this review",
+          "info": "Where shoppers can read this review, for example its page on your review platform. The stars link to it; with a rating of 0 the name (or the quote) links instead. Without it, no stars show."
+        }
+      ]
+    },
+    {
+      "type": "image",
+      "name": "Image",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Upload only images you are entitled to use. Show a press or partner logo only where the coverage or partnership is real."
+        },
+        {
+          "type": "text",
+          "id": "alt",
+          "label": "Alt text",
+          "info": "Describes the image for screen readers. Leave empty to use the alt text saved with the image."
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "Caption",
+          "info": "Optional text beside the image."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link",
+          "info": "Used only when the item has a caption, or an image with alt text, so the link always has a name."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Ticker",
+      "settings": {
+        "width": "full",
+        "pad_top": 16,
+        "pad_bottom": 16
+      },
+      "blocks": [
+        {
+          "type": "icon_text",
+          "settings": {
+            "icon": "truck",
+            "text": "Example: free shipping over $50"
+          }
+        },
+        {
+          "type": "text",
+          "settings": {
+            "text": "Example: <strong>replace</strong> with your own"
+          }
+        },
+        {
+          "type": "rich",
+          "settings": {
+            "icon": "rotate-ccw",
+            "heading": "Example: 30-day returns",
+            "text": "Example: the window in your refund policy"
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "quote": "Example: replace with a real customer's words",
+            "name": "Example name"
+          }
+        },
+        {
+          "type": "icon_text",
+          "settings": {
+            "icon": "message-circle",
+            "text": "Example: replies within one business day"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

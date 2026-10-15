@@ -1,0 +1,444 @@
+{%- liquid
+  assign s = section.settings
+
+  assign first_side = s.image_side | default: 'left'
+  assign other_side = 'right'
+  if first_side == 'right'
+    assign other_side = 'left'
+  endif
+
+  assign media_pct = s.image_width | default: 50
+  assign row_gap = 64
+  if s.row_gap != nil
+    assign row_gap = s.row_gap
+  endif
+
+  assign media_ratio = s.image_ratio | default: '1:1'
+  assign media_fit = s.image_fit | default: 'cover'
+  assign content_align = s.text_align | default: 'left'
+  assign content_valign = s.valign | default: 'center'
+  assign title_size = s.title_size | default: 'lg'
+  assign list_class = 'av-multirow av-multirow--align-' | append: content_align
+  assign list_class = list_class | append: ' av-multirow--valign-' | append: content_valign
+  assign list_class = list_class | append: ' av-multirow--title-' | append: title_size
+
+  # Row headings take the same accent style as the section heading.
+  assign accent_style = s.accent_style | default: 'color'
+  assign accent_open = '<span class="av-accent av-accent--' | append: accent_style | append: '">'
+
+  # Button look (only link_arrow draws the arrow).
+  assign btn_style = s.button_style | default: 'secondary'
+  assign btn_icon = ''
+  if btn_style == 'link_arrow'
+    assign btn_style = 'link'
+    assign btn_icon = 'arrow-right'
+  endif
+
+  # Image sizes: phones show the media full width; from 990 px it takes up to image_width % of the
+  # inner width, and tablets (750-989 px) cap that share at half so the text column keeps room. The
+  # page (or narrow) width caps the inner width unless the section is full width. The CSS can only
+  # shrink the image below these values (it keeps a 20rem text column), so sizes is a safe overestimate.
+  assign tablet_pct = media_pct | at_most: 50
+  assign img_widths = '360, 540, 720, 900, 1100'
+  if s.width == 'full'
+    assign img_widths = img_widths | append: ', 1500'
+    assign img_sizes = '(min-width: 990px) ' | append: media_pct | append: 'vw, (min-width: 750px) ' | append: tablet_pct | append: 'vw, 100vw'
+  else
+    assign max_inner = settings.page_width | default: 1400
+    if s.width == 'narrow'
+      assign max_inner = settings.narrow_width | default: 800
+    endif
+    assign cap_bp = max_inner | at_least: 750
+    assign px_desktop = max_inner | times: media_pct | divided_by: 100
+    # A wide page at a large share shows the image wider than 1100 px, so it gets the larger source too.
+    if px_desktop > 1100
+      assign img_widths = img_widths | append: ', 1500'
+    endif
+    if cap_bp >= 990
+      assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: px_desktop | append: 'px, (min-width: 990px) ' | append: media_pct | append: 'vw, (min-width: 750px) ' | append: tablet_pct | append: 'vw, 100vw'
+    else
+      assign px_tablet = max_inner | times: tablet_pct | divided_by: 100
+      assign img_sizes = '(min-width: 990px) ' | append: px_desktop | append: 'px, (min-width: ' | append: cap_bp | append: 'px) ' | append: px_tablet | append: 'px, (min-width: 750px) ' | append: tablet_pct | append: 'vw, 100vw'
+    endif
+  endif
+
+  # First two template sections (snippets/anvil-above-fold): the first row loads eagerly, and in the first section
+  # it is the likely LCP image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign above_fold = true
+  if fold == 'lazy'
+    assign above_fold = false
+  endif
+
+  # Row titles are <h3>, so a section without a heading gets a visually hidden <h2>.
+  # Mapped rather than looped: the one for-loop over section.blocks is the one that renders them.
+  assign row_titles = section.blocks | map: 'settings' | map: 'heading' | join: '' | strip_html | strip
+  assign shown = 0
+-%}
+{%- if section.blocks.size > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-multirow' %}>
+  <div class="av-section__inner">
+    {%- liquid
+      assign fallback = ''
+      if row_titles != blank
+        assign fallback = 'anvil.a11y.highlights' | t
+      endif
+    -%}
+    {% render 'anvil-section-head', section: section, fallback: fallback %}
+    {%- if section.blocks.size > 0 -%}
+      <ul class="{{ list_class }}" role="list" style="--av-multirow-media: {{ media_pct }}%; --av-multirow-gap: {{ row_gap }}px;">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign b = block.settings
+            assign eyebrow = b.eyebrow | strip
+            assign title = b.heading | strip
+            assign label = b.button_label | strip
+            assign label_html = label | escape
+            assign url = b.button_link
+
+            assign has_media = false
+            if b.image != blank or b.video != blank or b.video_url != blank
+              assign has_media = true
+            endif
+            assign has_action = false
+            if label != blank and url != blank
+              assign has_action = true
+            endif
+            assign has_body = false
+            if eyebrow != blank or title != blank or b.text != blank or has_action
+              assign has_body = true
+            endif
+
+            # A row with nothing in it is skipped on the storefront; the editor keeps it selectable.
+            assign is_real = false
+            if has_media or has_body
+              assign is_real = true
+            endif
+            unless is_real or request.design_mode
+              continue
+            endunless
+
+            # Sides are counted over the rows the storefront shows, so a skipped row never breaks the
+            # alternation. An editor-only empty row is not counted: it takes the side the next real row
+            # gets, so the editor preview matches the live page.
+            if is_real
+              assign shown = shown | plus: 1
+              assign pos = shown
+            else
+              assign pos = shown | plus: 1
+            endif
+            assign row_side = first_side
+            if s.alternate
+              assign turn = pos | modulo: 2
+              if turn == 0
+                assign row_side = other_side
+              endif
+            endif
+
+            assign img_loading = 'lazy'
+            assign img_priority = false
+            if above_fold and is_real and shown == 1
+              assign img_loading = 'eager'
+              if fold == 'lcp'
+                assign img_priority = true
+              endif
+            endif
+            assign ph_index = forloop.index0 | modulo: 2 | plus: 1
+            assign ph_name = 'lifestyle-' | append: ph_index
+          -%}
+          <li class="av-multirow__row av-multirow__row--media-{{ row_side }}" {{ block.shopify_attributes }}>
+            {%- render 'anvil-media', image: b.image, video: b.video, video_url: b.video_url, autoplay: b.video_autoplay, ratio: media_ratio, fit: media_fit, widths: img_widths, sizes: img_sizes, loading: img_loading, priority: img_priority, placeholder: ph_name, class: 'av-multirow__media' -%}
+            {%- if has_body -%}
+              <div class="av-multirow__content">
+                {%- if eyebrow != blank -%}
+                  <p class="av-multirow__eyebrow">{{ eyebrow | escape }}</p>
+                {%- endif -%}
+                {%- if title != blank -%}
+                  <h3 class="av-multirow__title">{{ title | replace: '<strong>', accent_open | replace: '</strong>', '</span>' }}</h3>
+                {%- endif -%}
+                {%- if b.text != blank -%}
+                  <div class="av-multirow__text av-rte">{{ b.text }}</div>
+                {%- endif -%}
+                {%- if has_action -%}
+                  <div class="av-multirow__action">
+                    {%- render 'anvil-button', label: label_html, url: url, style: btn_style, size: 'md', icon: btn_icon -%}
+                  </div>
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+.av-multirow{--av-multirow-media:50%;--av-multirow-gap:64px;display:grid;grid-template-columns:minmax(0,1fr);row-gap:calc(var(--av-multirow-gap) * 0.6);margin:0;padding:0;list-style:none}
+.av-multirow__row{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-5);align-items:center;min-width:0}
+.av-multirow--valign-top .av-multirow__row{align-items:start}
+.av-multirow--valign-bottom .av-multirow__row{align-items:end}
+.av-multirow__media{min-width:0}
+.av-multirow__content{display:flex;flex-direction:column;gap:var(--av-space-3);width:100%;max-width:36rem;min-width:0}
+.av-multirow--align-center .av-multirow__content{margin-inline:auto;text-align:center}
+.av-multirow--align-right .av-multirow__content{margin-inline-start:auto;text-align:right}
+.av-multirow__eyebrow{margin:0;font-size:var(--av-text-sm);font-weight:600;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;color:var(--av-fg-muted);overflow-wrap:break-word}
+.av-multirow__title{margin:0;font-size:var(--av-text-2xl);line-height:1.2;overflow-wrap:break-word}
+.av-multirow--title-sm .av-multirow__title{font-size:var(--av-text-lg)}
+.av-multirow--title-md .av-multirow__title{font-size:var(--av-text-xl)}
+.av-multirow--title-xl .av-multirow__title{font-size:var(--av-text-3xl)}
+.av-multirow__text{min-width:0;overflow-wrap:break-word}
+.av-multirow__action{display:flex;flex-wrap:wrap;padding-top:var(--av-space-2)}
+.av-multirow--align-center .av-multirow__action{justify-content:center}
+.av-multirow--align-right .av-multirow__action{justify-content:flex-end}
+/* Two columns from 750 px. Tablets cap the image at half the row. Right rows place both items explicitly,
+   so an image-only row still sits in its own column; DOM (reading) order stays image, then text. */
+@media (min-width: 750px){
+.av-multirow{row-gap:var(--av-multirow-gap)}
+.av-multirow__row{--av-multirow-col:min(var(--av-multirow-media),50%);grid-template-columns:var(--av-multirow-col) minmax(0,1fr);column-gap:clamp(var(--av-space-6),4vw,var(--av-space-8))}
+.av-multirow__row--media-right{grid-template-columns:minmax(0,1fr) var(--av-multirow-col)}
+.av-multirow__row--media-right .av-multirow__media{grid-column:2;grid-row:1}
+.av-multirow__row--media-right .av-multirow__content{grid-column:1;grid-row:1}
+}
+/* From 990 px the chosen share applies, but never past the point that leaves the text (and gap) less than 20rem of the row. */
+@media (min-width: 990px){
+.av-multirow__row{--av-multirow-col:min(var(--av-multirow-media),max(50%,100% - 20rem))}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Multirow",
+  "max_blocks": 10,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Multirow" },
+    {
+      "type": "select",
+      "id": "image_side",
+      "label": "Image side in the first row",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "left",
+      "info": "On phones every row shows its image above the text."
+    },
+    {
+      "type": "checkbox",
+      "id": "alternate",
+      "label": "Alternate sides row by row",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "row_gap",
+      "label": "Space between rows",
+      "min": 0,
+      "max": 128,
+      "step": 8,
+      "unit": "px",
+      "default": 64,
+      "info": "Phones use about 60 % of this."
+    },
+    { "type": "header", "content": "Images" },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" }
+      ],
+      "default": "1:1"
+    },
+    {
+      "type": "select",
+      "id": "image_fit",
+      "label": "Image fit",
+      "options": [
+        { "value": "cover", "label": "Fill the shape (crop)" },
+        { "value": "contain", "label": "Fit inside the shape" }
+      ],
+      "default": "cover"
+    },
+    {
+      "type": "range",
+      "id": "image_width",
+      "label": "Image width",
+      "min": 30,
+      "max": 70,
+      "step": 5,
+      "unit": "%",
+      "default": 50,
+      "info": "Share of the row on desktop. The image narrows when the text would have less than about 320 px. Tablets show at most half, phones the full width."
+    },
+    { "type": "header", "content": "Text and button" },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Text alignment",
+      "default": "left"
+    },
+    {
+      "type": "select",
+      "id": "valign",
+      "label": "Text position beside the image",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "center", "label": "Middle" },
+        { "value": "bottom", "label": "Bottom" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "select",
+      "id": "title_size",
+      "label": "Row heading size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "xl", "label": "Extra large" }
+      ],
+      "default": "lg"
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" },
+        { "value": "link", "label": "Text link" },
+        { "value": "link_arrow", "label": "Text link with arrow" }
+      ],
+      "default": "secondary"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "row",
+      "name": "Row",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Show the real product or result, and only images you have the right to use. The alt text comes from the image's own alt text."
+        },
+        {
+          "type": "video",
+          "id": "video",
+          "label": "Video",
+          "info": "A video uploaded to Shopify. Shows instead of the image. Show the real product in use, and only footage you have the right to use."
+        },
+        {
+          "type": "video_url",
+          "id": "video_url",
+          "label": "YouTube or Vimeo link",
+          "accept": ["youtube", "vimeo"],
+          "info": "Shows instead of the image, which becomes its cover. Nothing loads from YouTube or Vimeo until the shopper presses play. Show the real product in use, and only footage you have the right to use."
+        },
+        {
+          "type": "checkbox",
+          "id": "video_autoplay",
+          "label": "Play uploaded videos muted while in view",
+          "default": false,
+          "info": "Only when the shopper allows motion. Controls stay visible, so it can always be paused. YouTube and Vimeo videos always wait for a tap."
+        },
+        {
+          "type": "text",
+          "id": "eyebrow",
+          "label": "Eyebrow",
+          "info": "A short label above the heading, such as a step or a category. Words like \"Best seller\" or \"New\" only where they are true."
+        },
+        {
+          "type": "inline_richtext",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Example: replace it",
+          "info": "Bold a word to colour it with the accent. Claims such as \"best-selling\" or \"clinically proven\" need evidence you can show."
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "<p>Example: describe one feature, material or step in your own words.</p>",
+          "info": "Results, guarantees and delivery promises must match your product and your store policies."
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Button label",
+          "default": "Learn more",
+          "info": "The button shows once the row has a link."
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "Button link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Multirow",
+      "settings": {
+        "heading": "How it <strong>works</strong>"
+      },
+      "blocks": [
+        {
+          "type": "row",
+          "settings": {
+            "eyebrow": "Example: step 1",
+            "heading": "Example: show the product doing its job",
+            "text": "<p>Example: replace it with a short paragraph about the first thing a shopper should know. Keep every claim true for your store.</p>",
+            "button_label": "Shop now",
+            "button_link": "/collections/all"
+          }
+        },
+        {
+          "type": "row",
+          "settings": {
+            "eyebrow": "Example: step 2",
+            "heading": "Example: explain what it is made of",
+            "text": "<p>Example: name the materials, sizes or parts in plain words. Only list what the product really has.</p>"
+          }
+        },
+        {
+          "type": "row",
+          "settings": {
+            "eyebrow": "Example: step 3",
+            "heading": "Example: answer the next question",
+            "text": "<p>Example: cover care, setup or what arrives in the box, and link to a page with the details.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

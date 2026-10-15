@@ -1,0 +1,372 @@
+{%- liquid
+  assign s = section.settings
+  assign mode = s.mode | default: 'account'
+  assign align = s.text_align | default: 'center'
+  assign uid = 'anvil-track-' | append: section.id
+  assign hint_id = uid | append: '-hint'
+  assign help_id = uid | append: '-help'
+  assign btn_style = s.button_style | default: 'primary'
+
+  assign wrap_class = 'av-track-order av-track-order--' | append: mode | append: ' av-track-order--' | append: align
+  # Content box: the shared .av-box container (Theme settings > Containers) in its own colour scheme.
+  assign panel_class = 'av-track-order__panel'
+  if s.box
+    assign wrap_class = wrap_class | append: ' av-track-order--box'
+    assign box_scheme = s.box_scheme.id | default: 'scheme-1'
+    assign panel_class = panel_class | append: ' av-box av-scheme av-scheme--' | append: box_scheme
+  endif
+
+  # Tracking form. The carrier address must start with https://, contain {number}
+  # and have a host a browser accepts (no space or URL-forbidden character, no
+  # sign-in part before @, a port of digits up to 65535). Anything else shows an
+  # editor note and nothing to shoppers.
+  assign tpl_ok = false
+  assign native = false
+  if mode == 'tracking'
+    assign tpl = s.carrier_url | strip
+    assign tpl_scheme = tpl | slice: 0, 8 | downcase
+    assign tpl_rest = tpl | slice: 8, 2048
+    assign host = tpl_rest | split: '/' | first | split: '?' | first | split: '#' | first
+    if tpl contains '{number}' and tpl_scheme == 'https://' and host != blank
+      assign host_ok = true
+      if host contains ' '
+        assign host_ok = false
+      endif
+      assign bad_host_chars = '{,},<,>,\,^,|,@,[,],%,"' | split: ','
+      for bad_char in bad_host_chars
+        if host contains bad_char
+          assign host_ok = false
+          break
+        endif
+      endfor
+      assign host_name = host | split: ':' | first
+      assign host_port = host | remove_first: host_name | remove_first: ':'
+      assign port_rest = host_port | remove: '0' | remove: '1' | remove: '2' | remove: '3' | remove: '4' | remove: '5' | remove: '6' | remove: '7' | remove: '8' | remove: '9'
+      if host_name == blank or port_rest != blank
+        assign host_ok = false
+      elsif host_port != blank
+        assign port_num = host_port | plus: 0
+        if port_num > 65535
+          assign host_ok = false
+        endif
+      endif
+      assign tpl_ok = host_ok
+    endif
+  endif
+
+  # Shoppers see the panel only when the chosen mode renders something or help
+  # text is set; the editor always sees it, with a note for what is missing.
+  assign has_body = false
+  case mode
+    when 'tracking'
+      assign has_body = tpl_ok
+    when 'embed'
+      if s.embed != blank
+        assign has_body = true
+      endif
+    else
+      if shop.customer_accounts_enabled
+        assign has_body = true
+      endif
+  endcase
+  if s.help_text != blank
+    assign has_body = true
+  endif
+
+  if tpl_ok
+    assign carrier_label = s.carrier_name | strip | default: host
+    assign origin = tpl | slice: 0, 8 | append: host
+    assign track_label = s.track_label | escape
+    if track_label == blank
+      assign track_label = 'anvil.track_order.submit' | t
+    endif
+
+    # A template whose number is the last value of its query string, for example
+    # .../track?lang=en&id={number}, also works as a plain GET form without
+    # JavaScript: the other query values become hidden inputs. A number in the
+    # path, a fragment or a plus sign needs the module to build the address.
+    assign tpl_bare = tpl | remove: '{number}'
+    assign tpl_count = tpl.size | minus: tpl_bare.size | divided_by: 8
+    assign head = tpl | split: '{number}' | first
+    assign tail = tpl | remove_first: head | remove_first: '{number}'
+    assign head_last = head | slice: -1
+    if tpl_count == 1 and head_last == '=' and head contains '?'
+      unless tpl contains '#' or tpl contains '+'
+        assign tail_first = tail | slice: 0
+        if tail == blank or tail_first == '&'
+          assign form_action = head | split: '?' | first
+          assign query = head | remove_first: form_action | remove_first: '?'
+          assign pairs = query | split: '&'
+          assign param = pairs | last | split: '=' | first | url_decode
+          if param != blank
+            assign native = true
+          endif
+        endif
+      endunless
+    endif
+
+    assign hidden_before = ''
+    assign hidden_after = ''
+    if native
+      capture hidden_before
+        for pair in pairs
+          if forloop.last
+            break
+          endif
+          assign pair_name = pair | split: '=' | first
+          if pair_name != blank
+            assign pair_value = pair | remove_first: pair_name | remove_first: '=' | url_decode | escape
+            assign pair_name = pair_name | url_decode | escape
+            echo '<input type="hidden" name="' | append: pair_name | append: '" value="' | append: pair_value | append: '">'
+          endif
+        endfor
+      endcapture
+      assign tail_pairs = tail | remove_first: '&' | split: '&'
+      capture hidden_after
+        for pair in tail_pairs
+          assign pair_name = pair | split: '=' | first
+          if pair_name != blank
+            assign pair_value = pair | remove_first: pair_name | remove_first: '=' | url_decode | escape
+            assign pair_name = pair_name | url_decode | escape
+            echo '<input type="hidden" name="' | append: pair_name | append: '" value="' | append: pair_value | append: '">'
+          endif
+        endfor
+      endcapture
+    endif
+
+    assign described = hint_id
+    if s.help_text != blank
+      assign described = described | append: ' ' | append: help_id
+    endif
+    assign btn_attrs = 'data-anvil-track-submit aria-describedby="' | append: described | append: '"'
+    assign btn_disabled = true
+    if native
+      assign btn_disabled = false
+    endif
+  endif
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-track-order' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if has_body or request.design_mode -%}
+    <div class="{{ wrap_class }}">
+      <div class="{{ panel_class }}">
+        {%- case mode -%}
+          {%- when 'tracking' -%}
+            {%- if tpl_ok -%}
+              <anvil-track-order class="av-track-order__tool av-enhance" url-template="{{ tpl | escape }}"{% if s.new_tab %} new-tab{% endif %}>
+                <form class="av-track-order__form" method="get"{% if native %} action="{{ form_action | escape }}"{% endif %}{% if s.new_tab %} target="_blank" rel="noopener"{% endif %}>
+                  {{- hidden_before -}}
+                  <div class="av-field">
+                    <label class="av-field__label" for="{{ uid }}-number">{{ 'anvil.track_order.number_label' | t }}</label>
+                    <div class="av-field--inline av-track-order__row">
+                      <input class="av-field__input" id="{{ uid }}-number" type="text"{% if native %} name="{{ param | escape }}"{% endif %} required aria-required="true" maxlength="64" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-describedby="{{ described }}" data-anvil-track-input>
+                      {% render 'anvil-button', label: track_label, type: 'submit', style: btn_style, size: 'md', disabled: btn_disabled, attrs: btn_attrs, class: 'av-track-order__submit' %}
+                    </div>
+                    <p class="av-field__hint" id="{{ hint_id }}">
+                      {%- if s.new_tab -%}
+                        {{ 'anvil.track_order.opens_on_new_tab' | t: carrier: carrier_label }}
+                      {%- else -%}
+                        {{ 'anvil.track_order.opens_on' | t: carrier: carrier_label }}
+                      {%- endif -%}
+                    </p>
+                  </div>
+                  {{- hidden_after -}}
+                </form>
+                {%- unless native -%}
+                  <noscript>
+                    <p class="av-track-order__fallback">
+                      <a href="{{ origin | escape }}"{% if s.new_tab %} target="_blank" rel="noopener"{% endif %}>
+                        {{- 'anvil.track_order.carrier_site' | t: carrier: carrier_label -}}
+                        {%- if s.new_tab %} <span class="av-visually-hidden">{{ 'anvil.a11y.new_window' | t }}</span>{% endif -%}
+                      </a>
+                    </p>
+                  </noscript>
+                {%- endunless -%}
+              </anvil-track-order>
+              <script type="module" src="{{ 'anvil-track-order.js' | asset_url }}"></script>
+            {%- elsif request.design_mode -%}
+              <p class="av-track-order__note av-example-note">{{ 'anvil.editor.track_order_template' | t }}</p>
+            {%- endif -%}
+          {%- when 'embed' -%}
+            {%- if s.embed != blank -%}
+              <div class="av-track-order__embed">{{ s.embed }}</div>
+            {%- elsif request.design_mode -%}
+              <p class="av-track-order__note av-example-note">{{ 'anvil.editor.track_order_embed' | t }}</p>
+            {%- endif -%}
+          {%- else -%}
+            {%- if shop.customer_accounts_enabled -%}
+              {%- liquid
+                assign account_label = s.account_label | escape
+                if account_label == blank
+                  assign account_label = 'anvil.track_order.orders' | t
+                endif
+              -%}
+              <div class="av-track-order__account">
+                {% render 'anvil-button', label: account_label, url: routes.account_url, style: btn_style, size: 'lg' %}
+              </div>
+            {%- elsif request.design_mode -%}
+              <p class="av-track-order__note av-example-note">{{ 'anvil.editor.track_order_accounts' | t }}</p>
+            {%- endif -%}
+        {%- endcase -%}
+        {%- if s.help_text != blank -%}
+          <div class="av-track-order__help av-rte" id="{{ help_id }}">{{ s.help_text }}</div>
+        {%- endif -%}
+      </div>
+    </div>
+    {%- endif -%}
+  </div>
+</div>
+{% stylesheet %}
+.av-track-order{display:flex;flex-direction:column;align-items:flex-start}
+.av-track-order--center{align-items:center;text-align:center}
+.av-track-order--right{align-items:flex-end;text-align:end}
+.av-track-order__panel{container-type:inline-size;display:grid;gap:var(--av-space-4);width:100%;max-width:36rem}
+.av-track-order--embed .av-track-order__panel{max-width:none}
+.av-track-order--box .av-track-order__panel{padding:var(--av-space-5)}
+.av-track-order__tool,.av-track-order__form{display:block;min-width:0}
+.av-track-order__form .av-field{text-align:start}
+/* Layout comes from the shared .av-field--inline pair; below 26rem it stacks. */
+.av-track-order__row{flex-direction:column}
+/* The button ships disabled for path templates and the module enables it; until then it looks normal, not faded. */
+.av-track-order__tool:not(:defined) .av-track-order__submit[disabled]{opacity:1;cursor:default}
+.av-track-order__fallback{margin:var(--av-space-3) 0 0;font-size:var(--av-text-sm);text-align:start}
+.av-track-order__fallback a{color:inherit;text-underline-offset:0.15em}
+.av-track-order__help{font-size:var(--av-text-sm);color:var(--av-fg-muted)}
+.av-track-order__help>:first-child{margin-top:0}
+.av-track-order__help>:last-child{margin-bottom:0}
+.av-track-order__embed{min-width:0;overflow-x:auto;text-align:start}
+.av-track-order__embed iframe{max-width:100%}
+.av-track-order__note{margin:0}
+@container (min-width: 26rem){
+.av-track-order__row{flex-direction:row}
+.av-track-order__submit{flex:none}
+}
+@media (min-width: 750px){
+.av-track-order--box .av-track-order__panel{padding:var(--av-space-6)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Track order",
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Track order" },
+    {
+      "type": "select",
+      "id": "mode",
+      "label": "Shoppers track with",
+      "options": [
+        { "value": "account", "label": "A link to their account" },
+        { "value": "tracking", "label": "A tracking number form" },
+        { "value": "embed", "label": "Embed code you paste" }
+      ],
+      "default": "account",
+      "info": "The account lists each order with the tracking Shopify has for it. The form sends shoppers to your carrier's own tracking page."
+    },
+    {
+      "type": "richtext",
+      "id": "help_text",
+      "label": "Help text",
+      "info": "Shown under the link or form. Promise only the delivery times and support hours your policies back up.",
+      "default": "<p>Example: say where shoppers find their tracking details, for example the shipping confirmation email, and how to reach you if a parcel stalls. Replace it with what your store actually does.</p>"
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" }
+      ],
+      "default": "primary"
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Alignment",
+      "default": "center"
+    },
+    {
+      "type": "checkbox",
+      "id": "box",
+      "label": "Show content box",
+      "default": true,
+      "info": "Puts the form or link on a panel in its own colour scheme. Corners, border and shadow follow Theme settings > Containers."
+    },
+    {
+      "type": "color_scheme",
+      "id": "box_scheme",
+      "label": "Content box colour scheme",
+      "default": "scheme-1",
+      "visible_if": "{{ section.settings.box }}"
+    },
+    { "type": "header", "content": "Account link" },
+    {
+      "type": "text",
+      "id": "account_label",
+      "label": "Button label",
+      "default": "View my orders",
+      "info": "Opens the customer account, which lists orders with their tracking. Signed-out shoppers sign in first; with classic accounts, shoppers who checked out as guests must first create an account with the same email or accept an account invite."
+    },
+    { "type": "header", "content": "Tracking number form" },
+    {
+      "type": "text",
+      "id": "carrier_url",
+      "label": "Carrier tracking address",
+      "placeholder": "https://carrier.example/track?id={number}",
+      "info": "Your carrier's tracking page with {number} where the tracking number goes. It must start with https://. Nothing is sent to the carrier until a shopper submits the form."
+    },
+    {
+      "type": "text",
+      "id": "carrier_name",
+      "label": "Carrier name",
+      "info": "Tells shoppers which website opens. Name only the carrier this address belongs to; blank shows the address's domain."
+    },
+    {
+      "type": "text",
+      "id": "track_label",
+      "label": "Button label",
+      "default": "Track parcel"
+    },
+    {
+      "type": "checkbox",
+      "id": "new_tab",
+      "label": "Open the carrier page in a new tab",
+      "default": true
+    },
+    { "type": "header", "content": "Embed" },
+    {
+      "type": "html",
+      "id": "embed",
+      "label": "Embed code",
+      "info": "Paste the tracking widget from your tracking app or carrier. It runs exactly as pasted: Anvil adds no script of its own, so check the provider's privacy terms and any cookie consent it needs."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Track order",
+      "settings": {
+        "heading": "Track your <strong>order</strong>",
+        "width": "narrow",
+        "mode": "account"
+      }
+    }
+  ],
+  "disabled_on": { "groups": ["*"] }
+}
+{% endschema %}

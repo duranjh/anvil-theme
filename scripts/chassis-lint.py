@@ -13,9 +13,14 @@ sections) it verifies the contract in docs/CONVENTIONS.md §3–§4:
   presets    present, non-empty, every preset named
   blocks     {{ block.shopify_attributes }} on every local block (wrapper or
              per `when` branch), {% render block %} for @app, no local+@theme
-             mix, {% content_for 'blocks' %} when @theme is offered
+             mix, {% content_for 'blocks' %} when @theme or a theme block is
+             offered (a bare `{"type": "_x"}` entry, or one naming a file in
+             blocks/, is a theme-block reference, not a local block; theme
+             blocks print their own attributes and skip the loop and
+             max_blocks checks)
   limits     schema name <= 25 chars, <= 40 non-header settings,
-             enabled_on/disabled_on not both set
+             enabled_on/disabled_on not both set, and one of them set on
+             every addable section (the group policy, CONVENTIONS §4)
 
 Universal hygiene, applied to every sections/*.liquid and blocks/*.liquid
 (main-* and static sections included):
@@ -24,8 +29,10 @@ Universal hygiene, applied to every sections/*.liquid and blocks/*.liquid
     type="application/json" / "application/ld+json" are allowed)
   * no http(s):// URL except the SVG namespace, schema.org and the two
     click-to-load video facade hosts
-  * {% stylesheet %} body <= 6 KB; top-level selectors start with .av-<slug>
-    (warning)
+  * {% stylesheet %} body <= 6 KB after comments and whitespace are removed
+    (the source may be formatted for reading); top-level selectors start with
+    .av-<slug>, optionally scoped by the theme-wide motion switch
+    html:not([data-animations="off"]) / html[data-animations="off"] (warning)
 Theme blocks (blocks/*.liquid) must print {{ block.shopify_attributes }}.
 
 Group-only and overlay sections (`enabled_on.groups` without `templates`, for
@@ -97,6 +104,7 @@ IMG_RE = re.compile(r"<img\b", re.I)
 SCRIPT_RE = re.compile(r"<script\b([^>]*)>", re.I)
 URL_RE = re.compile(r"https?://([A-Za-z0-9.-]+)")
 SELECTOR_RE = re.compile(r"([^{}]+)\{")
+ROOT = "."
 
 
 class Report:
@@ -202,9 +210,9 @@ def check_hygiene(path, text, body, rep, slug=None, want_selector_prefix=False):
         rep.warn(path, line_of(text, sheets[1].start()), "more than one {% stylesheet %} block")
     for sh in sheets:
         css = sh.group(1)
-        size = len(css.encode("utf-8"))
+        size = len(minify_css(css).encode("utf-8"))
         if size > STYLESHEET_MAX:
-            rep.err(path, line_of(text, sh.start()), f"{{% stylesheet %}} is {size} bytes; limit {STYLESHEET_MAX}")
+            rep.err(path, line_of(text, sh.start()), f"{{% stylesheet %}} is {size} bytes minified; limit {STYLESHEET_MAX}")
         if want_selector_prefix and slug:
             css_nc = re.sub(r"/\*.*?\*/", lambda mm: " " * len(mm.group(0)), css, flags=re.S)
             want = f".av-{slug}"
@@ -217,12 +225,43 @@ def check_hygiene(path, text, body, rep, slug=None, want_selector_prefix=False):
                 sel_text = re.split(r"[;{}]", sel_text)[-1].strip()
                 if not sel_text or re.match(r"^(from|to|\d+%)$", sel_text):
                     continue
-                for sel in sel_text.split(","):
+                for sel in split_top_level(sel_text):
                     sel = sel.strip()
+                    # The theme-wide motion switch (CONVENTIONS §8) may scope a section rule from <html>.
+                    sel = re.sub(r'^html(?::not\(\[data-animations="off"\]\)|\[data-animations="off"\])\s+', "", sel)
                     if not sel:
                         continue
                     if not (sel.startswith(want) or sel.startswith(want_short) or sel.startswith("#shopify-section")):
                         rep.warn(path, line_of(text, sh.start(1) + sm.start(1)), f"selector `{sel}` should start with {want}")
+
+
+def minify_css(css):
+    """The stylesheet as it would ship minified: comments dropped, whitespace collapsed around punctuation. The 6 KB
+    budget (CONVENTIONS §11) is measured on this, so the source can be formatted for reading (DECISIONS 95)."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    css = re.sub(r"\s+", " ", css)
+    css = re.sub(r"\s*([{};,>])\s*", r"\1", css)
+    css = re.sub(r":\s+", ":", css)
+    css = css.replace(";}", "}")
+    return css.strip()
+
+
+def split_top_level(sel_text):
+    """Split a selector list on commas outside parentheses, so `:is(a, b)` and
+    `:not(a, b)` stay whole."""
+    parts, depth, cur = [], 0, []
+    for ch in sel_text:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            parts.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    parts.append("".join(cur))
+    return parts
 
 
 # --------------------------------------------------------------------------- chassis
@@ -326,17 +365,34 @@ def check_presets(path, schema, line, rep):
             rep.err(path, line, f"presets[{i}] needs a `name`")
 
 
-def check_blocks(path, body, schema, line, rep):
+def is_theme_block_ref(entry, root):
+    """A `blocks` entry that names a theme block instead of defining a local one.
+
+    Local blocks carry their own `name` (and settings). A bare `{"type": "x"}` that
+    starts with `_` (a private theme block) or matches a file blocks/<type>.liquid
+    is a reference to that theme block (shopify.dev: theme blocks can be listed by
+    type), so it renders through {% content_for 'blocks' %}, prints its own
+    {{ block.shopify_attributes }} and is not a local block.
+    """
+    t = str(entry.get("type") or "")
+    if not t or t.startswith("@") or entry.get("name"):
+        return False
+    return t.startswith("_") or os.path.isfile(os.path.join(root, "blocks", t + ".liquid"))
+
+
+def check_blocks(path, body, schema, line, rep, root="."):
     blocks = schema.get("blocks") or []
-    types = [b.get("type") for b in blocks if isinstance(b, dict)]
-    local = [t for t in types if t and not str(t).startswith("@")]
-    has_theme = "@theme" in types
+    entries = [b for b in blocks if isinstance(b, dict)]
+    types = [b.get("type") for b in entries]
+    theme_refs = [b.get("type") for b in entries if is_theme_block_ref(b, root)]
+    local = [t for t in types if t and not str(t).startswith("@") and t not in theme_refs]
+    has_theme = "@theme" in types or bool(theme_refs)
     has_app = "@app" in types
 
     if local and has_theme:
         rep.err(path, line, "a section cannot offer both local blocks and @theme blocks")
     if has_theme and not CONTENT_FOR_BLOCKS_RE.search(body):
-        rep.err(path, line, "@theme blocks offered but no {% content_for 'blocks' %} in the body")
+        rep.err(path, line, "theme blocks offered but no {% content_for 'blocks' %} in the body")
     if not local:
         return
     if "max_blocks" not in schema:
@@ -467,6 +523,10 @@ def lint_section(path, rel, rep):
     if not is_addable:
         return  # main-* and static sections: hygiene + schema limits only
 
+    # Group availability policy (CONVENTIONS §4, DECISIONS 100): every addable section says where it may go.
+    if "enabled_on" not in schema and "disabled_on" not in schema:
+        rep.err(rel, sline, "addable section needs `enabled_on` or `disabled_on` (CONVENTIONS §4 group policy)")
+
     # skeleton
     m = RENDER_ATTRS_RE.search(body)
     if not m:
@@ -495,7 +555,7 @@ def lint_section(path, rel, rep):
 
     check_chassis_settings(rel, schema, sline, rep)
     check_presets(rel, schema, sline, rep)
-    check_blocks(rel, body, schema, sline, rep)
+    check_blocks(rel, body, schema, sline, rep, root=ROOT)
 
 
 def lint_block(path, rel, rep):
@@ -520,6 +580,8 @@ def main():
     ap.add_argument("--strict", action="store_true", help="treat warnings as errors")
     args = ap.parse_args()
     root = os.path.abspath(args.root or os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    global ROOT
+    ROOT = root
     rep = Report(strict=args.strict)
 
     targets = []

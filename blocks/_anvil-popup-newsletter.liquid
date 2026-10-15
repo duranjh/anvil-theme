@@ -1,0 +1,196 @@
+{% doc %}
+  Private theme block for sections/anvil-popup.liquid: the popup's email signup form. The section renders it once as
+  a static block (content_for 'block', id "newsletter"), so merchants can edit or hide it but not remove or move it.
+  A Shopify customer form (id anvil-popup-<section id>-form) posts contact[email] and contact[tags] = "newsletter"
+  plus the optional tag below; each signup creates a customer with email marketing accepted. After a post the
+  form shows a success message (role="status", the field and button are hidden) or Shopify's errors (role="alert",
+  the field keeps the address); both messages carry data-anvil-result and tabindex="-1", which
+  assets/anvil-popup.js uses to reopen the popup on the shopper's own result and move focus to the message.
+  Without JavaScript the popup never opens, so this form only ever runs inside the open dialog.
+
+  Settings (id · type · values · default):
+  - layout · select · stacked | inline · default "stacked"
+  - show_label · checkbox · default false
+  - placeholder · text · default "Your email address"
+  - button_label · text · default "Subscribe"
+  - button_style · select · primary | secondary · default "primary"
+  - success_text · text · default "Thanks for signing up."
+  - small_print · richtext · default "<p>Example small print — …</p>"
+  - tag · text · default "popup"
+  - align · text_alignment · default "center" (small print and success message)
+
+  @example
+  {"type": "_anvil-popup-newsletter", "static": true, "id": "newsletter"}
+{% enddoc %}
+{%- liquid
+  assign b = block.settings
+
+  # Same id rule as the section, which reads it to recognise the shopper's own post (the action's fragment).
+  assign form_id = 'anvil-popup-' | append: section.id | append: '-form'
+  assign errors_id = form_id | append: '-errors'
+  assign print_id = form_id | append: '-print'
+
+  assign layout = b.layout | default: 'stacked'
+  assign align = b.align | default: 'center'
+  assign button_style = b.button_style | default: 'primary'
+  assign full_button = false
+  if layout == 'stacked'
+    assign full_button = true
+  endif
+
+  # The button always needs a name, and anvil-button prints labels as HTML, so the label is escaped here.
+  assign button_label = b.button_label | strip | escape
+  if button_label == blank
+    assign button_label = 'anvil.newsletter.submit' | t
+  endif
+  assign success_text = b.success_text | strip
+  if success_text == blank
+    assign success_text = 'anvil.newsletter.success' | t
+  endif
+
+  assign tags = 'newsletter'
+  assign extra_tag = b.tag | strip
+  if extra_tag != blank
+    assign tags = tags | append: ',' | append: extra_tag
+  endif
+
+  assign has_print = false
+  if b.small_print != blank
+    assign has_print = true
+  endif
+-%}
+<div class="av-popup-newsletter av-popup-newsletter--{{ layout }} av-popup-newsletter--{{ align }}" {{ block.shopify_attributes }}>
+  {%- form 'customer', id: form_id, class: 'av-popup-newsletter__form' -%}
+    {%- liquid
+      assign email_invalid = false
+      assign described = ''
+      if form.errors
+        if form.errors contains 'email'
+          assign email_invalid = true
+        endif
+        assign described = errors_id
+      endif
+      if has_print
+        assign described = described | append: ' ' | append: print_id | strip
+      endif
+    -%}
+    {%- if form.posted_successfully? -%}
+      <p class="av-popup-newsletter__notice av-form-message av-form-message--success" role="status" tabindex="-1" data-anvil-result="success">
+        {%- render 'anvil-icon', name: 'check-circle', size: 20, class: 'av-form-message__icon' -%}
+        <span>{{ success_text | escape }}</span>
+      </p>
+    {%- else -%}
+      {%- if form.errors -%}
+        <div class="av-popup-newsletter__notice av-form-message av-form-message--error" id="{{ errors_id }}" role="alert" tabindex="-1" data-anvil-result="error">
+          {%- render 'anvil-icon', name: 'alert-circle', size: 20, class: 'av-form-message__icon' -%}
+          <div>{{ form.errors | default_errors }}</div>
+        </div>
+      {%- endif -%}
+      <input type="hidden" name="contact[tags]" value="{{ tags | escape }}">
+      <div class="av-popup-newsletter__field av-field">
+        <label class="av-field__label{% unless b.show_label %} av-visually-hidden{% endunless %}" for="{{ form_id }}-email">{{ 'anvil.newsletter.label' | t }}</label>
+        <div class="av-popup-newsletter__row">
+          <input class="av-field__input av-popup-newsletter__input" id="{{ form_id }}-email" type="email" name="contact[email]" value="{{ form.email | escape }}"{% if b.placeholder != blank %} placeholder="{{ b.placeholder | escape }}"{% endif %} autocomplete="email" autocapitalize="off" spellcheck="false" required{% if email_invalid %} aria-invalid="true"{% endif %}{% if described != blank %} aria-describedby="{{ described }}"{% endif %}>
+          {% render 'anvil-button', label: button_label, style: button_style, size: 'md', type: 'submit', full: full_button, class: 'av-popup-newsletter__button' %}
+        </div>
+      </div>
+    {%- endif -%}
+  {%- endform -%}
+  {%- if has_print -%}
+    <div class="av-popup-newsletter__print av-rte" id="{{ print_id }}">{{ b.small_print }}</div>
+  {%- endif -%}
+</div>
+{% stylesheet %}
+.av-popup-newsletter{display:grid;gap:var(--av-space-3)}
+.av-popup-newsletter--left{text-align:left}
+.av-popup-newsletter--center{text-align:center}
+.av-popup-newsletter--right{text-align:right}
+.av-popup-newsletter__form{display:grid;gap:var(--av-space-3);text-align:start}
+.av-popup-newsletter--left .av-form-message--success{justify-self:left;text-align:left}
+.av-popup-newsletter--center .av-form-message--success{justify-self:center;text-align:center}
+.av-popup-newsletter--right .av-form-message--success{justify-self:right;text-align:right}
+.av-popup-newsletter__row{display:flex;flex-direction:column;gap:var(--av-space-2)}
+.av-popup-newsletter--inline .av-popup-newsletter__row{flex-flow:row wrap}
+.av-popup-newsletter--inline .av-popup-newsletter__input{flex:999 1 12rem;min-width:0}
+.av-popup-newsletter--inline .av-popup-newsletter__button{flex:1 0 auto}
+.av-popup-newsletter .av-popup-newsletter__print{font-size:var(--av-text-xs);line-height:1.5;color:var(--av-fg-muted)}
+.av-popup-newsletter .av-popup-newsletter__print a{color:inherit;text-decoration:underline;text-underline-offset:0.15em}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Signup form",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Each signup creates a customer with the email, the tag \"newsletter\" and email marketing accepted. Promise a discount or gift only when a real code exists and reaches every subscriber, for example through a Shopify Email automation."
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Form layout",
+      "options": [
+        { "value": "stacked", "label": "Button below the field" },
+        { "value": "inline", "label": "Field and button on one line" }
+      ],
+      "default": "stacked"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_label",
+      "label": "Show the field label",
+      "info": "A visible label stays on screen while shoppers type. Screen readers hear it either way.",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "placeholder",
+      "label": "Field placeholder",
+      "default": "Your email address"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Subscribe"
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" }
+      ],
+      "default": "primary"
+    },
+    {
+      "type": "text",
+      "id": "success_text",
+      "label": "Success message",
+      "default": "Thanks for signing up.",
+      "info": "Shown in the popup after a signup. Mention a discount, or a confirmation email (double opt-in), only if every subscriber really receives it."
+    },
+    {
+      "type": "richtext",
+      "id": "small_print",
+      "label": "Small print",
+      "default": "<p>Example: say what you send and how often, link your privacy policy and explain how to unsubscribe.</p>",
+      "info": "Consent wording and a privacy policy link. Any discount named here must exist and reach every subscriber."
+    },
+    {
+      "type": "text",
+      "id": "tag",
+      "label": "Extra customer tag",
+      "default": "popup",
+      "info": "Added next to \"newsletter\" so you can find signups from this popup under Customers or target them in an automation. Separate several tags with commas."
+    },
+    {
+      "type": "text_alignment",
+      "id": "align",
+      "label": "Small print alignment",
+      "default": "center",
+      "info": "Also aligns the success message. The field and error messages keep their usual alignment."
+    }
+  ]
+}
+{% endschema %}

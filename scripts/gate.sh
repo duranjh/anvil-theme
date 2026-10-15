@@ -11,7 +11,9 @@
 #                   (sections/anvil-<slug>.liquid, blocks/_anvil-<slug>-*.liquid,
 #                   assets/anvil-<slug>*, docs/sections/<slug>.md, plus --allow)
 #   G1 theme check  `shopify theme check --fail-level warning` on the whole theme
-#   G2 lints        cleanroom-lint, asset-audit, chassis-lint, check-limits
+#   G2 lints        cleanroom-lint, asset-audit, chassis-lint, check-limits, check-schema-ranges
+#                   (Shopify's upload rules for range settings), check-templates (templates and
+#                   section groups against the section schemas), sections-index --check (docs/SECTIONS.md)
 #
 # Push + screenshot stage (only when every static gate passed and the three
 # env vars are set; otherwise printed as SKIP):
@@ -115,6 +117,9 @@ run_gate "G2 cleanroom-lint" cleanroom-lint.log bash "$SELF_DIR/cleanroom-lint.s
 run_gate "G2 asset-audit" asset-audit.log python3 "$SELF_DIR/asset-audit.py" --root "$ROOT" || STATIC_OK=0
 run_gate "G2 chassis-lint" chassis-lint.log python3 "$SELF_DIR/chassis-lint.py" --root "$ROOT" || STATIC_OK=0
 run_gate "G2 check-limits" check-limits.log bash "$SELF_DIR/check-limits.sh" --root "$ROOT" || STATIC_OK=0
+run_gate "G2 schema-ranges" schema-ranges.log python3 "$SELF_DIR/check-schema-ranges.py" --root "$ROOT" || STATIC_OK=0
+run_gate "G2 check-templates" check-templates.log python3 "$SELF_DIR/check-templates.py" --root "$ROOT" || STATIC_OK=0
+run_gate "G2 sections-index" sections-index.log python3 "$SELF_DIR/sections-index.py" --check --root "$ROOT" || STATIC_OK=0
 
 # --- G3/G4 push + screenshots ---------------------------------------------------
 PUSH_READY=1

@@ -1,0 +1,658 @@
+{%- liquid
+  assign s = section.settings
+
+  # Media in the first two template sections loads eagerly (snippets/anvil-above-fold).
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign top_section = true
+  if fold contains 'lazy'
+    assign top_section = false
+  endif
+
+  comment
+    The summary (rating, count, logo) and every card's stars are claims a shopper should be able to check, so they
+    render only with a link: the platform link for the summary, and the review's own link for that card's stars
+    (docs/HONEST.md). A platform page is no source for a quote a customer emailed, so the section link never
+    unlocks card stars. The numbers are typed by the merchant; nothing is computed or invented here.
+  endcomment
+  assign has_platform = false
+  if s.platform_url != blank
+    assign has_platform = true
+  endif
+
+  comment
+    First pass: count the cards that render (a review without text is skipped on the storefront and kept in the
+    editor so it can still be selected) and note stars that stay hidden for want of the review's own link, so the
+    editor can say why. The only for-loop tag over section.blocks is the rendering loop below.
+  endcomment
+  assign card_count = 0
+  assign stars_hidden = false
+  for block in section.blocks
+    assign rw_text = block.settings.quote | strip
+    if rw_text != blank or request.design_mode
+      assign card_count = card_count | plus: 1
+    endif
+    if s.show_stars and block.settings.rating > 0 and block.settings.source_url == blank
+      assign stars_hidden = true
+    endif
+  endfor
+
+  assign lines = s.clamp_lines | plus: 0
+  assign initial = s.initial_count | plus: 0 | at_least: 1
+  assign extra_count = 0
+  if s.show_more and card_count > initial
+    assign extra_count = card_count | minus: initial
+  endif
+
+  comment
+    Columns are capped at the cards shown at first, not the total, so a short first batch never leaves empty tracks
+    (and the image sizes follow the columns that actually show).
+  endcomment
+  assign visible_count = card_count
+  if extra_count > 0
+    assign visible_count = initial
+  endif
+
+  # Columns follow the shared grid (.av-grid: tablets up to 3, 4 become 2); masonry reads the same column count.
+  assign layout = s.layout | default: 'grid'
+  assign cols = s.cols_desktop | default: '3' | plus: 0 | at_most: visible_count | at_least: 1
+  assign cols_t = cols | at_most: 3
+  if cols == 4
+    assign cols_t = 2
+  endif
+  assign cols_m = s.cols_mobile | default: '1' | plus: 0 | at_most: cols_t
+  assign vw_d = 100 | divided_by: cols
+  assign vw_t = 100 | divided_by: cols_t
+  assign vw_m = 100 | divided_by: cols_m
+  assign img_sizes = '(min-width: 990px) ' | append: vw_d | append: 'vw, (min-width: 750px) ' | append: vw_t | append: 'vw, ' | append: vw_m | append: 'vw'
+
+  comment
+    Masonry stacks cards top to bottom in each column, so the first visible row is the top card of each column,
+    not the first cols cards. Cards per column is estimated from an even split (the browser balances by height, so
+    this is close, not exact).
+  endcomment
+  assign masonry_rows = visible_count | plus: cols | minus: 1 | divided_by: cols | at_least: 1
+
+  capture surface
+    render 'anvil-surface', style: s.card_style
+  endcapture
+  assign surface = surface | strip
+  assign root_class = 'av-review-wall av-enhance av-review-wall--' | append: layout
+  if surface != blank
+    assign root_class = root_class | append: ' av-review-wall--boxed'
+  endif
+  assign grid_class = 'av-review-wall__grid av-grid av-grid--c' | append: cols | append: ' av-grid--m' | append: cols_m
+  assign img_ratio = s.image_ratio | default: '1:1'
+  if img_ratio == 'theme'
+    assign img_ratio = settings.card_image_ratio | default: '4:5'
+  endif
+  if lines > 0
+    assign root_class = root_class | append: ' av-review-wall--clamp'
+  endif
+
+  assign label_read = 'anvil.review_wall.read_more' | t
+  assign label_more = 'anvil.review_wall.show_more' | t
+  assign label_original = 'anvil.trust.original_review' | t
+  assign label_new_tab = 'anvil.a11y.new_window' | t
+  assign dialog_id = 'av-review-wall-dialog-' | append: section.id
+  assign title_id = dialog_id | append: '-title'
+
+  comment
+    Translations come back from t already escaped (shopify.dev, storefront locale files), so only the merchant's
+    own text is escaped here.
+  endcomment
+  assign disclosure = s.disclosure | strip | escape
+  if disclosure == blank
+    assign disclosure = 'anvil.trust.quotes_disclosure' | t
+  endif
+
+  comment
+    Summary line, for example "4.8 · 2,431 reviews on [logo]". The stars carry the spoken rating, so the printed
+    number is hidden from assistive technology.
+  endcomment
+  assign summary_rating = s.summary_rating | default: 0
+  assign count_text = s.count_text | strip
+  assign platform_name = s.platform_name | strip
+  capture summary_inner
+    if summary_rating > 0
+      render 'anvil-stars', rating: summary_rating, size: 20
+      echo '<span class="av-review-wall__score" aria-hidden="true">'
+      echo summary_rating | round: 1
+      echo '</span>'
+      if count_text != blank
+        echo '<span class="av-review-wall__dot" aria-hidden="true">·</span>'
+      endif
+    endif
+    if count_text != blank
+      echo '<span class="av-review-wall__count">'
+      echo count_text | escape
+      echo '</span>'
+    endif
+    if s.platform_logo != blank
+      assign logo_h = s.logo_height | default: 24
+      assign logo_w = s.platform_logo.aspect_ratio | times: logo_h | ceil
+      assign logo_sizes = logo_w | append: 'px'
+      assign logo_alt = platform_name | default: s.platform_logo.alt | default: ''
+      assign logo_loading = 'lazy'
+      if top_section
+        assign logo_loading = 'eager'
+      endif
+      echo s.platform_logo | image_url: width: 200 | image_tag: widths: '100, 200', sizes: logo_sizes, loading: logo_loading, alt: logo_alt, class: 'av-review-wall__logo'
+    elsif platform_name != blank
+      echo '<span class="av-review-wall__brand">'
+      echo platform_name | escape
+      echo '</span>'
+    endif
+  endcapture
+  assign summary_inner = summary_inner | strip
+
+  assign card_n = 0
+  assign show_summary = false
+  if summary_inner != blank
+    if has_platform or request.design_mode
+      assign show_summary = true
+    endif
+  endif
+-%}
+{%- if card_count > 0 or show_summary or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-review-wall' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if summary_inner != blank -%}
+      {%- if has_platform -%}
+        <p class="av-review-wall__summary av-review-wall__summary--{{ s.head_align }}" style="--av-review-wall-logo: {{ s.logo_height | default: 24 }}px;">
+          <a class="av-review-wall__platform" href="{{ s.platform_url }}" target="_blank" rel="noopener">
+            {{- summary_inner -}}
+            <span class="av-visually-hidden"> {{ label_new_tab }}</span>
+          </a>
+        </p>
+      {%- elsif request.design_mode -%}
+        {%- comment -%} Editor only: the merchant sees where the summary goes; shoppers see nothing until the link is set. {%- endcomment -%}
+        <div class="av-review-wall__summary av-review-wall__summary--{{ s.head_align }} av-review-wall__summary--preview" style="--av-review-wall-logo: {{ s.logo_height | default: 24 }}px;">
+          <span class="av-review-wall__platform">{{ summary_inner }}</span>
+          <p class="av-review-wall__preview-note av-example-note av-align--{{ s.head_align }}">{{ 'anvil.editor.review_wall_summary_preview' | t }}</p>
+        </div>
+      {%- endif -%}
+    {%- endif -%}
+    {%- if card_count > 0 -%}
+      <anvil-review-wall
+        class="{{ root_class }}"
+        data-anvil-step="{{ initial }}"
+        style="--av-review-wall-lines: {{ lines }};"
+      >
+        <ul class="{{ grid_class }}" role="list" data-anvil-grid>
+          {%- for block in section.blocks -%}
+            {%- liquid
+              assign b = block.settings
+              assign text = b.quote | strip
+              if text == blank and request.design_mode == false
+                continue
+              endif
+              assign card_n = card_n | plus: 1
+
+              assign is_extra = false
+              if extra_count > 0 and card_n > initial
+                assign is_extra = true
+              endif
+
+              assign media_loading = 'lazy'
+              if top_section and is_extra == false
+                if layout == 'masonry'
+                  assign column_pos = card_n | minus: 1 | modulo: masonry_rows
+                  if column_pos == 0
+                    assign media_loading = 'eager'
+                  endif
+                elsif card_n <= cols
+                  assign media_loading = 'eager'
+                endif
+              endif
+
+              assign show_card_stars = false
+              if s.show_stars and b.rating > 0 and b.source_url != blank
+                assign show_card_stars = true
+              endif
+
+              assign name = b.name | strip
+
+              # Dates typed as YYYY-MM-DD become a <time> element (snippets/anvil-typed-date, shared with Social cards).
+              capture date_html
+                render 'anvil-typed-date', date: b.date
+              endcapture
+              assign date_html = date_html | strip
+
+              assign has_by = false
+              if name != blank or date_html != blank or b.source_url != blank
+                assign has_by = true
+              endif
+
+              assign read_label = ''
+              if name != blank
+                assign read_label = 'anvil.review_wall.read_more_by' | t: name: name
+              endif
+            -%}
+            <li class="av-review-wall__card{% if is_extra %} av-review-wall__card--extra{% endif %}"{% if is_extra %} tabindex="-1"{% endif %} {{ block.shopify_attributes }}>
+              <figure class="av-review-wall__review {{ surface }}">
+                {%- if b.image != blank -%}
+                  {% render 'anvil-media', image: b.image, ratio: img_ratio, widths: '300, 450, 600', sizes: img_sizes, loading: media_loading, class: 'av-review-wall__media' %}
+                {%- endif -%}
+                {%- if show_card_stars -%}
+                  <div class="av-review-wall__stars">{% render 'anvil-stars', rating: b.rating, size: 16 %}</div>
+                {%- endif -%}
+                {%- if text != blank -%}
+                  <blockquote class="av-review-wall__quote">
+                    <p class="av-review-wall__text">{{ text | escape | newline_to_br }}</p>
+                  </blockquote>
+                  {%- if lines > 0 -%}
+                    <button type="button" class="av-review-wall__read av-enhanced-only" aria-haspopup="dialog"{% if read_label != blank %} aria-label="{{ read_label }}"{% endif %} data-anvil-read>
+                      {{- label_read -}}
+                    </button>
+                  {%- endif -%}
+                {%- else -%}
+                  <p class="av-review-wall__empty av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+                {%- endif -%}
+                {%- if has_by -%}
+                  <figcaption class="av-review-wall__by">
+                    {%- if name != blank -%}
+                      <span class="av-review-wall__name">{{ name | escape }}</span>
+                    {%- endif -%}
+                    {%- if date_html != blank -%}
+                      <span class="av-review-wall__date">{{ date_html }}</span>
+                    {%- endif -%}
+                    {%- if b.source_url != blank -%}
+                      <a class="av-review-wall__source" href="{{ b.source_url }}" target="_blank" rel="noopener">
+                        {{- label_original -}}
+                        <span class="av-visually-hidden"> {{ label_new_tab }}</span>
+                      </a>
+                    {%- endif -%}
+                  </figcaption>
+                {%- endif -%}
+              </figure>
+            </li>
+          {%- endfor -%}
+        </ul>
+        {%- if extra_count > 0 -%}
+          <div class="av-review-wall__foot av-enhanced-only" data-anvil-foot>
+            {%- render 'anvil-button', label: label_more, style: 'secondary', attrs: 'data-anvil-more' -%}
+          </div>
+        {%- endif -%}
+        {%- if lines > 0 -%}
+          <anvil-dialog id="{{ dialog_id }}">
+            <dialog class="av-dialog av-dialog--sheet av-review-wall__dialog" aria-labelledby="{{ title_id }}">
+              <button type="button" class="av-dialog__close" data-anvil-close aria-label="{{ 'anvil.a11y.close' | t }}">
+                {%- render 'anvil-icon', name: 'x', size: 20 -%}
+              </button>
+              <h2 class="av-dialog__title" id="{{ title_id }}">{{ 'anvil.review_wall.dialog_title' | t }}</h2>
+              <div class="av-review-wall__body" data-anvil-body></div>
+            </dialog>
+          </anvil-dialog>
+        {%- endif -%}
+      </anvil-review-wall>
+      {%- if lines > 0 -%}
+        {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+      {%- endif -%}
+      {%- if lines > 0 or extra_count > 0 -%}
+        <script type="module" src="{{ 'anvil-review-wall.js' | asset_url }}"></script>
+      {%- endif -%}
+      {%- if s.show_disclosure -%}
+        <p class="av-review-wall__note av-align--{{ s.head_align }}">{{ disclosure }}</p>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+    {%- if request.design_mode and stars_hidden -%}
+      <p class="av-review-wall__note av-example-note av-align--{{ s.head_align }}">{{ 'anvil.editor.review_wall_no_source' | t }}</p>
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Read more and Show more key on :defined, so without the module every review shows in full. */
+/* Columns and gap from the shared .av-grid (theme grid gap); card boxes from .av-surface. */
+.av-review-wall{display:block}
+.av-review-wall__summary{display:flex;justify-content:center;margin:0 0 var(--av-space-6);font-size:var(--av-text-md);line-height:1.4}
+.av-review-wall__summary--left{justify-content:flex-start}
+.av-review-wall__summary--right{justify-content:flex-end}
+.av-review-wall__platform{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:inherit;gap:var(--av-space-2) var(--av-space-3);min-height:24px;color:inherit;text-decoration:none}
+.av-review-wall__platform:hover .av-review-wall__count{text-decoration:underline;text-underline-offset:0.15em}
+.av-review-wall__score,.av-review-wall__brand{font-weight:700}
+.av-review-wall__dot{color:var(--av-fg-muted)}
+.av-review-wall__logo{display:block;width:auto;height:var(--av-review-wall-logo,24px);max-width:200px;object-fit:contain}
+/* Editor-only preview of the summary while the platform link is empty. */
+.av-review-wall__summary--preview{flex-wrap:wrap}
+.av-review-wall__summary--preview .av-review-wall__platform{opacity:0.6}
+.av-review-wall__preview-note{flex-basis:100%;margin:var(--av-space-1) 0 0}
+.av-review-wall__grid{padding:0;list-style:none}
+.av-review-wall--masonry .av-review-wall__grid{display:block;columns:var(--av-grid-n);column-gap:var(--av-grid-gap)}
+.av-review-wall__card{display:flex;min-width:0;margin:0;border-radius:var(--av-radius-card)}
+.av-review-wall--masonry .av-review-wall__card{break-inside:avoid;margin-bottom:var(--av-grid-gap)}
+.av-review-wall:defined .av-review-wall__card--extra:not(.av-is-shown){display:none}
+.av-review-wall__review{display:flex;flex:1;flex-direction:column;align-items:flex-start;gap:var(--av-space-3);min-width:0;margin:0;padding:var(--av-space-5);border-radius:var(--av-radius-card);text-align:start}
+.av-review-wall:not(.av-review-wall--boxed) .av-review-wall__review{padding:0;border-radius:0}
+.av-review-wall__media{align-self:stretch;flex:none}
+.av-review-wall__stars{display:flex;line-height:0}
+.av-review-wall__quote{max-width:100%;margin:0}
+.av-review-wall__text{margin:0;font-size:var(--av-text-sm);line-height:1.6;overflow-wrap:break-word}
+/* MDN: line clamping still needs the -webkit- box properties. */
+.av-review-wall--clamp:defined .av-review-wall__grid .av-review-wall__text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--av-review-wall-lines,5);overflow:hidden}
+.av-review-wall__read{display:inline-flex;align-items:center;min-height:24px;padding:0;border:0;background:none;color:var(--av-accent);font:inherit;font-size:var(--av-text-sm);font-weight:600;text-decoration:underline;text-underline-offset:0.15em;cursor:pointer}
+.av-review-wall__read:hover{text-decoration-thickness:2px}
+.av-review-wall__by{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-1) var(--av-space-3);max-width:100%;margin-top:auto;font-size:var(--av-text-xs);line-height:1.4;color:var(--av-fg-muted)}
+.av-review-wall__name{font-size:var(--av-text-sm);font-weight:600;color:var(--av-fg);overflow-wrap:anywhere}
+.av-review-wall__source{display:inline-flex;align-items:center;min-height:24px;color:inherit;text-decoration:underline;text-underline-offset:0.15em}
+.av-review-wall__source:hover{color:var(--av-fg)}
+.av-review-wall__foot{display:flex;justify-content:center;margin-top:var(--av-space-6)}
+.av-review-wall__note{margin:var(--av-space-4) 0 0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
+.av-review-wall__empty{margin:0}
+.av-review-wall__dialog .av-review-wall__review{padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.av-review-wall__dialog .av-review-wall__text{font-size:var(--av-text-md)}
+.av-review-wall__dialog .av-review-wall__media{max-width:420px}
+@media (min-width: 990px){
+.av-review-wall--boxed .av-review-wall__review{padding:var(--av-space-6)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Review wall",
+  "max_blocks": 50,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Review wall" },
+    { "type": "paragraph", "content": "Each card is a review you type in. Copy reviews word for word from where customers posted them, or use words customers sent you with their permission. For reviews collected by a review app, use that app's own block or section." },
+    { "type": "header", "content": "Summary" },
+    { "type": "paragraph", "content": "The rating, review count, platform name and logo show only when the platform link is set, so shoppers can check them." },
+    {
+      "type": "range",
+      "id": "summary_rating",
+      "label": "Overall rating",
+      "min": 0,
+      "max": 5,
+      "step": 0.1,
+      "default": 0,
+      "info": "Copy the rating the platform shows today and update it when it changes. 0 hides the stars and the number."
+    },
+    {
+      "type": "text",
+      "id": "count_text",
+      "label": "Review count text",
+      "default": "Example: 120 reviews on — replace with your real count",
+      "info": "Copy the count the platform shows, for example \"2,431 reviews on\". Never round it up."
+    },
+    {
+      "type": "text",
+      "id": "platform_name",
+      "label": "Platform name",
+      "info": "The site where these reviews and the rating are published, the one the platform link opens. Also read out as the logo's description, or shown as text when no logo is uploaded."
+    },
+    {
+      "type": "image_picker",
+      "id": "platform_logo",
+      "label": "Platform logo",
+      "info": "Upload a logo you are entitled to use. Anvil ships no third-party logos."
+    },
+    {
+      "type": "range",
+      "id": "logo_height",
+      "label": "Logo height",
+      "min": 16,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "url",
+      "id": "platform_url",
+      "label": "Platform link",
+      "info": "The page where these reviews and the rating are published. Without it the summary stays hidden."
+    },
+    { "type": "header", "content": "Cards" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "grid", "label": "Grid in rows" },
+        { "value": "masonry", "label": "Masonry columns" }
+      ],
+      "default": "grid",
+      "info": "Masonry stacks cards of different heights in columns, read from top to bottom."
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5", "label": "5" }
+      ],
+      "default": "3",
+      "info": "Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "Card style",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "flat", "label": "No box" },
+        { "value": "outlined", "label": "Outlined" },
+        { "value": "tinted", "label": "Tinted" },
+        { "value": "raised", "label": "Shadow" }
+      ],
+      "default": "outlined",
+      "info": "\"Same as theme cards\" follows Theme settings > Cards."
+    },
+    {
+      "type": "range",
+      "id": "clamp_lines",
+      "label": "Lines before \"Read more\"",
+      "min": 0,
+      "max": 12,
+      "step": 1,
+      "default": 5,
+      "info": "Longer reviews are cut and open in full in a dialog. 0 shows every review in full. Without JavaScript every review shows in full."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" }
+      ],
+      "default": "1:1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_stars",
+      "label": "Show stars on cards",
+      "default": true,
+      "info": "A card's stars show only when that review has its own link, so shoppers can check them."
+    },
+    { "type": "header", "content": "Show more" },
+    {
+      "type": "checkbox",
+      "id": "show_more",
+      "label": "Show a \"Show more\" button",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "initial_count",
+      "label": "Reviews shown at first",
+      "min": 2,
+      "max": 24,
+      "step": 1,
+      "default": 6,
+      "info": "Each click on \"Show more\" adds this many. Without JavaScript every review shows."
+    },
+    { "type": "header", "content": "Disclosure" },
+    {
+      "type": "checkbox",
+      "id": "show_disclosure",
+      "label": "Show a disclosure line",
+      "default": true,
+      "info": "Tells shoppers that the store entered these reviews. Keep it on unless every review links to where the customer posted it."
+    },
+    {
+      "type": "text",
+      "id": "disclosure",
+      "label": "Disclosure text",
+      "info": "Say plainly who entered these reviews; never call them verified unless each one links to where the customer posted it. Leave empty for the default: \"Quotes shared by customers; entered by the store.\""
+    }
+  ],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "Review",
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "A review you type in. Shoppers read it as a real customer's words, so enter only what a customer actually wrote or told you."
+        },
+        {
+          "type": "textarea",
+          "id": "quote",
+          "label": "Quote",
+          "default": "Example: replace with words a real customer wrote, copied exactly.",
+          "info": "You may shorten a review, but never change what the customer meant or add words they did not write."
+        },
+        {
+          "type": "range",
+          "id": "rating",
+          "label": "Stars",
+          "min": 0,
+          "max": 5,
+          "step": 0.5,
+          "default": 0,
+          "info": "The stars this customer gave where they posted the review, exactly. 0 hides them. They show only when this review has its own link."
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Customer name",
+          "default": "Example: Alex R.",
+          "info": "The name the customer posted under, or a first name and initial they agreed to."
+        },
+        {
+          "type": "text",
+          "id": "date",
+          "label": "Date posted",
+          "placeholder": "2026-03-14",
+          "info": "The day the customer posted it, written as YYYY-MM-DD. Shown in your store's date format; anything else is ignored."
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Customer photo",
+          "info": "Only a photo the customer shared with this review, used with their permission."
+        },
+        {
+          "type": "url",
+          "id": "source_url",
+          "label": "Link to this review",
+          "info": "The page where this review is published. Shoppers can open it to check; only with it does this card show its stars."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Review wall",
+      "settings": {
+        "heading": "Customer <strong>reviews</strong>"
+      },
+      "blocks": [
+        {
+          "type": "review",
+          "settings": {
+            "name": "Example: Alex R.",
+            "quote": "Example: replace with words a real customer wrote, copied exactly."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Example: Sam K.",
+            "quote": "Example: this one is longer, so you can see how the wall shortens long reviews. Shoppers open the full text with Read more, so you never need to cut a review down yourself. Replace it with a real review, word for word, and add the link to where the customer posted it."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Example: Jordan P.",
+            "quote": "Example: a short, specific review reads best. Replace it with a real one."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Example: Riley M.",
+            "quote": "Example: add the customer's photo only if they shared it with their review and agreed to its use. This example is long on purpose too: a review that runs past the line limit ends with Read more, and the whole text opens in a dialog. Screen readers read the whole review either way. Replace this text with the customer's own words, exactly as they wrote them."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Example: Casey T.",
+            "quote": "Example: the date field takes the day the customer posted, written as YYYY-MM-DD. Replace this with a real review."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Example: Morgan L.",
+            "quote": "Example: set the stars this customer gave and add the link to this review; stars show only with that link. Replace this with a real review."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Example: Taylor B.",
+            "quote": "Example: reviews after the first six wait behind the Show more button. Replace this with a real review."
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "name": "Example: Jamie D.",
+            "quote": "Example: delete any example you do not replace before you publish. Replace this with a real review."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,398 @@
+{%- liquid
+  assign s = section.settings
+  assign slide_count = section.blocks.size
+
+  # Each slide is a private theme block (blocks/_anvil-hero-slideshow-slide.liquid) whose root is the slider's
+  # [data-slider-slide]; this file owns the <anvil-slider> (assets/anvil-slider.js), the height, the transition
+  # and the controls.
+
+  # Heights. Adapt uses the first slide's image shape for every slide (an example shape while it has no image); the
+  # fixed heights are minimums, so long content makes the slides taller instead of being cut off. Slides in a row
+  # share the tallest height.
+  assign first_slide = section.blocks.first
+  assign first_d = first_slide.settings.image
+  assign first_m = first_slide.settings.image_mobile
+  if first_d == blank
+    assign first_d = first_m
+  endif
+  if first_m == blank
+    assign first_m = first_d
+  endif
+  assign ratio_d = '16 / 9'
+  assign ratio_m = '4 / 5'
+  if first_d != blank
+    assign ratio_d = first_d.aspect_ratio
+    assign ratio_m = first_m.aspect_ratio
+  endif
+  assign ar_d = 'auto'
+  case s.height_desktop
+    when 'adapt'
+      assign ar_d = ratio_d
+      assign min_d = 'auto'
+    when 'sm'
+      assign min_d = '440px'
+    when 'md'
+      assign min_d = '560px'
+    when 'full'
+      assign min_d = '100svh'
+    else
+      assign min_d = '720px'
+  endcase
+  assign ar_m = 'auto'
+  case s.height_mobile
+    when 'adapt'
+      assign ar_m = ratio_m
+      assign min_m = 'auto'
+    when 'sm'
+      assign min_m = '320px'
+    when 'lg'
+      assign min_m = '560px'
+    when 'full'
+      assign min_m = '100svh'
+    else
+      assign min_m = '440px'
+  endcase
+
+  # Autoplay needs two slides. The slider pauses it on hover, keyboard focus, a hidden tab, off-screen and while a
+  # block is selected in the editor, starts paused when the shopper reduces motion, and always draws a pause button.
+  assign autoplay = 0
+  if slide_count > 1
+    assign autoplay = s.autoplay | default: 0
+  endif
+  assign show_dots = false
+  if s.show_dots and slide_count > 1
+    assign show_dots = true
+  endif
+  assign show_arrows = false
+  if s.show_arrows and slide_count > 1
+    assign show_arrows = true
+  endif
+
+  assign transition = s.transition | default: 'slide'
+  assign root_class = 'av-hero-slideshow av-hero-slideshow--' | append: transition
+  if s.width != 'full'
+    assign root_class = root_class | append: ' av-hero-slideshow--framed'
+  endif
+  # Phones hide the arrows while dots are on (swipe or tap a dot; the slider's arrows="desktop"); with dots off they
+  # stay, so a mouse user in a narrow window or at high zoom can still change slides.
+  assign arrows = 'none'
+  if show_arrows
+    assign root_class = root_class | append: ' av-hero-slideshow--arrows'
+    assign arrows = 'desktop'
+    unless show_dots
+      assign root_class = root_class | append: ' av-hero-slideshow--arrows-always'
+      assign arrows = 'all'
+    endunless
+  endif
+  if show_dots or autoplay > 0
+    assign root_class = root_class | append: ' av-hero-slideshow--controls'
+  endif
+  assign root_class = root_class | append: ' av-slider--overlay'
+
+  assign slider_label = s.heading | strip_html | strip
+  if slider_label == blank
+    assign slider_label = 'anvil.hero_slideshow.label' | t
+  endif
+
+  capture head_html
+    render 'anvil-section-head', section: section
+  endcapture
+  assign head_html = head_html | strip
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-hero-slideshow' %}>
+  <div class="av-section__inner{% if s.width == 'full' %} av-section__inner--bleed{% endif %}">
+    {%- if head_html != blank -%}
+      <div class="av-hero-slideshow__head{% if s.width == 'full' %} av-hero-slideshow__head--bleed{% endif %}">{{ head_html }}</div>
+    {%- endif -%}
+    {%- if slide_count > 0 -%}
+      {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      {%- capture slider_style -%}--av-slider-gap: 0px; --av-hero-slideshow-ar-m: {{ ar_m }}; --av-hero-slideshow-ar-d: {{ ar_d }}; --av-hero-slideshow-min-m: {{ min_m }}; --av-hero-slideshow-min-d: {{ min_d }};{%- endcapture -%}
+      <anvil-slider {% render 'anvil-slider-attrs', count: slide_count, per_view: 1, arrows: arrows, dots: show_dots, autoplay: autoplay, loop: true, label: slider_label, class: root_class, style: slider_style %}>
+        <div class="av-hero-slideshow__track" data-slider-track>
+          {% content_for 'blocks' %}
+        </div>
+        {%- if show_dots -%}
+          <div class="av-slider__dots" data-slider-dots></div>
+        {%- endif -%}
+      </anvil-slider>
+      <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+      {%- if transition == 'fade' and slide_count > 1 -%}
+        <script type="module" src="{{ 'anvil-hero-slideshow.js' | asset_url }}"></script>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{% stylesheet %}
+/* Root = <anvil-slider> (assets/anvil-slider.css); each slide is the private block's root, its frame is what shoppers see. */
+.av-hero-slideshow__head--bleed{padding-inline:var(--av-gutter)}
+.av-hero-slideshow--framed > [data-slider-track]{border-radius:var(--av-radius-media)}
+.av-hero-slideshow__slide{display:grid;grid-template-columns:minmax(0,1fr);aspect-ratio:var(--av-hero-slideshow-ar-m,auto);min-height:var(--av-hero-slideshow-min-m,auto)}
+/* The frame paints its own solid background, so a fading frame never shows another slide's backdrop. */
+.av-hero-slideshow__slide > .av-hero-slideshow__frame{position:relative;display:grid;grid-template-columns:minmax(0,1fr);isolation:isolate;background:linear-gradient(rgb(var(--av-fg-rgb) / 0.06),rgb(var(--av-fg-rgb) / 0.06)) var(--av-bg);color:var(--av-fg)}
+.av-hero-slideshow__media,.av-hero-slideshow__picture,.av-hero-slideshow__img,.av-hero-slideshow__placeholder{position:absolute;inset:0;display:block;width:100%;height:100%}
+.av-hero-slideshow__media{overflow:hidden}
+.av-hero-slideshow__picture{object-position:var(--av-hero-slideshow-pos-m,50% 50%)}
+.av-hero-slideshow__img{object-fit:cover}
+.av-hero-slideshow__placeholder{box-sizing:border-box;padding:8%;color:rgb(var(--av-fg-rgb) / 0.35);fill:currentColor}
+/* Slide link under the content (z-index, not DOM order: it follows the content so the heading gives it context). */
+.av-hero-slideshow__link{position:absolute;inset:0;z-index:1}
+.av-hero-slideshow__link:focus-visible{outline:2px solid var(--av-accent);outline-offset:-6px;box-shadow:inset 0 0 0 4px var(--av-bg)}
+.av-hero-slideshow__note{position:absolute;z-index:3;inset-block-start:var(--av-space-3);inset-inline-start:var(--av-space-3);max-width:calc(100% - 2 * var(--av-space-3));margin:0;padding:var(--av-space-1) var(--av-space-3);border-radius:var(--av-radius-badge);background:var(--av-bg)}
+.av-hero-slideshow__content{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:var(--av-hero-slideshow-v-m,center);align-items:stretch;width:100%;max-width:var(--av-page-width);margin-inline:auto;padding:calc(var(--av-space-6) + var(--av-overlap-pad,0px)) var(--av-gutter) var(--av-space-6)}
+.av-hero-slideshow--controls .av-hero-slideshow__content{padding-block-end:calc(var(--av-space-6) + 56px)}
+.av-hero-slideshow--arrows-always .av-hero-slideshow__content{padding-inline:max(var(--av-gutter),calc(var(--av-slider-arrow,44px) + var(--av-space-5)))}
+.av-hero-slideshow__frame--linked .av-hero-slideshow__content{pointer-events:none}
+.av-hero-slideshow__frame--linked .av-hero-slideshow__box{pointer-events:auto}
+.av-hero-slideshow__box{display:flex;flex-direction:column;gap:var(--av-space-4);width:100%}
+.av-hero-slideshow__box > *{min-width:0}
+/* Controls sit on the slides (the slider's av-slider--overlay); arrows follow arrows="desktop" or "all". */
+/* Without JavaScript there are no arrows or dots: a non-auto scrollbar-width brings the track's scrollbar back. */
+@media (scripting: none){
+.av-hero-slideshow > [data-slider-track]{scrollbar-width:thin}
+}
+@media (min-width: 750px){
+.av-hero-slideshow__slide{aspect-ratio:var(--av-hero-slideshow-ar-d,auto);min-height:var(--av-hero-slideshow-min-d,auto)}
+.av-hero-slideshow__picture{object-position:var(--av-hero-slideshow-pos-d,50% 50%)}
+.av-hero-slideshow__content{justify-content:var(--av-hero-slideshow-v-d,center);align-items:var(--av-hero-slideshow-h-d,center);padding-block:calc(var(--av-space-8) + var(--av-overlap-pad,0px)) var(--av-space-8)}
+.av-hero-slideshow--controls .av-hero-slideshow__content{padding-block-end:calc(var(--av-space-8) + 40px)}
+.av-hero-slideshow--arrows .av-hero-slideshow__content{padding-inline:max(var(--av-gutter),calc(var(--av-slider-arrow,44px) + var(--av-space-5)))}
+.av-hero-slideshow__box{max-width:var(--av-hero-slideshow-box-w,560px)}
+.av-hero-slideshow__box.av-box{padding:var(--av-space-7)}
+}
+/* Fade: the track still scrolls (swipe, keys, dots, autoplay), but a view timeline on each slide holds its frame in
+   place and cross-fades it. Without scroll-driven animations or JavaScript, under reduced motion, with animations off
+   and on right-to-left pages (Chrome maps their view progress from the other edge) slides slide. visibility is
+   switched, not animated, so an off-stage frame takes no click or focus; assets/anvil-hero-slideshow.js keeps focus. */
+@supports (animation-timeline: view()){
+@media (prefers-reduced-motion: no-preference) and (scripting: enabled){
+html:not([data-animations="off"]) .av-hero-slideshow--fade:dir(ltr) .av-hero-slideshow__slide{view-timeline:--av-hero-slideshow inline}
+html:not([data-animations="off"]) .av-hero-slideshow--fade:dir(ltr) .av-hero-slideshow__frame{animation-name:av-hero-slideshow-fade;animation-duration:1ms;animation-timing-function:linear;animation-fill-mode:both;animation-timeline:--av-hero-slideshow}
+}
+}
+@keyframes av-hero-slideshow-fade{
+0%{transform:translateX(-100%);opacity:0;visibility:hidden}
+2%{opacity:0;visibility:hidden}
+50%{transform:none;opacity:1;visibility:visible}
+98%{visibility:hidden}
+100%{transform:translateX(100%);visibility:hidden}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Hero slideshow",
+  "max_blocks": 8,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Hero slideshow" },
+    {
+      "type": "select",
+      "id": "height_desktop",
+      "label": "Height on desktop",
+      "options": [
+        { "value": "adapt", "label": "Adapt to first image" },
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "full", "label": "Full screen" }
+      ],
+      "default": "lg"
+    },
+    {
+      "type": "select",
+      "id": "height_mobile",
+      "label": "Height on phones",
+      "options": [
+        { "value": "adapt", "label": "Adapt to first image" },
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "full", "label": "Full screen" }
+      ],
+      "default": "md",
+      "info": "Every slide takes the same height. Long content makes the slides taller rather than cutting text off."
+    },
+    {
+      "type": "select",
+      "id": "transition",
+      "label": "Transition",
+      "options": [
+        { "value": "slide", "label": "Slide" },
+        { "value": "fade", "label": "Fade" }
+      ],
+      "default": "slide",
+      "info": "Fade needs a browser with scroll-driven animations; others slide. Shoppers who reduce motion see slides change without animation."
+    },
+    {
+      "type": "range",
+      "id": "autoplay",
+      "label": "Auto-advance every",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 6,
+      "info": "0 turns it off. It pauses on hover and focus, starts paused when the shopper prefers reduced motion, and always shows a pause button."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true,
+      "info": "With dots on, arrows show from tablet width up and phones swipe or tap a dot. With dots off, arrows show on phones too."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "Show dots",
+      "default": true,
+      "info": "Keep arrows or dots on, so shoppers with a mouse can change slides."
+    }
+  ],
+  "blocks": [
+    { "type": "_anvil-hero-slideshow-slide" }
+  ],
+  "presets": [
+    {
+      "name": "Hero slideshow",
+      "settings": {
+        "color_scheme": "scheme-4",
+        "width": "full",
+        "pad_top": 0,
+        "pad_bottom": 0,
+        "height_desktop": "lg",
+        "height_mobile": "md"
+      },
+      "blocks": [
+        {
+          "type": "_anvil-hero-slideshow-slide",
+          "settings": {
+            "overlay": 35
+          },
+          "blocks": [
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: say what you <strong>sell</strong>",
+                "tag": "h2",
+                "size": "xl",
+                "align": "center"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: one or two sentences on what shoppers get. Replace it with words that are true for your store.</p>",
+                "size": "lg",
+                "align": "center"
+              }
+            },
+            {
+              "type": "anvil-button",
+              "settings": {
+                "label": "Shop now",
+                "url": "/collections/all",
+                "style": "primary",
+                "size": "lg",
+                "align": "center"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-hero-slideshow-slide",
+          "settings": {
+            "overlay": 35,
+            "position_desktop": "middle-left",
+            "position_mobile": "bottom"
+          },
+          "blocks": [
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: a collection or a story",
+                "tag": "h2",
+                "size": "xl",
+                "align": "left"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: point shoppers to one place. Announce a sale only when a real Shopify discount backs it.</p>",
+                "size": "lg",
+                "align": "left"
+              }
+            },
+            {
+              "type": "anvil-button",
+              "settings": {
+                "label": "Browse the collection",
+                "url": "/collections/all",
+                "style": "secondary",
+                "size": "lg",
+                "align": "left"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-hero-slideshow-slide",
+          "settings": {
+            "overlay": 0,
+            "position_desktop": "bottom-right",
+            "position_mobile": "bottom",
+            "box": true,
+            "own_scheme": true,
+            "color_scheme": "scheme-1",
+            "content_width": 480
+          },
+          "blocks": [
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: text on a panel",
+                "tag": "h2",
+                "size": "lg",
+                "align": "left"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: the panel keeps words readable over any photo. Replace it before publishing.</p>",
+                "align": "left"
+              }
+            },
+            {
+              "type": "anvil-button",
+              "settings": {
+                "label": "Learn more",
+                "url": "/collections/all",
+                "style": "link",
+                "align": "left"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

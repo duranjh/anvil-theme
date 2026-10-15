@@ -1,0 +1,484 @@
+{%- liquid
+  assign s = section.settings
+
+  # Columns follow the shared grid rule (.av-grid: tablets up to 3, 4 become 2); the slider shows the same counts.
+  assign layout = s.layout | default: 'slider'
+  assign cols_d = s.cols_desktop | default: '4' | plus: 0 | at_least: 2 | at_most: 6
+  assign cols_t = cols_d | at_most: 3
+  if cols_d == 4
+    assign cols_t = 2
+  endif
+  assign cols_m = s.cols_mobile | default: '2' | plus: 0
+  assign btn_style = s.button_style | default: 'primary'
+  assign media_ratio = s.image_ratio | default: '9:16'
+
+  # Muted play while in view is anvil-core's (snippets/anvil-media autoplay, DECISIONS 94), on every device or on
+  # phones only.
+  assign autoplay_scope = s.video_autoplay_scope | default: 'all'
+
+  # sizes for covers and posters: the page or narrow width caps the row from the viewport width where it starts to
+  # bite, divided by the column count that applies there (a narrow cap below 990 px meets the tablet or phone count).
+  # The last width is also the poster size video_tag requests, so it stays small; one video per row on phones needs
+  # a larger one.
+  case s.width
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 0
+    when 'full'
+      assign cap = 0
+    else
+      assign cap = settings.page_width | default: 0
+  endcase
+  assign vw_m = 'calc(100vw / ' | append: cols_m | append: ')'
+  assign vw_t = '(min-width: 750px) calc(100vw / ' | append: cols_t | append: '), '
+  assign vw_d = '(min-width: 990px) calc(100vw / ' | append: cols_d | append: '), '
+  if cap >= 990
+    assign px_d = cap | divided_by: cols_d
+    assign img_sizes = '(min-width: ' | append: cap | append: 'px) ' | append: px_d | append: 'px, ' | append: vw_d | append: vw_t | append: vw_m
+  elsif cap > 0
+    assign px_d = cap | divided_by: cols_d
+    assign px_t = cap | divided_by: cols_t
+    assign img_sizes = '(min-width: 990px) ' | append: px_d | append: 'px, '
+    if cap >= 750
+      assign img_sizes = img_sizes | append: '(min-width: ' | append: cap | append: 'px) ' | append: px_t | append: 'px, ' | append: vw_t | append: vw_m
+    else
+      assign px_m = cap | divided_by: cols_m
+      assign img_sizes = img_sizes | append: '(min-width: 750px) ' | append: px_t | append: 'px, (min-width: ' | append: cap | append: 'px) ' | append: px_m | append: 'px, ' | append: vw_m
+    endif
+  else
+    assign img_sizes = vw_d | append: vw_t | append: vw_m
+  endif
+  assign media_widths = '300, 450, 600, 750'
+  if cols_m == 1
+    assign media_widths = '300, 450, 600, 750, 900'
+  endif
+
+  # First two template sections (snippets/anvil-above-fold): the first row loads eagerly.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign eager_ok = true
+  if fold contains 'lazy'
+    assign eager_ok = false
+  endif
+
+  # Uploaded videos need the module (deferred cards, pause out of view, one sound at a time); URL videos are
+  # facades the module cannot control.
+  assign native_count = section.blocks | map: 'settings' | map: 'video' | compact | size
+  assign product_count = section.blocks | map: 'settings' | map: 'product' | compact | size
+
+  assign list_label = s.heading | strip_html | strip
+  if list_label == blank
+    assign list_label = 'anvil.product_videos.heading' | t
+  endif
+
+  assign add_label = s.add_label | strip
+  if add_label == blank
+    assign add_label = 'anvil.product.add_to_cart' | t
+  endif
+
+  assign item_tag = 'li'
+  if layout == 'slider'
+    assign item_tag = 'div'
+  endif
+-%}
+{%- if section.blocks.size > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-product-videos' %}>
+  <div class="av-section__inner">
+    {%- if section.blocks.size > 0 -%}
+      {%- assign fallback = 'anvil.product_videos.heading' | t -%}
+      {% render 'anvil-section-head', section: section, fallback: fallback %}
+      <anvil-product-videos class="av-product-videos av-product-videos--{{ layout }}">
+        {%- if layout == 'slider' -%}
+          {%- liquid
+            assign arrows = 'none'
+            if s.show_arrows
+              assign arrows = 'all'
+            endif
+          -%}
+          {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+          <anvil-slider {% render 'anvil-slider-attrs', count: section.blocks.size, per_view: cols_m, per_view_tablet: cols_t, per_view_desktop: cols_d, peek: 'auto', arrows: arrows, dots: s.show_dots, label: list_label, class: 'av-product-videos__slider' %}>
+            <div class="av-product-videos__track" data-slider-track>
+        {%- else -%}
+          <ul class="av-product-videos__grid av-grid av-grid--c{{ cols_d }} av-grid--m{{ cols_m }}" role="list">
+        {%- endif -%}
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign b = block.settings
+            assign p = b.product
+            assign title = b.title | strip
+
+            assign ph_odd = forloop.index0 | modulo: 2
+            assign ph_name = 'lifestyle-1'
+            if ph_odd == 1
+              assign ph_name = 'lifestyle-2'
+            endif
+
+            assign load = 'lazy'
+            if eager_ok and forloop.index <= cols_d
+              assign load = 'eager'
+            endif
+
+            # An untouched example card (no media, no product) shows an example product row so the preset looks
+            # finished; a real video without a product shows the video only.
+            assign action = 'none'
+            if p != blank
+              assign action = 'product'
+            elsif b.video == blank and b.video_url == blank and b.cover == blank
+              assign action = 'example'
+            endif
+            assign form_id = 'av-pv-' | append: block.id
+
+            # Below the first row an uploaded video waits as a lazy poster image; assets/anvil-product-videos.js
+            # puts the video in from the noscript copy near the view, so its metadata and poster load only then.
+            assign defer = false
+            if b.video != blank and load == 'lazy'
+              assign defer = true
+            endif
+            # The caption names the card. The media repeats the title only as the facade's iframe title, so cover
+            # images keep their own alt instead of reading the caption twice.
+            assign media_alt = ''
+            if b.video == blank and b.video_url != blank
+              assign media_alt = title
+            endif
+
+            assign product_class = 'av-product-videos__product'
+            if s.show_image
+              assign product_class = product_class | append: ' av-product-videos__product--thumb'
+            endif
+          -%}
+          <{{ item_tag }} class="av-product-videos__card"{% if layout == 'slider' %} data-slider-slide{% endif %} {{ block.shopify_attributes }}>
+            <figure class="av-product-videos__figure">
+              {%- if defer -%}
+                <div class="av-product-videos__defer" data-pv-defer>
+                  {%- render 'anvil-media', image: b.video.preview_image, ratio: media_ratio, widths: media_widths, sizes: img_sizes, loading: 'lazy', placeholder: ph_name, class: 'av-product-videos__media' -%}
+                  <noscript>
+                    {%- render 'anvil-media', video: b.video, ratio: media_ratio, widths: media_widths, autoplay: s.video_autoplay, autoplay_scope: autoplay_scope, class: 'av-product-videos__media' -%}
+                  </noscript>
+                </div>
+              {%- else -%}
+                {%- render 'anvil-media', video: b.video, video_url: b.video_url, image: b.cover, ratio: media_ratio, widths: media_widths, sizes: img_sizes, loading: load, alt: media_alt, placeholder: ph_name, autoplay: s.video_autoplay, autoplay_scope: autoplay_scope, class: 'av-product-videos__media' -%}
+              {%- endif -%}
+              {%- if title != blank -%}
+                <figcaption class="av-product-videos__caption{% unless s.show_titles %} av-visually-hidden{% endunless %}">{{ title | escape }}</figcaption>
+              {%- endif -%}
+            </figure>
+            {%- if action == 'example' -%}
+              <div class="{{ product_class }}">
+                {%- if s.show_image -%}
+                  <span class="av-product-videos__thumb">{{ 'product-1' | placeholder_svg_tag: 'av-product-videos__thumb-ph' }}</span>
+                {%- endif -%}
+                <div class="av-product-videos__info">
+                  <p class="av-product-videos__title">{{ 'anvil.card.example_product' | t }}</p>
+                  {%- if s.show_price -%}
+                    <div class="av-price av-price--sm"><span class="av-price__current">{% render 'anvil-money', amount: 1900 %}</span></div>
+                  {%- endif -%}
+                </div>
+                <div class="av-product-videos__buy">
+                  <button class="av-btn av-btn--{{ btn_style }} av-btn--sm av-btn--full" type="button" disabled>{{ add_label | escape }}</button>
+                </div>
+              </div>
+            {%- elsif action == 'product' -%}
+              <div class="{{ product_class }}">
+                {%- if s.show_image -%}
+                  {%- assign thumb = p.featured_media.preview_image | default: p.featured_image -%}
+                  <a class="av-product-videos__thumb" href="{{ p.url }}" tabindex="-1" aria-hidden="true">
+                    {%- if thumb != blank -%}
+                      {{ thumb | image_url: width: 144 | image_tag: widths: '48, 96, 144', sizes: '48px', loading: 'lazy', alt: '' }}
+                    {%- else -%}
+                      {{ 'product-1' | placeholder_svg_tag: 'av-product-videos__thumb-ph' }}
+                    {%- endif -%}
+                  </a>
+                {%- endif -%}
+                <div class="av-product-videos__info">
+                  <h3 class="av-product-videos__title"><a href="{{ p.url }}">{{ p.title | escape }}</a></h3>
+                  {%- if s.show_price -%}
+                    {%- render 'anvil-price', product: p, size: 'sm', show_badge: false -%}
+                  {%- endif -%}
+                </div>
+                <div class="av-product-videos__buy">
+                  {%- render 'anvil-quick-buy', product: p, variant_mode: s.variant_mode, label: s.add_label, style: btn_style, form_id: form_id -%}
+                </div>
+              </div>
+            {%- endif -%}
+          </{{ item_tag }}>
+        {%- endfor -%}
+        {%- if layout == 'slider' -%}
+            </div>
+            {%- if s.show_dots -%}
+              <div class="av-slider__dots" data-slider-dots></div>
+            {%- endif -%}
+          </anvil-slider>
+          <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+        {%- else -%}
+          </ul>
+        {%- endif -%}
+      </anvil-product-videos>
+      {%- if native_count > 0 -%}
+        <script type="module" src="{{ 'anvil-product-videos.js' | asset_url }}"></script>
+      {%- endif -%}
+      {%- if product_count > 0 -%}
+        <script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-section-head', section: section %}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Columns and gap from the shared .av-grid; the slider from <anvil-slider> (snippets/anvil-slider-attrs); the video
+   shape from anvil-media (9:16 included); the buy control from snippets/anvil-quick-buy. */
+.av-product-videos{display:block}
+.av-product-videos__grid{padding:0;list-style:none}
+.av-product-videos__card{display:flex;flex-direction:column;gap:var(--av-space-3);min-width:0;margin:0}
+.av-product-videos__figure{display:flex;flex-direction:column;gap:var(--av-space-2);margin:0}
+/* Deferred card: the lazy poster and, without JavaScript, the noscript video share one cell; the video paints on top. */
+.av-product-videos__defer{display:grid}
+.av-product-videos__defer > *{grid-area:1 / 1;min-width:0}
+.av-product-videos__caption{font-size:var(--av-text-sm);line-height:1.4;color:var(--av-fg-muted);overflow-wrap:anywhere}
+.av-product-videos__product{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-2) var(--av-space-3);align-items:center;margin-top:auto}
+.av-product-videos__product--thumb{grid-template-columns:48px minmax(0,1fr)}
+.av-product-videos__thumb{display:block;width:48px;height:48px;overflow:hidden;border-radius:var(--av-radius-media);background:rgb(var(--av-fg-rgb) / 0.06);color:rgb(var(--av-fg-rgb) / 0.4)}
+.av-product-videos__thumb > img,.av-product-videos__thumb > svg{display:block;width:100%;height:100%;object-fit:cover}
+.av-product-videos__thumb-ph{fill:currentColor}
+.av-product-videos__info{display:grid;gap:var(--av-space-1);min-width:0}
+.av-product-videos__title{margin:0;font-family:var(--av-font-body);font-size:var(--av-text-sm);font-weight:600;line-height:1.35;letter-spacing:normal;text-transform:none;overflow-wrap:anywhere}
+.av-product-videos__title a{color:inherit;text-decoration:none}
+.av-product-videos__title a:hover{text-decoration:underline;text-underline-offset:0.15em}
+.av-product-videos__buy{grid-column:1 / -1;min-width:0}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Product videos",
+  "max_blocks": 12,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Product videos" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "slider", "label": "Slider" },
+        { "value": "grid", "label": "Grid" }
+      ],
+      "default": "slider",
+      "info": "The slider scrolls sideways, also without JavaScript. The grid wraps videos onto new rows."
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5", "label": "5" },
+        { "value": "6", "label": "6" }
+      ],
+      "default": "4",
+      "info": "In a slider this is the number in view. Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "2",
+      "info": "In a slider this is the number in view."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "9:16", "label": "Vertical (9:16)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "1:1", "label": "Square (1:1)" }
+      ],
+      "default": "9:16",
+      "info": "Videos and cover images are cropped to fill the shape. Phone videos fit 9:16."
+    },
+    {
+      "type": "checkbox",
+      "id": "video_autoplay",
+      "label": "Play uploaded videos muted while in view",
+      "default": true,
+      "info": "Only when the shopper allows motion. Controls stay visible, so it can always be paused. YouTube and Vimeo videos always wait for a tap."
+    },
+    {
+      "type": "select",
+      "id": "video_autoplay_scope",
+      "label": "Where videos play by themselves",
+      "options": [
+        { "value": "all", "label": "On all devices" },
+        { "value": "mobile", "label": "Phones only" }
+      ],
+      "default": "mobile",
+      "visible_if": "{{ section.settings.video_autoplay }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_titles",
+      "label": "Show video titles",
+      "default": true,
+      "info": "When off, titles still name each card for screen readers."
+    },
+    { "type": "header", "content": "Product under each video" },
+    {
+      "type": "checkbox",
+      "id": "show_image",
+      "label": "Show product image",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_price",
+      "label": "Show price",
+      "default": true,
+      "info": "Prices come from Shopify; a compare-at price shows struck through only when it is higher."
+    },
+    {
+      "type": "select",
+      "id": "variant_mode",
+      "label": "Products with options",
+      "options": [
+        { "value": "select", "label": "Show a variant menu" },
+        { "value": "link", "label": "Link to the product page" }
+      ],
+      "default": "select",
+      "info": "The menu lists every variant with its price, and sold-out variants cannot be chosen. Subscription-only products always link to the product page."
+    },
+    {
+      "type": "text",
+      "id": "add_label",
+      "label": "Button label",
+      "placeholder": "Add to cart",
+      "info": "Leave empty to use the translated \"Add to cart\". Name the action only; prices, savings and \"free\" come from Shopify, not from this label."
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" }
+      ],
+      "default": "primary"
+    },
+    {
+      "type": "header",
+      "content": "Slider",
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true,
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "Show dots",
+      "default": true,
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "video",
+      "name": "Video",
+      "settings": [
+        {
+          "type": "video",
+          "id": "video",
+          "label": "Video",
+          "info": "Upload it under Content > Files. Show the product you link below as it really is, and say so in the title if a creator was paid or got it free."
+        },
+        {
+          "type": "video_url",
+          "id": "video_url",
+          "label": "Or a YouTube or Vimeo link",
+          "accept": ["youtube", "vimeo"],
+          "info": "Used when no video is picked above. It loads only after the shopper taps play and never plays by itself."
+        },
+        {
+          "type": "image_picker",
+          "id": "cover",
+          "label": "Cover image",
+          "info": "Shown before a YouTube or Vimeo video loads, or on its own when there is no video. Uploaded videos use their own cover."
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Video title",
+          "default": "Example: replace with a short description",
+          "info": "Names the card for screen readers and shows under the video when titles are on. Describe what it really shows."
+        },
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product",
+          "info": "Shows the product's title, price and an add button under the video. Price and availability come from Shopify."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product videos",
+      "settings": {
+        "heading": "See it <strong>in action</strong>"
+      },
+      "blocks": [
+        {
+          "type": "video",
+          "settings": {
+            "title": "Example: unboxing, replace with your own"
+          }
+        },
+        {
+          "type": "video",
+          "settings": {
+            "title": "Example: how it works"
+          }
+        },
+        {
+          "type": "video",
+          "settings": {
+            "title": "Example: a customer clip shared with permission"
+          }
+        },
+        {
+          "type": "video",
+          "settings": {
+            "title": "Example: care and storage"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

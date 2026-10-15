@@ -1,0 +1,330 @@
+{% doc %}
+  Private theme block: one plan card of sections/anvil-pricing.liquid (the only place it can be added). Name, short
+  description, price, optional badge, a column of child blocks (feature rows from _anvil-pricing-feature, any theme
+  block, app blocks) and one button pinned to the bottom of the card.
+  Price: a linked product's price from Shopify (anvil-price: "From" when variants differ, compare-at strike-through
+  and saving only from compare_at_price); the typed price only when no product is linked. The linked product is
+  passed to the child blocks as closest.product, so an Add to cart or Stars block inside the plan uses it.
+  Highlight: the plan finds its position in section.blocks and compares it with the section's highlight setting;
+  the highlighted plan gets an accent border and the section's highlight colour scheme.
+  Badge: shown only when "Badge is backed by sales data" is ticked (docs/HONEST.md); the editor says when it is hidden.
+  Button: auto = the linked product's page, else the button link; cart = a product form that adds the linked
+  single-variant product without JavaScript (<anvil-product-form> from assets/anvil-product.js enhances it), while a
+  product with options or one that needs a selling plan opens its page; link = always the button link. Nothing is
+  drawn when there is no destination or no label.
+  Editor: when a product is linked but the price note still says "(example price)", an editor-only note asks the
+  merchant to update it, since the price shown is then the real Shopify price.
+
+  Settings (id · type · values · default):
+  - title · text · default "Example: plan name"
+  - summary · text · default "Example: say in one line who this plan is for"
+  - product · product
+  - price · text · default "$19"
+  - price_note · text · no default (the section preset types the example notes)
+  - show_compare · checkbox · default true
+  - badge · text
+  - badge_backed_by_sales · checkbox · default false
+  - button_label · text · default "Choose this plan"
+  - button_action · select · auto | cart | link · default "auto"
+  - button_url · url
+  Accepts child blocks: _anvil-pricing-feature, @theme, @app
+
+  @example
+  {"type": "_anvil-pricing-plan"}
+{% enddoc %}
+{%- liquid
+  assign b = block.settings
+  assign ss = section.settings
+  assign p = b.product
+
+  # Highlight: the plan's position among the section's plans. Only top-level
+  # blocks are in section.blocks, and plans are always top-level.
+  assign is_hl = false
+  assign hl = ss.highlight | default: 'none'
+  if hl != 'none'
+    assign hl_pos = hl | plus: 0
+    for sb in section.blocks
+      if sb.id == block.id
+        if forloop.index == hl_pos
+          assign is_hl = true
+        endif
+        break
+      endif
+    endfor
+  endif
+
+  # Card surface from the section's card style (assets/anvil-base.css .av-surface); the highlight draws over it.
+  capture plan_surface
+    render 'anvil-surface', style: ss.card_style
+  endcapture
+  assign plan_class = 'av-pricing-plan ' | append: plan_surface | strip
+  # In the phone swipe row each plan is a slider slide (the slider names slides while the row scrolls); in the grid
+  # each plan is a list item.
+  assign plan_role = 'role="listitem"'
+  if ss.mobile_layout == 'swipe' and section.blocks.size > 1
+    assign plan_role = 'data-slider-slide'
+  endif
+  if is_hl
+    assign hl_scheme = 'scheme-1'
+    if ss.highlight_scheme != blank
+      assign hl_scheme = ss.highlight_scheme.id
+    endif
+    assign plan_class = plan_class | append: ' av-pricing-plan--highlight av-scheme av-scheme--' | append: hl_scheme
+  endif
+
+  assign title = b.title | strip | escape
+  assign summary = b.summary | strip | escape
+  assign price_note = b.price_note | strip | escape
+  assign typed_price = b.price | strip | escape
+  assign note_is_example = false
+  assign note_lc = price_note | downcase
+  if p != blank and note_lc contains 'example price'
+    assign note_is_example = true
+  endif
+
+  assign badge = b.badge | strip | escape
+  assign badge_hidden = false
+  if badge != blank and b.badge_backed_by_sales != true
+    assign badge = ''
+    assign badge_hidden = true
+  endif
+
+  # Button destination: none | link | form | sold_out
+  assign action = b.button_action | default: 'auto'
+  assign btn_style = ss.button_style | default: 'auto'
+  if btn_style == 'auto'
+    if is_hl
+      assign btn_style = 'primary'
+    else
+      assign btn_style = 'secondary'
+    endif
+  endif
+  assign btn_label = b.button_label | strip | escape
+  assign btn_url = b.button_url
+  assign btn_mode = 'none'
+  assign cart_variant = nil
+  if p != blank and action != 'link'
+    assign btn_url = p.url
+    assign btn_mode = 'link'
+    if action == 'cart'
+      assign single_variant = false
+      if p.has_only_default_variant or p.variants.size == 1
+        assign single_variant = true
+      endif
+      if single_variant and p.requires_selling_plan != true
+        assign cart_variant = p.selected_or_first_available_variant
+        if cart_variant.available
+          assign btn_mode = 'form'
+        else
+          assign btn_mode = 'sold_out'
+        endif
+      else
+        assign btn_label = 'anvil.product.choose_options' | t
+      endif
+    endif
+  elsif btn_url != blank
+    assign btn_mode = 'link'
+  endif
+  if btn_label == blank and btn_mode != 'sold_out'
+    assign btn_mode = 'none'
+  endif
+
+  # Every plan's button often says the same thing ("Choose this plan"), so the
+  # plan name is added for screen readers after the visible words (WCAG 2.4.4, 2.5.3).
+  assign btn_html = btn_label
+  if title != blank
+    assign btn_html = btn_html | append: '<span class="av-visually-hidden">: ' | append: title | append: '</span>'
+  endif
+-%}
+<div class="{{ plan_class }}" {{ plan_role }} {{ block.shopify_attributes }}>
+  <div class="av-pricing-plan__head">
+    {%- if title != blank -%}
+      <h3 class="av-pricing-plan__title">{{ title }}</h3>
+    {%- endif -%}
+    {%- if badge != blank -%}
+      <p class="av-pricing-plan__badge"><span class="av-badge av-badge--accent av-badge--pill">{{ badge }}</span></p>
+    {%- endif -%}
+    {%- if summary != blank -%}
+      <p class="av-pricing-plan__summary">{{ summary }}</p>
+    {%- endif -%}
+    {%- if p != blank or typed_price != blank -%}
+      <div class="av-pricing-plan__price">
+        {%- if p != blank -%}
+          {%- render 'anvil-price', product: p, size: 'lg', show_compare: b.show_compare, show_badge: b.show_compare -%}
+        {%- else -%}
+          <div class="av-price av-price--lg">
+            <span class="av-price__current"><span class="av-visually-hidden">{{ 'anvil.price.price' | t }}</span> {{ typed_price }}</span>
+          </div>
+        {%- endif -%}
+        {%- if price_note != blank -%}
+          <span class="av-pricing-plan__note">{{ price_note }}</span>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- if request.design_mode and note_is_example -%}
+      <p class="av-pricing-plan__editor av-example-note">{{ 'anvil.editor.pricing_note_example' | t }}</p>
+    {%- endif -%}
+    {%- if request.design_mode and badge_hidden -%}
+      <p class="av-pricing-plan__editor av-example-note">{{ 'anvil.editor.pricing_badge_hidden' | t }}</p>
+    {%- endif -%}
+  </div>
+  <div class="av-pricing-plan__rows">
+    {%- if p != blank -%}
+      {%- content_for 'blocks', closest.product: p -%}
+    {%- else -%}
+      {%- content_for 'blocks' -%}
+    {%- endif -%}
+  </div>
+  {%- case btn_mode -%}
+    {%- when 'link' -%}
+      <div class="av-pricing-plan__action">
+        {%- render 'anvil-button', label: btn_html, url: btn_url, style: btn_style, size: 'md', full: true -%}
+      </div>
+    {%- when 'form' -%}
+      {%- assign form_id = 'av-pricing-form-' | append: section.id | append: '-' | append: block.id -%}
+      <div class="av-pricing-plan__action">
+        <anvil-product-form class="av-pricing-plan__form" form-id="{{ form_id }}">
+          {%- form 'product', p, id: form_id -%}
+            <input type="hidden" name="id" value="{{ cart_variant.id }}">
+            <input type="hidden" name="quantity" value="1">
+            {%- render 'anvil-button', label: btn_html, type: 'submit', style: btn_style, size: 'md', full: true, attrs: 'name="add"' -%}
+            <div class="av-form-message av-form-message--error" role="alert" data-anvil-form-error></div>
+            <p class="av-visually-hidden" role="status" data-anvil-form-status></p>
+          {%- endform -%}
+        </anvil-product-form>
+      </div>
+      <script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>
+    {%- when 'sold_out' -%}
+      {%- liquid
+        assign sold_label = 'anvil.product.sold_out' | t
+        if title != blank
+          assign sold_label = sold_label | append: '<span class="av-visually-hidden">: ' | append: title | append: '</span>'
+        endif
+      -%}
+      <div class="av-pricing-plan__action">
+        {%- render 'anvil-button', label: sold_label, style: 'secondary', size: 'md', full: true, disabled: true -%}
+      </div>
+  {%- endcase -%}
+</div>
+{% stylesheet %}
+.av-pricing-plan{box-sizing:border-box;position:relative;display:flex;flex-direction:column;gap:var(--av-space-5);padding:var(--av-space-6) var(--av-space-5);border-radius:var(--av-radius-card);color:var(--av-fg);text-align:start}
+.av-pricing .av-pricing-plan--highlight{border:max(1px,var(--av-border-w-card)) solid var(--av-accent);background-color:var(--av-bg);background-image:var(--av-bg-gradient);box-shadow:0 0 0 1px var(--av-accent),var(--av-shadow-md)}
+.av-pricing-plan__head{display:flex;flex-direction:column;align-items:flex-start;gap:var(--av-space-2)}
+.av-pricing-plan__badge{order:-1;margin:0 0 var(--av-space-1)}
+.av-pricing-plan__title{margin:0;font-size:var(--av-text-lg);line-height:1.25;overflow-wrap:anywhere}
+.av-pricing-plan__summary{margin:0;font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted)}
+.av-pricing-plan__price{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--av-space-1) var(--av-space-2);margin-top:var(--av-space-2)}
+.av-pricing-plan__note{font-size:var(--av-text-sm);color:var(--av-fg-muted)}
+.av-pricing-plan__editor{margin:0}
+.av-pricing-plan__rows{display:flex;flex-direction:column;gap:var(--av-space-3);padding-top:var(--av-space-5);border-top:1px solid var(--av-border)}
+.av-pricing-plan__rows:not(:has(>*)){display:none}
+.av-pricing-plan__rows>*{min-width:0}
+.av-pricing-plan__action{margin-top:auto}
+.av-pricing-plan__form{display:block}
+.av-pricing-plan__form form{display:flex;flex-direction:column;gap:var(--av-space-2)}
+.av-pricing--center .av-pricing-plan{text-align:center}
+.av-pricing--center .av-pricing-plan__head{align-items:center}
+.av-pricing--center .av-pricing-plan__price{justify-content:center}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Plan",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Plan name",
+      "default": "Example: plan name"
+    },
+    {
+      "type": "text",
+      "id": "summary",
+      "label": "Short description",
+      "default": "Example: say in one line who this plan is for",
+      "info": "Describe only what the plan really is; results and promises must match your policies. Do not type prices, savings or 'was' amounts here; link a product with a compare-at price for those."
+    },
+    { "type": "header", "content": "Price" },
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Product",
+      "info": "Optional. When set, the price and any compare-at price come from this product in Shopify, and the button can open it or add it to the cart. Update the price note so it matches how this product is billed."
+    },
+    {
+      "type": "text",
+      "id": "price",
+      "label": "Price",
+      "default": "$19",
+      "info": "Shown only when no product is linked. Type the price you actually charge; a crossed-out or saving amount can only come from a linked product's compare-at price."
+    },
+    {
+      "type": "text",
+      "id": "price_note",
+      "label": "Price note",
+      "info": "Shown after the price, for example per month or one-time. It must match how you actually bill."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_compare",
+      "label": "Show compare-at price and saving",
+      "default": true,
+      "info": "Linked product only. Shows when its compare-at price in Shopify is higher than its price."
+    },
+    { "type": "header", "content": "Badge" },
+    {
+      "type": "text",
+      "id": "badge",
+      "label": "Badge",
+      "info": "A label such as Most popular, never a saving or discount amount. It shows only when the box below is ticked."
+    },
+    {
+      "type": "checkbox",
+      "id": "badge_backed_by_sales",
+      "label": "Badge is backed by sales data",
+      "default": false,
+      "info": "Only tick if sales data supports this badge. Shoppers never see it otherwise."
+    },
+    { "type": "header", "content": "Button" },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Choose this plan"
+    },
+    {
+      "type": "select",
+      "id": "button_action",
+      "label": "Button action",
+      "options": [
+        { "value": "auto", "label": "Open the linked product, else the link" },
+        { "value": "cart", "label": "Add the linked product to the cart" },
+        { "value": "link", "label": "Always open the link" }
+      ],
+      "default": "auto",
+      "info": "Adding to the cart works for a product with one variant. A product with options, or one sold only as a subscription, opens its page so the shopper can choose."
+    },
+    {
+      "type": "url",
+      "id": "button_url",
+      "label": "Button link",
+      "info": "Used when no product is linked, or always with Always open the link."
+    }
+  ],
+  "blocks": [
+    { "type": "_anvil-pricing-feature" },
+    { "type": "@theme" },
+    { "type": "@app" }
+  ],
+  "presets": [
+    {
+      "name": "Plan",
+      "blocks": [
+        { "type": "_anvil-pricing-feature", "settings": { "text": "Example: one thing this plan includes", "state": "included" } },
+        { "type": "_anvil-pricing-feature", "settings": { "text": "Example: another thing it includes", "state": "included" } },
+        { "type": "_anvil-pricing-feature", "settings": { "text": "Example: something this plan leaves out", "state": "excluded" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

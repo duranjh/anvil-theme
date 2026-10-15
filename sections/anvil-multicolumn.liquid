@@ -1,0 +1,618 @@
+{%- liquid
+  assign s = section.settings
+
+  assign cols_desktop = s.cols_desktop | default: '3' | plus: 0 | at_least: 1 | at_most: 6
+  assign cols_mobile = s.cols_mobile | default: '1' | plus: 0 | at_least: 1 | at_most: 2
+  # Tablets (750-989 px): up to 3 columns; 4 columns become 2 x 2 instead of 3 + 1.
+  assign cols_tablet = cols_desktop | at_most: 3
+  if cols_desktop == 4
+    assign cols_tablet = 2
+  endif
+
+  assign swipe = false
+  if s.mobile_layout == 'swipe'
+    assign swipe = true
+  endif
+
+  # Card surface from the shared utility (blank = no box). A boxed column lets its image reach the card edges.
+  capture surface
+    render 'anvil-surface', style: s.card_style
+  endcapture
+  assign surface = surface | strip
+  assign text_align = s.text_align | default: 'center'
+  assign icon_px = s.icon_size | default: 40
+  assign icon_img_px = icon_px | times: 2
+  assign icon_img_widths = icon_px | append: ', ' | append: icon_img_px
+  assign icon_img_sizes = icon_px | append: 'px'
+
+  # Button look (only link_arrow draws the arrow).
+  assign btn_icon = ''
+  assign btn_style = s.button_style | default: 'link_arrow'
+  if btn_style == 'link_arrow'
+    assign btn_style = 'link'
+    assign btn_icon = 'arrow-right'
+  endif
+
+  # First pass: count the columns that render (same rule as the rendering loop) and note whether any
+  # has a heading, so a visually hidden h2 keeps the outline when the section heading is blank.
+  # The only for-loop tag over section.blocks is the rendering loop below (chassis lint).
+  assign shown_total = 0
+  assign has_titles = false
+  for block in section.blocks
+    assign b_title = block.settings.heading | strip
+    assign b_label = block.settings.button_label | strip
+    assign b_show = request.design_mode
+    if block.settings.media != 'none' or b_title != blank or block.settings.text != blank
+      assign b_show = true
+    elsif b_label != blank and block.settings.button_link != blank
+      assign b_show = true
+    endif
+    if b_show
+      assign shown_total = shown_total | plus: 1
+      if b_title != blank
+        assign has_titles = true
+      endif
+    endif
+  endfor
+
+  # Image sizes: the inner width is capped by the page (or narrow) width unless the section is full width.
+  # Swipe rows show part of the next column on phones, so one column is about 85 % of the screen.
+  if swipe
+    assign vw_mobile = 85
+    if cols_mobile == 2
+      assign vw_mobile = 45
+    endif
+  else
+    assign vw_mobile = 100 | divided_by: cols_mobile
+  endif
+  assign vw_tablet = 100 | divided_by: cols_tablet
+  assign vw_desktop = 100 | divided_by: cols_desktop
+  if s.width == 'full'
+    assign img_sizes = '(min-width: 990px) ' | append: vw_desktop | append: 'vw, (min-width: 750px) ' | append: vw_tablet | append: 'vw, ' | append: vw_mobile | append: 'vw'
+  else
+    assign max_inner = settings.page_width | default: 1400
+    if s.width == 'narrow'
+      assign max_inner = settings.narrow_width | default: 800
+    endif
+    assign cap_bp = max_inner | at_least: 990
+    assign px_desktop = max_inner | divided_by: cols_desktop
+    assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: px_desktop | append: 'px, (min-width: 990px) ' | append: vw_desktop | append: 'vw, (min-width: 750px) ' | append: vw_tablet | append: 'vw, ' | append: vw_mobile | append: 'vw'
+  endif
+  assign img_widths = '300, 450, 600, 750, 900, 1100'
+  if cols_desktop == 1
+    assign img_widths = '450, 750, 1100, 1500, 1800, 2200'
+  endif
+
+  # First two template sections (snippets/anvil-above-fold): the first phone row loads eagerly, and in the first
+  # section the first real image is the likely LCP image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign above_fold = false
+  if fold != 'lazy'
+    assign above_fold = true
+  endif
+  assign lcp_ok = false
+  if fold == 'lcp'
+    assign lcp_ok = true
+  endif
+  # Images that start on the phone screen: the first phone row, plus the peeking column in the swipe row.
+  assign eager_count = cols_mobile
+  if swipe
+    assign eager_count = cols_mobile | plus: 1
+  endif
+
+  assign list_label = s.heading | strip_html | strip
+  if list_label == blank
+    assign list_label = 'anvil.a11y.highlights' | t
+  endif
+
+  assign root_class = 'av-multicolumn av-multicolumn--m' | append: cols_mobile | append: ' av-multicolumn--align-' | append: text_align
+  if surface != blank
+    assign root_class = root_class | append: ' av-multicolumn--boxed'
+  endif
+  assign list_class = 'av-multicolumn__list av-grid av-grid--flex av-grid--c' | append: cols_desktop | append: ' av-grid--m' | append: cols_mobile
+  if s.center_row
+    assign list_class = list_class | append: ' av-grid--center'
+  endif
+
+  # Grid: a list. Swipe: <anvil-slider> on phones, which gives its slides role=group, so no list there.
+  # Tag names are variables so no element opens in one branch and closes in another.
+  assign has_dots = false
+  if swipe
+    assign wrap_tag = 'anvil-slider'
+    assign list_tag = 'div'
+    assign item_tag = 'div'
+    assign root_class = root_class | append: ' av-multicolumn--swipe'
+    # Dots only when the phone row scrolls; tablets and desktop wrap the track into the grid, so the slider is told
+    # every column fits there (no dots, no peek, no carousel roles).
+    if shown_total > cols_mobile
+      assign has_dots = true
+    endif
+    capture wrap_attrs
+      render 'anvil-slider-attrs', count: shown_total, per_view: cols_mobile, per_view_tablet: shown_total, per_view_desktop: shown_total, peek: 'auto', dots: has_dots, label: list_label, class: root_class
+    endcapture
+    assign wrap_style = ''
+  else
+    assign wrap_tag = 'div'
+    assign list_tag = 'ul'
+    assign item_tag = 'li'
+    assign root_class = root_class | append: ' av-multicolumn--grid'
+    assign wrap_attrs = 'class="' | append: root_class | append: '"'
+    assign wrap_style = ''
+  endif
+  assign wrap_style = '--av-multicolumn-icon: ' | append: icon_px | append: 'px;'
+
+  assign shown = 0
+-%}
+{%- if shown_total > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-multicolumn' %}>
+  <div class="av-section__inner">
+    {%- if shown_total > 0 -%}
+      {%- liquid
+        assign fallback = ''
+        if has_titles
+          assign fallback = 'anvil.a11y.highlights' | t
+        endif
+      -%}
+      {% render 'anvil-section-head', section: section, fallback: fallback %}
+      {%- if swipe -%}
+        {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      {%- endif -%}
+      <{{ wrap_tag }} {{ wrap_attrs }}>
+        <{{ list_tag }} class="{{ list_class }}" style="{{ wrap_style }}"{% if swipe %} data-slider-track{% else %} role="list"{% endif %}>
+          {%- for block in section.blocks -%}
+            {%- liquid
+              assign b = block.settings
+              assign title = b.heading | strip
+              assign label = b.button_label | strip
+              assign label_html = label | escape
+              assign title_escaped = title | escape
+              assign url = b.button_link
+              assign media = b.media | default: 'image'
+
+              assign has_body = false
+              if title != blank or b.text != blank
+                assign has_body = true
+              elsif label != blank and url != blank
+                assign has_body = true
+              endif
+
+              # A column with nothing to show is skipped on the storefront; the editor keeps it selectable.
+              if media == 'none' and has_body == false and request.design_mode == false
+                continue
+              endif
+              assign shown = shown | plus: 1
+
+              # A link is drawn only when something names it: the button label, else the heading.
+              assign link_mode = 'none'
+              if url != blank
+                if label != blank
+                  assign link_mode = 'button'
+                elsif title != blank
+                  assign link_mode = 'title'
+                endif
+              endif
+
+              # Eager only for the columns on the phone screen; lazy images that start in a wider viewport
+              # still load at first layout. Priority goes to the first real image among them, so an icon or
+              # text-only first column does not use it up.
+              assign img_loading = 'lazy'
+              assign img_priority = false
+              if above_fold and shown <= eager_count
+                assign img_loading = 'eager'
+                if lcp_ok and media == 'image' and b.image != blank
+                  assign img_priority = true
+                  assign lcp_ok = false
+                endif
+              endif
+              assign ph_index = forloop.index0 | modulo: 6 | plus: 1
+              assign ph_name = 'collection-' | append: ph_index
+
+              # An uploaded icon is decorative beside the words; it speaks only in a column without text.
+              assign icon_alt = ''
+              if has_body == false and b.icon_image != blank
+                assign icon_alt = b.icon_image.alt | default: ''
+              endif
+            -%}
+            <{{ item_tag }} class="av-multicolumn__item"{% if swipe %} data-slider-slide{% endif %} {{ block.shopify_attributes }}>
+              <div class="av-multicolumn__card {{ surface }}">
+                {%- if media == 'image' -%}
+                  {%- render 'anvil-media', image: b.image, ratio: s.image_ratio, widths: img_widths, sizes: img_sizes, loading: img_loading, priority: img_priority, placeholder: ph_name, class: 'av-multicolumn__media' -%}
+                {%- endif -%}
+                {%- if media == 'icon' or has_body -%}
+                  <div class="av-multicolumn__body">
+                    {%- if media == 'icon' -%}
+                      <span class="av-multicolumn__icon">
+                        {%- if b.icon_image != blank -%}
+                          {{ b.icon_image | image_url: width: icon_img_px | image_tag: widths: icon_img_widths, sizes: icon_img_sizes, loading: img_loading, alt: icon_alt }}
+                        {%- else -%}
+                          {%- render 'anvil-icon', name: b.icon, size: icon_px -%}
+                        {%- endif -%}
+                      </span>
+                    {%- endif -%}
+                    {%- if title != blank -%}
+                      <h3 class="av-multicolumn__title">
+                        {%- if link_mode == 'title' -%}
+                          <a class="av-multicolumn__link" href="{{ url | escape }}">{{ title_escaped }}</a>
+                        {%- else -%}
+                          {{ title_escaped }}
+                        {%- endif -%}
+                      </h3>
+                    {%- endif -%}
+                    {%- if b.text != blank -%}
+                      <div class="av-multicolumn__text av-rte">{{ b.text }}</div>
+                    {%- endif -%}
+                    {%- if link_mode == 'button' -%}
+                      {%- liquid
+                        # A label such as "Learn more" repeats in every column: a hidden copy of the heading after
+                        # the visible words names each link on its own and keeps the visible label first.
+                        if title != blank
+                          assign label_html = label_html | append: '<span class="av-visually-hidden"> – ' | append: title_escaped | append: '</span>'
+                        endif
+                      -%}
+                      <div class="av-multicolumn__action">
+                        {%- render 'anvil-button', label: label_html, url: url, style: btn_style, size: 'md', icon: btn_icon -%}
+                      </div>
+                    {%- endif -%}
+                  </div>
+                {%- elsif media == 'none' -%}
+                  <div class="av-multicolumn__body">
+                    <p class="av-multicolumn__empty av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+                  </div>
+                {%- endif -%}
+              </div>
+            </{{ item_tag }}>
+          {%- endfor -%}
+        </{{ list_tag }}>
+        {%- if has_dots -%}
+          <div class="av-slider__dots" data-slider-dots></div>
+        {%- endif -%}
+      </{{ wrap_tag }}>
+      {%- if swipe -%}
+        <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-section-head', section: section %}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Columns, gap and the centred last row from the shared .av-grid on the list; boxes from .av-surface. */
+.av-multicolumn{--av-multicolumn-pad:var(--av-space-4);--av-multicolumn-title:var(--av-text-lg);--av-multicolumn-text:var(--av-text-md);--av-slider-gap:var(--av-grid-space,var(--av-grid-gap))}
+.av-multicolumn--m2{--av-grid-space:var(--av-space-3);--av-multicolumn-pad:var(--av-space-3);--av-multicolumn-title:var(--av-text-md);--av-multicolumn-text:var(--av-text-sm)}
+.av-multicolumn__list{padding:0;list-style:none}
+.av-multicolumn__item{display:flex;margin:0}
+.av-multicolumn__card{display:flex;flex:1;flex-direction:column;min-width:0;color:var(--av-fg)}
+/* Boxed: the image reaches the card edges and the card clips it to its own radius. */
+.av-multicolumn--boxed .av-multicolumn__card{overflow:hidden}
+.av-multicolumn--boxed .av-multicolumn__media{border-width:0;border-radius:0;box-shadow:none}
+.av-multicolumn__body{display:flex;flex:1 1 auto;flex-direction:column;gap:var(--av-space-3);min-width:0}
+.av-multicolumn__media + .av-multicolumn__body{margin-top:var(--av-space-4)}
+.av-multicolumn--boxed .av-multicolumn__body{margin-top:0;padding:var(--av-multicolumn-pad)}
+.av-multicolumn__icon{flex:none;align-self:flex-start;display:inline-flex;width:var(--av-multicolumn-icon,40px);height:var(--av-multicolumn-icon,40px);color:var(--av-accent)}
+.av-multicolumn__icon > svg,.av-multicolumn__icon > img{display:block;width:100%;height:100%;object-fit:contain}
+.av-multicolumn .av-multicolumn__title{margin:0;font-size:var(--av-multicolumn-title);line-height:1.25;overflow-wrap:anywhere}
+.av-multicolumn .av-multicolumn__text{min-width:0;font-size:var(--av-multicolumn-text);overflow-wrap:break-word}
+.av-multicolumn__action{display:flex;flex-wrap:wrap;margin-top:auto;padding-top:var(--av-space-1)}
+.av-multicolumn--align-center .av-multicolumn__body{text-align:center}
+.av-multicolumn--align-center .av-multicolumn__icon{align-self:center}
+.av-multicolumn--align-center .av-multicolumn__action{justify-content:center}
+.av-multicolumn--align-right .av-multicolumn__body{text-align:right}
+.av-multicolumn--align-right .av-multicolumn__icon{align-self:flex-end}
+.av-multicolumn--align-right .av-multicolumn__action{justify-content:flex-end}
+.av-multicolumn__link{color:inherit;text-decoration:none}
+.av-multicolumn__link:hover{text-decoration:underline;text-decoration-thickness:0.06em;text-underline-offset:0.15em}
+.av-multicolumn__empty{margin:0}
+/* Swipe row on phones: the scrolling track clips what overflows it, so it keeps room for the 4 px focus ring
+   (and the card shadow below). Snap points start at the padding edge. */
+.av-multicolumn--swipe > [data-slider-track]{flex-wrap:nowrap;justify-content:flex-start;padding:var(--av-space-1);scroll-padding-inline:var(--av-space-1)}
+.av-multicolumn--swipe.av-multicolumn--boxed > [data-slider-track]{padding-bottom:var(--av-space-3)}
+@media (min-width: 750px){
+.av-multicolumn,.av-multicolumn--m2{--av-grid-space:initial;--av-multicolumn-pad:var(--av-space-5);--av-multicolumn-title:var(--av-text-lg);--av-multicolumn-text:var(--av-text-md)}
+/* Swipe is a phone layout: from 750 px the slider track wraps into the same grid. */
+.av-multicolumn--swipe > [data-slider-track]{flex-wrap:wrap;overflow:visible;scroll-snap-type:none;padding:0;scroll-padding-inline:0}
+.av-multicolumn--swipe > .av-grid--center{justify-content:center}
+.av-multicolumn--swipe > [data-slider-track] > .av-multicolumn__item{flex:0 0 calc((100% - (var(--av-grid-n) - 1) * var(--av-grid-space,var(--av-grid-gap))) / var(--av-grid-n))}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Multicolumn",
+  "max_blocks": 12,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Multicolumn" },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5", "label": "5" },
+        { "value": "6", "label": "6" }
+      ],
+      "default": "3",
+      "info": "Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "select",
+      "id": "mobile_layout",
+      "label": "Layout on phones",
+      "options": [
+        { "value": "grid", "label": "Grid" },
+        { "value": "swipe", "label": "Swipe row" }
+      ],
+      "default": "grid",
+      "info": "Swipe row puts the columns in one row that shoppers swipe through, with dots below. Tablets and desktop always show the grid."
+    },
+    {
+      "type": "checkbox",
+      "id": "center_row",
+      "label": "Centre a short last row",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "Card style",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "flat", "label": "No box" },
+        { "value": "outlined", "label": "Outlined" },
+        { "value": "tinted", "label": "Tinted" },
+        { "value": "raised", "label": "Shadow" }
+      ],
+      "default": "flat",
+      "info": "\"Same as theme cards\" follows Theme settings > Cards."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Text alignment",
+      "default": "center"
+    },
+    { "type": "header", "content": "Images and icons" },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" },
+        { "value": "21:9", "label": "Wide (21:9)" }
+      ],
+      "default": "1:1"
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon size",
+      "min": 16,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    },
+    { "type": "header", "content": "Links" },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" },
+        { "value": "link", "label": "Text link" },
+        { "value": "link_arrow", "label": "Text link with arrow" }
+      ],
+      "default": "link_arrow"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "column",
+      "name": "Column",
+      "settings": [
+        {
+          "type": "select",
+          "id": "media",
+          "label": "Show",
+          "options": [
+            { "value": "image", "label": "Image" },
+            { "value": "icon", "label": "Icon" },
+            { "value": "none", "label": "Text only" }
+          ],
+          "default": "image"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Shown when Show is set to Image. Show the real product or result, and upload only images you are entitled to use.",
+          "visible_if": "{{ block.settings.media == 'image' }}"
+        },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "info": "Used when Show is set to Icon and no icon image is picked.",
+          "options": [
+            { "value": "check", "label": "Check" },
+            { "value": "check-circle", "label": "Check in circle" },
+            { "value": "badge-check", "label": "Badge check" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "package", "label": "Package" },
+            { "value": "package-check", "label": "Package checked" },
+            { "value": "plane", "label": "Plane" },
+            { "value": "ship", "label": "Ship" },
+            { "value": "globe", "label": "Globe" },
+            { "value": "map-pin", "label": "Map pin" },
+            { "value": "rotate-ccw", "label": "Return arrow" },
+            { "value": "refresh-cw", "label": "Refresh" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "shield-check", "label": "Shield check" },
+            { "value": "lock", "label": "Lock" },
+            { "value": "key", "label": "Key" },
+            { "value": "credit-card", "label": "Credit card" },
+            { "value": "wallet", "label": "Wallet" },
+            { "value": "banknote", "label": "Banknote" },
+            { "value": "receipt", "label": "Receipt" },
+            { "value": "piggy-bank", "label": "Piggy bank" },
+            { "value": "tag", "label": "Tag" },
+            { "value": "percent", "label": "Percent" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "award", "label": "Award" },
+            { "value": "medal", "label": "Medal" },
+            { "value": "trophy", "label": "Trophy" },
+            { "value": "star", "label": "Star" },
+            { "value": "heart", "label": "Heart" },
+            { "value": "hand-heart", "label": "Hand with heart" },
+            { "value": "thumbs-up", "label": "Thumbs up" },
+            { "value": "users", "label": "People" },
+            { "value": "user-check", "label": "Person checked" },
+            { "value": "message-circle", "label": "Chat bubble" },
+            { "value": "headphones", "label": "Headphones" },
+            { "value": "mail", "label": "Mail" },
+            { "value": "phone", "label": "Phone" },
+            { "value": "smartphone", "label": "Phone device" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "timer", "label": "Timer" },
+            { "value": "calendar", "label": "Calendar" },
+            { "value": "hourglass", "label": "Hourglass" },
+            { "value": "zap", "label": "Lightning" },
+            { "value": "sparkles", "label": "Sparkles" },
+            { "value": "lightbulb", "label": "Light bulb" },
+            { "value": "target", "label": "Target" },
+            { "value": "rocket", "label": "Rocket" },
+            { "value": "layers", "label": "Layers" },
+            { "value": "infinity", "label": "Infinity" },
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "recycle", "label": "Recycle" },
+            { "value": "trees", "label": "Trees" },
+            { "value": "droplet", "label": "Droplet" },
+            { "value": "flame", "label": "Flame" },
+            { "value": "snowflake", "label": "Snowflake" },
+            { "value": "sun", "label": "Sun" },
+            { "value": "home", "label": "Home" },
+            { "value": "store", "label": "Store" },
+            { "value": "shirt", "label": "Shirt" },
+            { "value": "coffee", "label": "Coffee" },
+            { "value": "camera", "label": "Camera" },
+            { "value": "book-open", "label": "Open book" },
+            { "value": "scale", "label": "Scale" },
+            { "value": "ruler", "label": "Ruler" },
+            { "value": "scissors", "label": "Scissors" },
+            { "value": "wrench", "label": "Wrench" },
+            { "value": "info", "label": "Info" },
+            { "value": "help-circle", "label": "Question mark" }
+          ],
+          "default": "check-circle",
+          "visible_if": "{{ block.settings.media == 'icon' }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "Icon image",
+          "info": "Replaces the icon at icon size. Upload only artwork you are entitled to use.",
+          "visible_if": "{{ block.settings.media == 'icon' }}"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Example: one point about your product",
+          "info": "Claims such as best-selling, award-winning or clinically proven need evidence you can show."
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "<p>Example: describe one real benefit in a sentence or two.</p>",
+          "info": "Results, guarantees and delivery times must match your products and policies."
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Button label",
+          "default": "Learn more",
+          "info": "Shows as a button once the column has a link. Without a label, a linked heading becomes the link."
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "Link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Multicolumn",
+      "settings": {
+        "heading": "What sets it <strong>apart</strong>"
+      },
+      "blocks": [
+        {
+          "type": "column",
+          "settings": {
+            "media": "image",
+            "heading": "Example: what it does",
+            "text": "<p>Example: say in a sentence or two what the product does for the shopper. Only state what is true.</p>"
+          }
+        },
+        {
+          "type": "column",
+          "settings": {
+            "media": "image",
+            "heading": "Example: what it is made of",
+            "text": "<p>Example: name the real materials or ingredients and leave out claims you cannot back up.</p>"
+          }
+        },
+        {
+          "type": "column",
+          "settings": {
+            "media": "image",
+            "heading": "Example: how to use it",
+            "text": "<p>Example: give one simple step or tip, in your own words.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

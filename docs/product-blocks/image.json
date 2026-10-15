@@ -15,28 +15,28 @@
     },
     {
       "type": "select",
-      "id": "ratio",
-      "label": "Aspect ratio",
+      "id": "image_ratio",
+      "label": "Image shape",
       "options": [
         {
           "value": "adapt",
-          "label": "Adapt to media"
+          "label": "Original"
         },
         {
           "value": "1:1",
-          "label": "Square"
+          "label": "Square (1:1)"
         },
         {
           "value": "4:5",
-          "label": "Portrait 4:5"
+          "label": "Portrait (4:5)"
         },
         {
           "value": "3:4",
-          "label": "Portrait 3:4"
+          "label": "Portrait (3:4)"
         },
         {
           "value": "16:9",
-          "label": "Landscape 16:9"
+          "label": "Landscape (16:9)"
         }
       ],
       "default": "adapt"
@@ -64,7 +64,7 @@
     },
     {
       "type": "text",
-      "id": "link_label",
+      "id": "link_name",
       "label": "Link description",
       "info": "Read out by screen readers when the image has no alt text, for example \"See the size guide\"."
     }

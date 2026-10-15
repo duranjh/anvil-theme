@@ -121,14 +121,14 @@
 }
 
 .av-discount__status,
-.av-bundle__status {
+.av-pb-bundle__status {
   margin: 0;
   font-size: var(--av-text-xs);
   color: var(--av-fg-muted);
 }
 
 /* ---------- bundle offer ---------- */
-.av-bundle__set {
+.av-pb-bundle__set {
   display: grid;
   gap: var(--av-space-3);
   margin: 0;
@@ -138,7 +138,7 @@
   min-width: 0;
 }
 
-.av-bundle__heading {
+.av-pb-bundle__heading {
   float: left;
   width: 100%;
   margin: 0 0 var(--av-space-1);
@@ -148,39 +148,39 @@
   font-weight: var(--av-heading-weight);
 }
 
-.av-bundle__rows {
+.av-pb-bundle__rows {
   display: grid;
   gap: var(--av-space-3);
   clear: both;
 }
 
-.av-bundle__row {
+.av-pb-bundle__row {
   display: grid;
   grid-template-columns: auto 48px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--av-space-3);
 }
 
-.av-bundle--no-images .av-bundle__row {
+.av-pb-bundle--no-images .av-pb-bundle__row {
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
-.av-enhance:not(:defined) .av-bundle__row {
+.av-enhance:not(:defined) .av-pb-bundle__row {
   grid-template-columns: 48px minmax(0, 1fr) auto;
 }
 
-.av-enhance.av-bundle--no-images:not(:defined) .av-bundle__row {
+.av-enhance.av-pb-bundle--no-images:not(:defined) .av-pb-bundle__row {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.av-bundle__check {
+.av-pb-bundle__check {
   width: 22px;
   height: 22px;
   margin: 0;
   accent-color: var(--av-accent);
 }
 
-.av-bundle__media {
+.av-pb-bundle__media {
   display: block;
   width: 48px;
   aspect-ratio: 1;
@@ -189,20 +189,20 @@
   background: rgb(var(--av-fg-rgb) / 0.05);
 }
 
-.av-bundle__img {
+.av-pb-bundle__img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.av-bundle__info {
+.av-pb-bundle__info {
   display: grid;
   gap: var(--av-space-1);
   min-width: 0;
 }
 
-.av-bundle__title {
+.av-pb-bundle__title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -215,34 +215,34 @@
   overflow-wrap: anywhere;
 }
 
-a.av-bundle__title:hover {
+a.av-pb-bundle__title:hover {
   text-decoration: underline;
 }
 
-.av-bundle__variant {
+.av-pb-bundle__variant {
   font-size: var(--av-text-xs);
   color: var(--av-fg-muted);
 }
 
-.av-bundle__select {
+.av-pb-bundle__select {
   min-height: var(--av-control-h-sm);
   padding-block: var(--av-space-1);
   font-size: var(--av-text-sm);
 }
 
-.av-bundle__price {
+.av-pb-bundle__price {
   font-size: var(--av-text-sm);
   font-weight: 600;
   white-space: nowrap;
 }
 
-.av-bundle__row--sold-out .av-bundle__info,
-.av-bundle__row--sold-out .av-bundle__price {
+.av-pb-bundle__row--sold-out .av-pb-bundle__info,
+.av-pb-bundle__row--sold-out .av-pb-bundle__price {
   color: var(--av-fg-muted);
 }
 
 /* While the module loads (JavaScript on), the foot keeps its space, invisible, so later blocks do not shift. */
-.js .av-bundle:not(:defined) .av-bundle__foot {
+.js .av-pb-bundle:not(:defined) .av-pb-bundle__foot {
   display: grid;
   visibility: hidden;
 }
@@ -252,14 +252,14 @@ a.av-bundle__title:hover {
   visibility: hidden;
 }
 
-.av-bundle__foot {
+.av-pb-bundle__foot {
   display: grid;
   gap: var(--av-space-2);
   padding-top: var(--av-space-3);
   border-top: 1px solid var(--av-border);
 }
 
-.av-bundle__total {
+.av-pb-bundle__total {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -267,11 +267,11 @@ a.av-bundle__title:hover {
   margin: 0;
 }
 
-.av-bundle__total strong {
+.av-pb-bundle__total strong {
   font-size: var(--av-text-lg);
 }
 
-.av-bundle__note {
+.av-pb-bundle__note {
   display: flex;
   align-items: center;
   gap: var(--av-space-2);
@@ -280,7 +280,7 @@ a.av-bundle__title:hover {
   color: var(--av-success);
 }
 
-.av-bundle__note .av-icon {
+.av-pb-bundle__note .av-icon {
   flex: none;
 }
 

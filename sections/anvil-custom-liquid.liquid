@@ -1,0 +1,132 @@
+{%- liquid
+  assign s = section.settings
+
+  # The merchant's code is rendered once, into code_html, so the section can tell
+  # whether it printed anything on this page. Code whose conditions all fail (for
+  # example a block meant for logged-in customers only) and no chassis heading
+  # leave no padded empty band for shoppers: nothing renders at all. The editor
+  # always renders the section, with a note, so it stays selectable.
+  # The storefront reads s.custom_liquid once (the capture below). Whether reading
+  # the value runs the merchant's Liquid is not documented, so the only other read
+  # (the blank test that picks the editor note) sits in the design_mode branch.
+
+  assign has_head = false
+  if s.heading != blank or s.subheading != blank
+    assign has_head = true
+  endif
+-%}
+{%- capture code_html -%}{{ s.custom_liquid }}{%- endcapture -%}
+{%- liquid
+  assign has_output = false
+  assign code_check = code_html | strip
+  if code_check != blank
+    assign has_output = true
+  endif
+
+  assign render_section = true
+  unless has_output or has_head or request.design_mode
+    assign render_section = false
+  endunless
+
+  # Editor only: output with no visible text or media (a script loader, a tracking
+  # tag, a comment) still leaves a padded empty band for shoppers. Say so while
+  # padding is on and no heading fills the band.
+  assign show_invisible_hint = false
+  if request.design_mode and has_output and has_head == false
+    if s.pad_top > 0 or s.pad_bottom > 0
+      assign visible_text = code_html | strip_html | strip
+      if visible_text == blank
+        assign show_invisible_hint = true
+        assign code_lower = code_html | downcase
+        assign media_tags = 'iframe,img,picture,video,audio,svg,canvas,object,embed,form,input,button,select,textarea' | split: ','
+        for media_tag in media_tags
+          assign media_open = '<' | append: media_tag
+          if code_lower contains media_open
+            assign show_invisible_hint = false
+            break
+          endif
+        endfor
+      endif
+    endif
+  endif
+-%}
+{%- if render_section -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-custom-liquid' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if has_output -%}
+      <div class="av-custom-liquid">{{ code_html }}</div>
+      {%- if show_invisible_hint -%}
+        {%- assign empty_note = 'anvil.editor.custom_liquid_invisible' | t -%}
+        {% render 'anvil-editor-empty', text: empty_note, class: 'av-custom-liquid__empty' %}
+      {%- endif -%}
+    {%- else -%}
+      {%- liquid
+        if s.custom_liquid != blank
+          assign empty_note = 'anvil.editor.custom_liquid_silent' | t
+        else
+          assign empty_note = 'anvil.editor.custom_liquid_blank' | t
+        endif
+      -%}
+      {% render 'anvil-editor-empty', text: empty_note %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+.av-custom-liquid{min-width:0;overflow-wrap:break-word}
+/* Base CSS zeroes prose margins: 1em above a prose block after a rendered sibling; widgets untouched; :where() lets merchant classes win */
+.av-custom-liquid>:where(:not(script):not(style):not(link)+p),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h1),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h2),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h3),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h4),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h5),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+h6),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+ul),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+ol),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+dl),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+blockquote),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+figure),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+pre),
+.av-custom-liquid>:where(:not(script):not(style):not(link)+table){margin-top:1em}
+.av-custom-liquid+.av-custom-liquid__empty{margin-top:var(--av-space-4)}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Custom Liquid",
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Custom Liquid" },
+    {
+      "type": "liquid",
+      "id": "custom_liquid",
+      "label": "Liquid code",
+      "info": "Renders exactly as written and any script here loads on every view of this section, so what it shows is your responsibility: never use it for timers, stock counts, viewer counts, ratings or reviews that are not real."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Custom Liquid",
+      "settings": {
+        "custom_liquid": "<p>Example custom Liquid — replace this with your own HTML or Liquid code.</p>"
+      }
+    }
+  ],
+  "disabled_on": { "groups": ["custom.overlay"] }
+}
+{% endschema %}

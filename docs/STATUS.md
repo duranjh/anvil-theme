@@ -1,6 +1,176 @@
-# Anvil — Status after wave 1 (product page and cart drawer)
+# Anvil — Status after the section library (waves 2–5), its integration and the fix pass
 
-_2026-10-15. Written by the wave-1 integrator after merging the seven owners (shell, gallery, picker-form, content, trust, commerce, drawer), then updated by the wave-1 fix pass (W1.6, which wins where it differs from W1.1–W1.5). Numbers come from the in-place gate (`shopify theme check --fail-level warning`, Shopify CLI 4.9.3), the repo scripts and `node --test`. Sections 1–5 further down are the wave-0 record, kept as written; section 4's live-store list still applies._
+_2026-10-15. Section F is the consistency and completeness fix pass (54 audit findings, DECISIONS 82–119). Section S below is the section-library integration pass (45 sections from the first run plus the rebuilt `anvil-stats`), written by the integrator. Numbers come from the in-place gate (`shopify theme check --fail-level warning`, Shopify CLI 4.9.3), the repo scripts and `node --test`. Section W1 is the wave-1 record (product page and cart drawer) and sections 1–5 the wave-0 record, kept as written; their live-store lists still apply._
+
+## F. Consistency and completeness fix pass (2026-10-15)
+
+54 audit findings (37 consistency, 17 completeness) applied by the final fixer; decisions are DECISIONS 82–119. Liquid and platform claims were checked on shopify.dev first: `section.location` / `section.index` (nil in the editor and under the Section Rendering API, index restarting per section group), `time_tag` writing `datetime` in UTC, and `.shopifyignore` syntax (simple names, wildcards, regular expressions, at the theme root). Nothing was pushed to the store.
+
+### F.1 Gates (whole theme, after the pass)
+- `shopify theme check --fail-level warning` (CLI 4.9.3): **246 files inspected, 0 offenses**.
+- `scripts/cleanroom-lint.sh` clean (30 patterns); `scripts/asset-audit.py` clean; `scripts/chassis-lint.py` clean, 96 files, 0 warnings (now also: 6 KB measured on minified CSS, motion-prefix selectors accepted, an addable section without `enabled_on`/`disabled_on` is an error); `scripts/check-limits.sh` all limits respected; `scripts/check-schema-ranges.py` clean; `scripts/check-templates.py` clean, 25 files (largest 91 blocks); `python3 scripts/sync-block-schemas.py --check --strict` up to date (38 / 36 block types; icon labels from `docs/icons.json`); `python3 scripts/spec-cards.py --check` 35 cards up to date; `python3 scripts/sections-index.py --check` up to date (new); `node --test 'tests/*.test.mjs'` 24/24 (Node 22).
+- Sizes (gzip -9): `anvil-slider.js` 4,974 / 5,120; `anvil-marquee.js` 1,528 / 1,536; core modules 13,996 / 15,360; `anvil-cart.js` 3,933; `anvil-cart-drawer.js` 4,065 / 6,144; `anvil-product.js` 7,541 / 8,192; `anvil-product-videos.js` 1,468; `anvil-slider.css` 2,431; `anvil-accordion.css` 1,014 (new); `anvil-base.css` 9,420 gz, **39,654 raw against Theme Check's 40,000-byte `AssetSizeCSS` limit** (the accordion moved to its own file for room; the next shared rule should go to a component file).
+- Locales: `en.default.json` 535 values (+3: `anvil.faq.heading`, `anvil.collapsible.heading`, `anvil.cart.terms_default`); `en.default.schema.json` gained the `cart_type` info and canonical card image-shape labels.
+
+### F.2 Findings applied
+| # | Finding | Outcome |
+|---|---|---|
+| 1 | Columns spelled four ways | `cols_desktop` / `cols_mobile` everywhere (20 sections + collection, blog, collections list), selects, one tablet rule in `.av-grid`; templates and presets migrated (82) |
+| 2 | Image shape ids and labels | `image_ratio` "Image shape", one label set, `theme` on card grids; theme block, product blocks, drawer image, theme card settings too (102) |
+| 3 | Card style vocabularies | canonical `card_style`; `card_layout`; `item_style` lines / cards (83) |
+| 4 | Surface CSS copied 12 times | `.av-surface` + `--av-surface-tint` + `--av-surface-shadow` + `snippets/anvil-surface` (83) |
+| 5 | Rotation configured six ways | `autoplay` 0–10 s "Auto-advance every"; `video_autoplay` (+ scope) through anvil-core (94, 103) |
+| 6 | `link` button style drew an arrow | `link` / `link_arrow` split; `show_view_all` (104) |
+| 7 | H1 guard copy-pasted | `heading_tag` + `snippets/anvil-main-heading-tag`; slideshow documented (86) |
+| 8 | Two hero content models | fields renamed to theme-block ids, one block per button; local blocks kept (99, see F.3) |
+| 9 | FAQ / collapsible accordion | `assets/anvil-accordion.css`, `toggle_icon`, `item_style` (91) |
+| 10 | Fallback headings three ways | `anvil-section-head` `fallback:` (84) |
+| 11 | Slider controls per section | `snippets/anvil-slider-attrs`, fits classes, `arrows="desktop"`, pause room, gutter (89) |
+| 12 | Slider ids and defaults | `show_arrows` / `show_dots` default on with `visible_if`; peek settings removed; label through `escape_once` (89) |
+| 13 | Related products copied featured collection | `snippets/anvil-product-row` (93) |
+| 14 | Quick-buy form duplicated | `snippets/anvil-quick-buy` with `anvil-money` option prices (96) |
+| 15 | `dot_style` meant two things | `dot_shape` / `dot_color` / `dot_size` / `dot_pulse`; close-on-image-tap in `<anvil-hotspots>`; `anvil-hotspots-section.js` deleted (97) |
+| 16 | Ids with several meanings | `image_side_mobile`, `show_image_mobile`, `link_type` + `link`, `link_label` vs `link_name`, `col_split`, `card_layout` (104) |
+| 17 | Above-the-fold logic ×33 | `snippets/anvil-above-fold` in 36 files (85) |
+| 18 | Group availability | one policy, applied to every addable section (100) |
+| 19 | Empty-section note three looks | `snippets/anvil-editor-empty` + `.av-editor-empty`; storefront renders nothing (87) |
+| 20 | Animations-off three ways | one CSS pattern, Liquid motion classes removed (107) |
+| 21 | Hover zoom ×5 | `.av-hover-zoom`, `hover_zoom` (98) |
+| 22 | Marquee configs | speed 10–150 / 40; linked strips pause in the component; inline gap (90) |
+| 23 | Two one-line rotators | both kept on the canonical autoplay and `--av-inline-control` (103, see F.3) |
+| 24 | Swipe on phones built twice | pricing on `mobile_layout` + `<anvil-slider>` (89) |
+| 25 | 9:16 workarounds | `ratio: '9:16'` + `.av-media--9-16`; section workarounds deleted (102) |
+| 26 | Hand-written icon lists | `docs/icons.json` + label sync in `sync-block-schemas.py` (92) |
+| 27 | Icon frame vocabularies | `icon_style` plain / circle / square / ring / solid, `.av-icon-frame--*` (92) |
+| 28 | Eight alignment ids | `text_align`, `valign`; `left` not `start` (105) |
+| 29 | Gap labels | "Space between …", 4 px step, `--av-grid-gap` default (105) |
+| 30 | Content box four ways | `box` + `box_scheme` in image with text, newsletter, track order (105) |
+| 31 | Review blocks disagree | `quote`, `name`, `rating` 0–5 / 0.5, `source_url`; ticker disclosure (106) |
+| 32 | Typed-date parser ×2 | `snippets/anvil-typed-date` (88) |
+| 33 | Block field names | `heading`, `text`, `button_label` + `button_link`, `icon_image` (104) |
+| 34 | Stylesheet leaks | scroll-top on `--av-audio-space`; `.av-bundle` / `.av-pb-bundle`; component modifiers (109) |
+| 35 | Placeholder styles | "Example: " prefix rule (108) |
+| 36 | Rich text content width | `content_width` px "Content width on desktop"; heroes' `box_width` renamed (105) |
+| 37 | Two stylesheet formats | compact everywhere; 6 KB measured minified (95) |
+| 38 | Dev theme id does not exist | placeholder in `shopify.theme.toml`, HARNESS and S.6 updated; no push (118, see F.5) |
+| 39–40 | Hero video | image-only recorded, SPEC §4.2 amended (112, owner may reverse) |
+| 41 | FAQ page "still have questions" | decision G kept; SPEC §5 and DESIGN-sections §4 amended (113) |
+| 42 | Inline header search | `search_mode` `inline`: a field in the bar from 990 px with predictive results (110) |
+| 43 | Transparent header on home only | `transparent_mode` home / listed templates + `--av-header-overlap` (110) |
+| 44 | Announcement truncation | wrap recorded, SPEC §2.1 amended (111) |
+| 45 | Video block mute | `muted` "Start without sound" + `video_autoplay` (94) |
+| 46 | Quantity min/step | Shopify quantity rules recorded, SPEC §3.2 amended (114) |
+| 47 | Featured product parity | SPEC §3 heading amended (115) |
+| 48 | Cart type Page loses drawer blocks | policies checkbox on Cart summary; `cart_type` info lists drawer-only blocks (116) |
+| 49 | Drawer settings are theme-wide | drawer schema points to them; SPEC §2.4 amended (116) |
+| 50 | `_blocks.liquid` never built | removed from the docs and the lint exemption; Group is the free-form section (101) |
+| 51 | SECTIONS / INSTALL / .shopifyignore | `docs/SECTIONS.md` (generated, checked), `docs/INSTALL.md`, `.shopifyignore` (119) |
+| 52 | Columns has no cap | "more than 4 wraps" recorded, SPEC §4.2 amended (117) |
+| 53 | Contact form and welcome in any group | template-only, and chassis-lint enforces the rule (100) |
+| 54 | Stale track-order card line | replaced with the integration note |
+
+Section cards: every `docs/sections/<slug>.md` touched by a rename has its table ids updated and a "Fix pass" note (renames, shared pieces used, availability); `docs/CHASSIS-API.md` regenerated; CONVENTIONS §1–§12 amended (tokens, headings, group policy, a shared setting-vocabulary table, snippet table, slider/marquee/accordion/hotspots contracts, motion pattern, utilities, fold snippet, placeholders).
+
+### F.3 Applied in part, or kept, with the reason
+- **Image banner and image with text keep local blocks** (finding 8): their banner-level H1 guard needs the section to own the heading level; `@theme` blocks would let a second H1 in. Fields and sizes now match the theme blocks, so moving later is a type change.
+- **Timeline, stats and icon bar keep their own column classes** (finding 1): connectors and dividers need per-count selectors; they follow the canonical ids, labels and tablet rule.
+- **Product-block and drawer "Columns in narrow / wider spaces"** keep their ids: they follow the container in a buy column or drawer, not the viewport breakpoints `cols_*` mean.
+- **Two rotators stay** (finding 23): the announcement bar needs arrows and swipe (`<anvil-slider>`), the vertical ticker fades in place without arrows; both use the canonical autoplay and one control size.
+- **Stories row and lightbox track are not sliders** (finding 24): a thumbnail strip and a full-screen viewer are not card carousels.
+- **Shoppable image's narrow-screen popover placement** stays its own until a live check (finding 15).
+- **Contextual `.av-section-head` overrides** in the divider, heroes and newsletter, and collage's `.av-card` fill, stay (finding 34): they place shared markup inside the section's own layout, not restyle a component.
+- **Typed-rating theme blocks** (`anvil-stars`, review platform badge) keep their own rating fields (finding 31 covers review and quote blocks); their default of 5 stays an owner question (S.5).
+- **Ticker `item_style`** (plain / outlined pill / tinted pill) keeps its values: it styles pills in a strip, not rows; same id meaning "how each item is drawn".
+- **No `alt` override on every image block** (finding 33's `image` + `alt` pair): blocks without one use the image's own alt text from Shopify admin, and a linked image names its link with `link_name`.
+- **No dev-theme push** (finding 38): creating a theme on the owner's store is the owner's call (F.5).
+
+### F.4 Live-store checks added by this pass (on top of S.6, W1.4 and §4)
+1. Editor: every renamed setting shows its saved value in `index`, `product.landing`, `product`, `page.*`, `404` and the groups (templates were migrated by script; presets updated); `visible_if` on `show_arrows`/`show_dots`, `box_scheme`, `transparent_templates`, the Cart summary policies settings.
+2. Transparent header on a listed template (product, landing) with each hero and the image banner as first section: content clears the bar at 375, 768 and 1280 px; the `inline` search field with predictive results at ≥ 990 px and the search link below.
+3. Sliders: dots and arrows hidden where every slide fits (fits classes at each width), the pause button beside the dots, `av-slider--overlay` on the hero, the announcement bar's inline controls, pricing's swipe row on phones.
+4. Cart page with cart type Page and "Show policies checkbox" on: checkout blocked until ticked without JavaScript, Update still posts, the tick survives a quantity change, the attribute reaches the order.
+5. Product videos: muted autoplay on phones only (scope `mobile`), one sound at a time, Save-Data respected; Video product block "Start without sound".
+6. Hotspots and shoppable image: the new dot settings, close on an image tap, quick-buy variant menu with prices and sold-out options.
+7. `anvil-base.css` under 40,000 bytes after any later edit (Theme Check fails above it).
+
+### F.5 Open questions for the owner (new in this pass)
+- **Create the dev theme?** `shopify theme push --unpublished --theme "ANVIL dev - DO NOT PUBLISH" --store ftsegk-n1.myshopify.com`, then put its id in `shopify.theme.toml` and `DEV_THEME_ID`. Never `--live`; the live theme is #189067624527. Every live-store list in this file waits on it. Also confirm a page with handle `contact` exists for `SCRATCH_PAGE`.
+- **Hero video**: keep heroes image-only (DECISIONS 112) or add a background video with visible pause controls and a poster.
+- **Columns cap**: restore `max_blocks: 4` on Custom columns once the editor shows whether nested theme blocks count.
+- **Spend gifts with cart type Page**: the gift at a cart total is a drawer block; with a page cart it never adds. Offer it on the Cart summary too (a second copy of the rule), or document drawer-only (current state)?
+
+### F.6 Earlier open items closed by this pass
+S.4: the product-row snippet, slider `per-view-tablet` (now per-width inputs), hotspots pointer close, `.av-bundle` naming; S.5: hero H1 rule, transparent header offset, fallback headings, marquee speed wording; W1.5: Video block mute, cart page policies checkbox.
+
+## S. Section library (integration pass, 2026-10-15)
+
+### S.1 What exists
+| Area | Files | Notes |
+|---|---|---|
+| Addable sections (46 built in waves 2–5) | `sections/anvil-{audio, before-after, bundle, collage, collapsible, collection-list, columns, compare-table, custom-liquid, divider, feature-grid, featured-collection, group, guarantees, hero-parallax, hero-slideshow, hotspots, icon-content, image-banner, image-gallery, image-marquee, image-text, logo-list, media-slider, multicolumn, multirow, newsletter, palette-preview, popup, pricing, product-videos, related-products, review-wall, rich-text, scroll-top, shoppable-image, social-cards, stats, stories, tabs, testimonials, ticker, ticker-vertical, timeline, track-order, video}.liquid` | 58 `anvil-*` sections in all (with the wave-0/1 chrome, FAQ, icon bar, contact, welcome, cart drawer/bubble, predictive search, featured product, upsell row) + 19 `main-*` + `apps` |
+| Private theme blocks | `blocks/_anvil-columns-column`, `_anvil-hero-slideshow-slide`, `_anvil-popup-newsletter`, `_anvil-pricing-plan`, `_anvil-pricing-feature`, `_anvil-tabs-tab` | naming rule `_anvil-<slug>-<name>` (DECISIONS 70) |
+| Section modules | `assets/anvil-{audio, bundle, collage, hero-parallax, hero-slideshow, hotspots-section, image-gallery, popup, product-videos, related-products, review-wall, scroll-top, shoppable-image, stats, stories, ticker-vertical, track-order}.js`, `anvil-palette-preview.{css,js}` | each ≤ 4,096 B gzipped (check-limits); bundle, image gallery, popup and stories sit at the 2 KB CONVENTIONS §7 line |
+| Section cards | `docs/sections/<slug>.md` for every `anvil-*` section (58 cards, one per section), each with an "Integration pass" note where this pass changed something | |
+| Templates | `index` (12 sections, 48 blocks), `product.landing` (19 sections, 91 blocks), `product` (main product + related products), `page.contact` (main → contact → icons with content → FAQ), `page.track-order` (main → track order → timeline → FAQ), `404` (main + featured collection); `sections/overlay-group.json` (Scroll to top on; Promo popup and Music player configured, `"disabled": true`) | DECISIONS 75; every FAQ `json_ld: false` |
+| Locales | `locales/en.default.json` 532 values (+172 this pass) | DECISIONS 68 |
+| Scripts | `scripts/check-templates.py` (new), `scripts/check-schema-ranges.py` (wired in), `scripts/chassis-lint.py` (theme-block references), `scripts/scratch-template.py` (static block ids) | DECISIONS 69, 76 |
+| README | "What's inside": every section, header/footer/overlay, template sections, product blocks and cart features, one line each | |
+
+### S.2 Gates (after integration, whole theme)
+- `shopify theme check --fail-level warning`: **237 files inspected, 0 offenses** (193 `TranslationKeyExists` across 43 files before the locale keys).
+- `scripts/cleanroom-lint.sh` clean (30 patterns); `scripts/asset-audit.py` clean; `scripts/chassis-lint.py` clean, 96 files, 0 warnings (4 errors and 3 warnings before: the private-theme-block false positives on columns, hero slideshow, pricing and tabs); `scripts/check-limits.sh` all limits respected; `scripts/check-schema-ranges.py` clean; `scripts/check-templates.py` clean, 25 files (largest `product.landing`, 91 blocks); `python3 scripts/sync-block-schemas.py --check --strict` up to date (38 / 36 block types); `python3 scripts/spec-cards.py --check` 35 cards up to date; `node --test 'tests/*.test.mjs'` 24/24 (PATH with Node 22).
+- `scripts/gate.sh stats --no-paths --no-push`: every static gate PASS (G0 skipped, G3/G4 skipped: no push in this pass).
+- Gzip after the shared changes: `anvil-marquee.js` 1,528 / 1,536; `anvil-slider.js` 4,974 / 5,120; core modules 13,786 / 15,360; `anvil-product.js` 7,541 / 8,192; `anvil-cart-drawer.js` 4,065 / 6,144; `anvil-compare.js` 1,611; `anvil-stats.js` 1,966; `anvil-base.css` 8,632 (36,979 raw).
+- Browser smoke test (local static page with the real marquee, slider and compare assets, Chromium in the browser pane; no Liquid rendered): marquee clones in phase (`currentTime` equal), no editor attributes on clones, pause button keeps the name "Pause" and toggles `aria-pressed`; Tab to the 8th link of a 12-link moving strip stops the animation and the link is fully visible, Tab out resets the scroll to 0 and the strip runs again; a static slider row has no carousel roles and a scrolling one has region / carousel / "1 of 3" groups; ArrowRight from a button inside a slide moves focus to the track and slides; ArrowRight on a `<video>` does not slide; a slide change pauses an unmuted video that left the view; vertical compare: ArrowUp 50 → 45, ArrowDown back to 50.
+
+### S.3 Shared-file changes applied from the section notes
+1. Locale keys (all 349 request lines, deduplicated to 172 values) and seven reconciled keys (DECISIONS 68); Liquid and section cards updated to the shared names.
+2. `assets/anvil-product.js`: `<anvil-product-form>` also finds a child form; `snippets/anvil-product-card.liquid` and `blocks/anvil-product-atc.liquid` write `form-id` and load the module; Featured collection's "not yet" comment removed (DECISIONS 73).
+3. `scripts/chassis-lint.py`: theme-block references and parenthesis-aware selector lists (DECISIONS 69).
+4. `assets/anvil-marquee.{js,css}`, `anvil-slider.js`, `anvil-compare.{js,css}`, `anvil-core.js` (autoplay pause, dialog opener), `anvil-cart-drawer.js` (hidden-opener focus), `anvil-tabs.css`, `anvil-hotspots.css`, `anvil-card.css` (`av-card--fill`), `anvil-base.css` (link button, `--av-rating-empty`), `snippets/anvil-media.liquid` (`decorative`, `play_label`, 9:16, lazy `preload="none"`, cover priority), `snippets/anvil-product-card.liquid` (`widths`), `snippets/anvil-price.liquid` (floor), `assets/anvil-stats.js` (leading-zero count, editor in-view skip; the Liquid `first != '0'` guard removed), `blocks/anvil-image.liquid` (column-aware sizes, eager in the first two sections), `blocks/anvil-icon-text.liquid` (pill width), `blocks/anvil-group.liquid` (preset `h3`), `layout/theme.liquid` (`slideRole`) (DECISIONS 74).
+5. Section follow-ups those changes allowed: media slider and video drop their output rewrites (`play_label`, `decorative`); collage, feature grid, icon content, multirow, multicolumn, tabs and before/after drop their local patches; image marquee renders links in a moving strip (DECISIONS 81); guarantees links use `aria-labelledby`; icon content and columns follow the theme card settings exactly (DECISIONS 80); "viewer counts" in every custom Liquid info.
+6. CONVENTIONS amended (§2 page offsets, §3 hidden heading key and private blocks, §5 media and card params, §6 slider, marquee and dialog, §8 visibility step, §11 eager location gate and logo widths); HARNESS documents the new scripts and the dev theme id; CHASSIS-API regenerated.
+
+### S.4 Shared-file changes not applied (and why)
+- **Hotspots component placement and pointer close** (hotspots, shoppable image): both sections already fix the narrow-screen popover and close-on-tap themselves, differently; merging them into `anvil-hotspots.css/.js` needs one agreed placement and a live check. Only the stacking rules moved.
+- **"Inherit" alignment for 11 theme blocks; `h3` default for the Heading block** (rich text, columns, group): a cross-cutting schema change (every block, plus inline-margin rules) with migration risk for saved templates; the Heading block is also the main heading in rich text and hero slides. v1.1.
+- **Shared newsletter form snippet** (newsletter, popup): a refactor of two working forms; the popup block still lacks the newsletter's success-message `aria-describedby` and solid message background. Next pass.
+- **Shared overlay offset token** (audio, scroll-top, popup): needs a design for stacking order and heights; today scroll-to-top lifts itself over the docked player.
+- **Slider `per-view-tablet`** (featured collection, product videos, testimonials, image gallery): sections override `--n` at 750–989 px; a component attribute would change every caller's dot count. Later.
+- **`anvil-media` video `aria-label` and lazy poster deferral** (product videos): `video_tag` documents no alt parameter; product videos keep their own deferral.
+- **Light dismiss for full-viewport dialogs in core** (stories): closing on any click on the dialog element would also close normal dialogs on a click in their padding; stories handles it.
+- **Popup `open(null)`** (popup): core supports it now; `anvil-popup.js` (2,041 B) keeps its working stand-in until it has room.
+- **Hero slideshow module** (hero slideshow): the slider now moves focus to the track on arrow keys; the module's focusout part still covers swipes, so it stays.
+- **Collage big tile `widths`**, **comparison table `--av-rating-empty`**, **`decorative` in collage and collection list**: the switches exist; the sections still use their working fallbacks.
+- **Card `hover_image` parameter**, **`.av-overlay--bottom` shared modifier**, **separator-aware number formats (social cards)**: not needed for v1.0 behaviour.
+- **A shared product-row snippet** for Featured collection and Related products (same preamble, card loops and stylesheet apart from the slug): a refactor of two working sections; recorded as intended duplication until a later pass extracts `snippets/anvil-product-row.liquid`.
+- **Footer newsletter `autofocus`** (newsletter): left as it is; only one form on a page posts, and the newsletter section has none.
+
+### S.5 Open questions for the owner (from the 460 builder notes, grouped)
+- **Hero media and H1.** Parallax hero and hero slideshow are image-only (SPEC says "media"): record image-only or add video with visible controls. One H1 rule for heroes: image banner allows H1 on page templates, parallax refuses it; the homepage's H1 is now the first slide's heading.
+- **Transparent header over a first-section hero**: content at a top position can sit under the header; needs a header-height token from the header.
+- **Example content on the live storefront**: placeholder logos, example collection cards, example bundle slots and product-video product rows render to shoppers until replaced (CONVENTIONS §12); shoppable image already shows its example spots only in the editor. Pick one rule.
+- **Typed ratings**: stars default to 5 in `anvil-stars` and the comparison table (0 = "not set" would be stricter); the review wall shows card stars when the platform link is set; testimonials' "Verified purchase" toggle. Confirm the honesty level.
+- **Stats**: figures already on screen when the module runs never count (a stats section at the top of a page stays static; now in the editor too); a decimal such as `4.125` reads as thousands for ~180 ms of the count (a stricter "no count-up when the last group after `.` has 3 digits" rule is possible); prefix and suffix are trimmed, so a typed space before a symbol suffix is lost (`4.8 / 5` shows `4.8/ 5`; only words of 3+ letters get the automatic space); a rating-like stat relies on the `source_url` info text, not a required source link; RTL figures without `dir=auto` or isolation.
+- **Harness rule**: let a section's builder edit its own existing `assets/anvil-<slug>*` (DESIGN-sections §5 already lists them as allowed paths). The stats rebuild left two fixes to `anvil-stats.js` for the integrator because the wave made existing assets read-only; both landed here.
+- **Fallback headings**: generic hidden "Highlights" / "Features" / "Guarantees" vs card titles as `h2` when the section heading is blank.
+- **Nested theme blocks and `max_blocks`** (columns, tabs, pricing, hero slideshow): unknown whether nested blocks count; caps were removed where they could break presets.
+- **Translation escaping**: several sections write `| t | escape`, which double-escapes `&` and apostrophes in translations; choose one rule theme-wide.
+- **Marquee and ticker speed** is pixels per second, not seconds per loop (spec card).
+- **Popup**: the result page after a signup opens the popup at once (answering the shopper's own submit); an `aria-modal` consent banner holds it back.
+- **Bundle**: fewer buyable products than "Products to pick" lowers the count and hides the savings text (alternative: block the bundle); every pick is added at quantity 1; no selling plans; no form fallback without JavaScript.
+- **Track order** reads "order number/email" as a link to the customer account (no theme endpoint checks both); no `@app` blocks yet; "new tab" defaults on.
+- **Video**: no "controls" setting (a no-controls video needs a script); an uploaded video's cover is set in Content > Files.
+- **Palette preview**: the shipped error, success and rating colours fail contrast on some schemes of both styles (theme-wide colours cannot pass on light and dark schemes); per-scheme status colours or retuned defaults.
+- **Divider**: curve, peak and zigzag beyond the spec's four shapes; height applies to every style.
+- **Smaller calls**: collapsible rows with no content are skipped on the storefront; collapsible image sticky by default; testimonials hide arrows on phones; social cards ship no counts and no verified mark; stories' "autoplay per story" is a duration; newsletter double opt-in admin path wording and no consent checkbox; logo hover colour on unlinked logos; related products show example cards in the editor only; custom Liquid that prints nothing also removes its anchor; music player "start muted" only sets the speaker control; overlay positions are physical (RTL); overlay widgets read `pad_bottom` as the distance from the screen edge and ignore `pad_top` (worth a CONVENTIONS line once the overlay offset token is designed).
+
+### S.6 Live-store checks still needed (on the unpublished dev theme 189166714959, created 2026-10-15)
+1. **G3/G4 for every section** (none ran in waves 2–5): scratch render at 375×812 and 1280×800, reduced motion, console errors, axe; then `index`, `product.landing`, `product`, `page.contact`, `page.track-order`, `404` and the overlay group as shipped. Lighthouse mobile on home, product and landing with the new templates (19 sections on landing).
+2. **Editor**: the popup's unlisted static signup block shows and can be hidden; nested theme blocks vs `max_blocks`; `section.blocks` lists only top-level blocks in theme-block sections (tabs, rich text, columns, pricing); which element the editor outlines for a tab (button vs panel) and for a marquee item (original, not a clone, now that clones drop the editor attribute); `visible_if` with `and`/`or` and on header settings (divider, video, collection list); a module script in a newly added section runs (music player first add); `data-anvil-editor-open` on scroll-to-top; shoppable image's example dots in the preset preview (`design_mode` vs `visual_preview_mode`).
+3. **Liquid behaviours** written from shopify.dev only: `capture` of `content_for 'blocks'` (columns); `content_for 'blocks', closest.product:` (pricing); `closest.product` on home vs product templates (comparison table, image with text); date-only `time_tag` and a UTC+13 store (review wall); unset `shop.refund_policy` (guarantees); `image_tag style: 'object-position: inherit;'` (image banner, parallax); customer-form action fragment `#anvil-newsletter-<id>` (newsletter, popup); `color_to_rgb` alpha format (palette preview); recommendations for an unsaved editor section (related products); custom Liquid blank/silent notes.
+4. **Commerce paths changed in this pass**: card quick add on a collection page, featured collection and related products opens the drawer (not `/cart`); Add to cart theme block in rich text, columns and a hero slide; drawer focus returns to a shoppable-image dot after adding from its popover; product price badge percentages now round down.
+5. **Cross-browser**: Firefox and Safari for stats row wrapping, the timeline's dotted connector, icon content `justify-content: right`, `:has()` fallbacks (music player padding, marquee keyboard stop, hotspot stacking), the hero slideshow fade in RTL, 343 px hotspot popovers, marquee lazy images popping in, the slider's dropped roles in VoiceOver.
 
 ## W1. Wave 1
 

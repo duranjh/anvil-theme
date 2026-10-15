@@ -1,0 +1,71 @@
+{% doc %}
+  Private theme block: one feature row inside a plan of sections/anvil-pricing.liquid (blocks/_anvil-pricing-plan).
+  A short line with a marker: included (check mark), not included (cross, muted text) or no marker. The marker is
+  decorative; a visually hidden "Included:" / "Not included:" before the words carries the meaning, so the row
+  never depends on the icon or its colour (WCAG 1.3.1, 1.4.1). Renders nothing on the storefront when the text is
+  blank; the editor shows a note so the empty row can still be selected.
+
+  Settings (id · type · values · default):
+  - text · inline_richtext · default "Example feature — replace with something this plan includes"
+  - state · select · included | excluded | plain · default "included"
+
+  @example
+  {"type": "_anvil-pricing-feature"}
+{% enddoc %}
+{%- liquid
+  assign b = block.settings
+  assign state = b.state | default: 'included'
+-%}
+{%- if b.text != blank -%}
+  <p class="av-pricing-feature av-pricing-feature--{{ state }}" {{ block.shopify_attributes }}>
+    {%- case state -%}
+      {%- when 'included' -%}
+        <span class="av-pricing-feature__icon">{% render 'anvil-icon', name: 'check', size: 18 %}</span>
+        <span class="av-pricing-feature__text"><span class="av-visually-hidden">{{ 'anvil.pricing.included_prefix' | t }} </span>{{ b.text }}</span>
+      {%- when 'excluded' -%}
+        <span class="av-pricing-feature__icon">{% render 'anvil-icon', name: 'x', size: 18 %}</span>
+        <span class="av-pricing-feature__text"><span class="av-visually-hidden">{{ 'anvil.pricing.excluded_prefix' | t }} </span>{{ b.text }}</span>
+      {%- else -%}
+        <span class="av-pricing-feature__text">{{ b.text }}</span>
+    {%- endcase -%}
+  </p>
+{%- elsif request.design_mode -%}
+  <p class="av-pricing-feature av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+{%- endif -%}
+{% stylesheet %}
+.av-pricing-feature{display:flex;align-items:flex-start;gap:var(--av-space-2);margin:0;font-size:var(--av-text-sm);line-height:1.5;text-align:start}
+.av-pricing-feature__icon{flex:none;display:inline-flex;align-items:center;height:1.5em;color:var(--av-accent)}
+.av-pricing-feature__icon svg{display:block;width:18px;height:18px}
+.av-pricing-feature__text{min-width:0;overflow-wrap:anywhere}
+.av-pricing-feature--excluded{color:var(--av-fg-muted)}
+.av-pricing-feature--excluded .av-pricing-feature__icon{color:var(--av-fg-muted)}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Feature row",
+  "tag": null,
+  "settings": [
+    {
+      "type": "inline_richtext",
+      "id": "text",
+      "label": "Text",
+      "default": "Example: replace with something this plan includes",
+      "info": "Name only what the plan really includes. Delivery times, guarantees and support hours must match your policies. Do not type savings or 'was' prices."
+    },
+    {
+      "type": "select",
+      "id": "state",
+      "label": "Marker",
+      "options": [
+        { "value": "included", "label": "Included (check mark)" },
+        { "value": "excluded", "label": "Not included (cross)" },
+        { "value": "plain", "label": "No marker" }
+      ],
+      "default": "included"
+    }
+  ],
+  "presets": [
+    { "name": "Feature row" }
+  ]
+}
+{% endschema %}

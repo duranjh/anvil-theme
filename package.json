@@ -9,7 +9,8 @@
   },
   "scripts": {
     "check": "shopify theme check --fail-level warning",
-    "lint": "bash scripts/cleanroom-lint.sh && python3 scripts/asset-audit.py && python3 scripts/chassis-lint.py && bash scripts/check-limits.sh",
+    "lint": "bash scripts/cleanroom-lint.sh && python3 scripts/asset-audit.py && python3 scripts/chassis-lint.py && bash scripts/check-limits.sh && python3 scripts/check-schema-ranges.py && python3 scripts/check-templates.py && python3 scripts/sections-index.py --check",
+    "templates:check": "python3 scripts/check-templates.py",
     "test": "node --test 'tests/*.test.mjs'",
     "blocks": "python3 scripts/sync-block-schemas.py",
     "blocks:check": "python3 scripts/sync-block-schemas.py --check --strict",
@@ -17,6 +18,7 @@
     "package": "bash scripts/package.sh",
     "a11y": "bash scripts/a11y.sh",
     "spec-cards": "python3 scripts/spec-cards.py",
+    "sections-index": "python3 scripts/sections-index.py",
     "prompt": "python3 scripts/agent-prompt.py",
     "similarity": "python3 scripts/similarity.py"
   },

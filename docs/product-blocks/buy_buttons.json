@@ -20,9 +20,9 @@
       "id": "atc_style",
       "label": "Button style",
       "options": [
-        { "value": "primary", "label": "Primary" },
-        { "value": "accent", "label": "Accent" },
-        { "value": "secondary", "label": "Outline" }
+        { "value": "primary", "label": "Solid button" },
+        { "value": "accent", "label": "Accent button" },
+        { "value": "secondary", "label": "Outline button" }
       ],
       "default": "primary"
     },

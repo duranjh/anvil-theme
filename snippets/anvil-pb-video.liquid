@@ -4,7 +4,8 @@
 
   A Shopify-hosted video (video_tag) or a YouTube/Vimeo link (click-to-load facade, nothing loads before the tap)
   through snippets/anvil-media. Autoplay applies to Shopify videos only: anvil-core.js plays them muted while in
-  view and only when the shopper allows motion; their controls stay visible so they can always be paused. The poster
+  view and only when the shopper allows motion; their controls stay visible so they can always be paused. A
+  click-to-play Shopify video can start without sound ("muted"); autoplay always starts muted. The poster
   image covers a YouTube/Vimeo facade; the title names the video for screen readers. Placeholder when empty.
   Styles: assets/anvil-pb-content.css (media box styles live in assets/anvil-base.css).
 
@@ -28,11 +29,12 @@
     video: s.video,
     video_url: s.video_url,
     image: s.poster,
-    ratio: s.ratio,
+    ratio: s.image_ratio,
     widths: '300, 450, 600, 800, 1100',
     sizes: poster_sizes,
     alt: video_title,
-    autoplay: s.autoplay,
+    autoplay: s.video_autoplay,
+    muted: s.muted,
     loop: s.loop,
     placeholder: 'lifestyle-1',
     class: 'av-pb-video__media'

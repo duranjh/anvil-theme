@@ -337,21 +337,21 @@
           "label": "Text alignment"
         },
         "card_image_ratio": {
-          "label": "Image ratio",
+          "label": "Image shape",
           "options__1": {
-            "label": "Adapt to image"
+            "label": "Original"
           },
           "options__2": {
-            "label": "Square"
+            "label": "Square (1:1)"
           },
           "options__3": {
-            "label": "Portrait"
+            "label": "Portrait (4:5)"
           },
           "options__4": {
-            "label": "Tall"
+            "label": "Portrait (3:4)"
           },
           "options__5": {
-            "label": "Landscape"
+            "label": "Landscape (16:9)"
           }
         },
         "header__2": {
@@ -370,21 +370,21 @@
           }
         },
         "collection_card_image_ratio": {
-          "label": "Image ratio",
+          "label": "Image shape",
           "options__1": {
-            "label": "Adapt to image"
+            "label": "Original"
           },
           "options__2": {
-            "label": "Square"
+            "label": "Square (1:1)"
           },
           "options__3": {
-            "label": "Portrait"
+            "label": "Portrait (4:5)"
           },
           "options__4": {
-            "label": "Tall"
+            "label": "Portrait (3:4)"
           },
           "options__5": {
-            "label": "Landscape"
+            "label": "Landscape (16:9)"
           }
         },
         "header__3": {
@@ -788,6 +788,7 @@
       "settings": {
         "cart_type": {
           "label": "Cart type",
+          "info": "Page sends shoppers to the cart page, whose summary has its own policies checkbox. The cart drawer's blocks (free shipping bar, upsells, gift, trust and policies checkbox) only show in the drawer.",
           "options__1": {
             "label": "Drawer"
           },

@@ -1,0 +1,601 @@
+{%- liquid
+  assign s = section.settings
+  assign design = request.design_mode
+  assign digit_chars = '0123456789'
+
+  # Pre-pass, kept inside this liquid tag so the render loop below stays the only for-loop tag over
+  # section.blocks (the chassis lint checks that loop for shopify_attributes). Lists hold ",<block id>," keys.
+  # - shown: stats that will show. A stat needs a number or a label; an empty one stays visible only in the
+  #   editor, where it can still be selected.
+  # - gap_before / gap_after: a word before or after the number (three letters or more, such as Over or days)
+  #   gets a space; symbols and unit letters such as $, +, %, k or M touch it. A character whose upcase differs
+  #   from its downcase counts as a letter, in any script with case.
+  # - num_ids: numbers (digits with optional separators, 12,500 or 12.500 or 4.8, starting and ending with a
+  #   digit, 15 digits at most). They never wrap. count_ids: the ones that count up (above zero and not
+  #   starting with 0: the counter fills digit slots from the right, so 0.125 would read 117 on the way).
+  #   Any other value is text, shown exactly as typed.
+  # - max_ch: the longest unbreakable run of characters across all figures. The CSS sizes every figure from
+  #   it, so one row never mixes sizes and a long figure shrinks to fit its column.
+  # Never put a tag delimiter inside a comment line of a liquid tag.
+  assign shown = 0
+  assign gap_before = ','
+  assign gap_after = ','
+  assign num_ids = ','
+  assign count_ids = ','
+  assign max_ch = 0
+  for block in section.blocks
+    assign v = block.settings.value | strip
+    assign label = block.settings.label | strip
+    if v == blank and label == blank
+      unless design
+        continue
+      endunless
+    endif
+    assign shown = shown | plus: 1
+    if v == blank
+      continue
+    endif
+
+    assign pre = block.settings.prefix | strip
+    assign post = block.settings.suffix | strip
+    assign measure = pre
+    if pre.size > 2
+      assign edge = pre | slice: -1
+      assign edge_up = edge | upcase
+      assign edge_down = edge | downcase
+      if edge_up != edge_down
+        assign gap_before = gap_before | append: block.id | append: ','
+        assign measure = measure | append: ' '
+      endif
+    endif
+
+    assign bare = v | remove: ',' | remove: '.' | remove: "'" | remove: ' '
+    assign rest = bare | remove: '0' | remove: '1' | remove: '2' | remove: '3' | remove: '4' | remove: '5' | remove: '6' | remove: '7' | remove: '8' | remove: '9'
+    assign first = v | slice: 0
+    assign last = v | slice: -1
+    if rest == '' and bare.size <= 15 and digit_chars contains first and digit_chars contains last
+      assign num_ids = num_ids | append: block.id | append: ','
+      assign total = bare | plus: 0
+      if s.count_up and total > 0
+        assign count_ids = count_ids | append: block.id | append: ','
+      endif
+      assign whole = v | replace: ' ', '0'
+      assign measure = measure | append: whole
+    else
+      assign measure = measure | append: v
+    endif
+
+    if post.size > 2
+      assign edge = post | slice: 0
+      assign edge_up = edge | upcase
+      assign edge_down = edge | downcase
+      if edge_up != edge_down
+        assign gap_after = gap_after | append: block.id | append: ','
+        assign measure = measure | append: ' '
+      endif
+    endif
+    assign measure = measure | append: post
+
+    assign runs = measure | split: ' '
+    for run in runs
+      if run.size > max_ch
+        assign max_ch = run.size
+      endif
+    endfor
+  endfor
+
+  # Columns: phones 1-3, desktop a fixed count or one row matching the stats shown (at most 6); a fixed count
+  # is capped at the stats shown, so no empty column pushes a short row off centre; a short last row of a
+  # centred list sits in the middle (flex row, see the stylesheet notes). Tablets (750-989 px) follow the shared
+  # grid rule, balanced: rows = ceil(d / 3), t = ceil(d / rows), so 4 become 2 + 2 and 5 or 6 rows of 3. The
+  # section keeps its own column classes because the divider lines are drawn per row and column.
+  assign total_cols = shown | at_least: 1 | at_most: 6
+  assign cols_mobile = s.cols_mobile | default: '2' | plus: 0
+  assign cols_mobile = cols_mobile | at_most: total_cols
+  if s.cols_desktop == blank or s.cols_desktop == 'auto'
+    assign cols_desktop = total_cols
+  else
+    assign cols_desktop = s.cols_desktop | plus: 0 | at_most: total_cols
+  endif
+  assign rows = cols_desktop | plus: 2 | divided_by: 3
+  assign cols_tablet = cols_desktop | plus: rows | minus: 1 | divided_by: rows
+  assign cols_tablet = cols_tablet | at_least: cols_mobile | at_most: cols_desktop
+
+  assign align = s.text_align | default: 'center'
+  assign size = s.size | default: 'lg'
+  assign item_style = s.item_style | default: 'plain'
+  # Cards use the shared surface (outlined with the one tint, assets/anvil-base.css .av-surface).
+  assign item_surface = ''
+  if item_style == 'cards'
+    assign item_surface = ' av-surface av-surface--outlined av-surface--tinted'
+  endif
+
+  assign list_class = 'av-stats av-stats--m' | append: cols_mobile
+  assign list_class = list_class | append: ' av-stats--t' | append: cols_tablet
+  assign list_class = list_class | append: ' av-stats--d' | append: cols_desktop
+  assign list_class = list_class | append: ' av-stats--' | append: size
+  assign list_class = list_class | append: ' av-stats--' | append: align
+  assign list_class = list_class | append: ' av-stats--' | append: item_style
+  if s.icon_position == 'start'
+    assign list_class = list_class | append: ' av-stats--inline'
+  endif
+  if s.value_color != 'text'
+    assign list_class = list_class | append: ' av-stats--accent'
+  endif
+
+  assign icon_px = s.icon_size | default: 32
+  assign icon_img_px = icon_px | times: 2
+  assign icon_img_widths = icon_px | append: ', ' | append: icon_img_px
+  assign icon_img_sizes = icon_px | append: 'px'
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign img_loading = 'eager'
+  if fold contains 'lazy'
+    assign img_loading = 'lazy'
+  endif
+-%}
+{%- if shown > 0 or design -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-stats' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if shown > 0 -%}
+      {%- if count_ids != ',' -%}<anvil-stats class="av-stats__counter">{%- endif -%}
+      <ul class="{{ list_class }}" role="list" style="--av-stats-icon: {{ icon_px }}px; --av-stats-ch: {{ max_ch | at_least: 1 }};">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign b = block.settings
+            assign v = b.value | strip
+            assign label = b.label | strip
+            assign is_empty = false
+            if v == blank and label == blank
+              if design
+                assign is_empty = true
+              else
+                continue
+              endif
+            endif
+
+            assign has_icon = false
+            if b.icon_image != blank
+              assign has_icon = true
+            elsif b.icon != blank and b.icon != 'none'
+              assign has_icon = true
+            endif
+
+            # Spaces, numbers and count-up were decided in the pre-pass above.
+            assign id_key = ',' | append: block.id | append: ','
+            assign pre = b.prefix | strip
+            if gap_before contains id_key
+              assign pre = pre | append: ' '
+            endif
+            assign post = b.suffix | strip
+            if gap_after contains id_key
+              assign post = ' ' | append: post
+            endif
+            assign is_num = false
+            if num_ids contains id_key
+              assign is_num = true
+            endif
+            assign countable = false
+            if count_ids contains id_key
+              assign countable = true
+            endif
+
+            assign body_tag = 'div'
+            if b.source_url != blank and is_empty == false
+              assign body_tag = 'a'
+            endif
+          -%}
+          <li class="av-stats__item{% if has_icon %} av-stats__item--icon{% endif %}{{ item_surface }}" {{ block.shopify_attributes }}>
+            <{{ body_tag }} class="av-stats__body"{% if body_tag == 'a' %} href="{{ b.source_url }}"{% endif %}>
+              {%- if has_icon -%}
+                <span class="av-stats__icon">
+                  {%- if b.icon_image != blank -%}
+                    {{ b.icon_image | image_url: width: icon_img_px | image_tag: widths: icon_img_widths, sizes: icon_img_sizes, loading: img_loading, alt: '' }}
+                  {%- else -%}
+                    {%- render 'anvil-icon', name: b.icon, size: icon_px -%}
+                  {%- endif -%}
+                </span>
+              {%- endif -%}
+              <span class="av-stats__text">
+                {%- if is_empty -%}
+                  <span class="av-stats__label av-example-note">{{ 'anvil.editor.block_empty' | t }}</span>
+                {%- else -%}
+                  {%- if v != blank -%}
+                    <span class="av-stats__figure"{% if countable %} data-anvil-count{% endif %}><span class="av-stats__final">{{ pre | escape }}<span class="av-stats__num{% if is_num %} av-stats__num--whole{% endif %}">{{ v | escape }}</span>{{ post | escape }}</span></span>
+                  {%- endif -%}
+                  {%- if label != blank -%}
+                    <span class="av-stats__label">{{ label | escape }}</span>
+                  {%- endif -%}
+                {%- endif -%}
+              </span>
+              {%- if body_tag == 'a' -%}
+                <span class="av-visually-hidden"> {{ 'anvil.stats.source_link' | t }}</span>
+              {%- endif -%}
+            </{{ body_tag }}>
+          </li>
+        {%- endfor -%}
+      </ul>
+      {%- if count_ids != ',' -%}
+        </anvil-stats>
+        <script type="module" src="{{ 'anvil-stats.js' | asset_url }}"></script>
+      {%- endif -%}
+      {%- if s.footnote != blank -%}
+        <p class="av-stats__note av-stats__note--{{ align }}">{{ s.footnote }}</p>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{%- comment -%}
+  Stylesheet notes (kept here so the comments do not ship in the compiled CSS):
+  - Centred lists are a wrapping flex row, so a short last row sits in the middle; each stat is exactly one
+    column wide, (100% + gap) / cols - gap, less 0.1px against rounding, so rows match the grid and the divider
+    rules still hold. Left and right alignment keep the grid. --av-stats-cg carries the column gap for both.
+  - Alignment follows anvil-section-head: text-align is physical (left/right) and placement is logical
+    (flex-start/flex-end, like its justify-items: start/end), so in a right-to-left store the stats and the
+    source note line up with a heading set to the same alignment. Beside-the-number icons keep their text
+    start-aligned next to the icon.
+  - A linked stat underlines its label, or its figure (the typed text and the count-up copy) when it has no label.
+  - Count-up: the real text stays in flow (__final); anvil-stats.js lays an aria-hidden copy (__tick) over it.
+  - Dividers: each stat draws a top and a start edge; the first row and column blank theirs through
+    --av-stats-bt / --av-stats-bs, which only these borders read, so card borders stay whole. Each breakpoint
+    resets both with an equal-specificity :nth-child(n) rule first.
+  - Every figure takes the size that fits the longest run (about 0.67em a character), floor --av-text-lg.
+{%- endcomment -%}
+{% stylesheet %}
+.av-stats__counter{display:block}
+.av-stats{--av-stats-cols:2;--av-stats-cg:var(--av-grid-gap);--av-stats-fs:var(--av-text-4xl);display:grid;grid-template-columns:repeat(var(--av-stats-cols),minmax(0,1fr));gap:var(--av-space-6) var(--av-stats-cg);margin:0;padding:0;list-style:none}
+.av-stats--center{display:flex;flex-wrap:wrap;justify-content:center}
+.av-stats--center>*{flex:0 0 calc((100% + var(--av-stats-cg))/var(--av-stats-cols) - var(--av-stats-cg) - .1px)}
+.av-stats--m1{--av-stats-cols:1}
+.av-stats--m3{--av-stats-cols:3}
+.av-stats--sm{--av-stats-fs:var(--av-text-2xl)}
+.av-stats--md{--av-stats-fs:var(--av-text-3xl)}
+.av-stats--xl{--av-stats-fs:calc(var(--av-text-4xl) * 1.35)}
+.av-stats__item{min-width:0;margin:0}
+.av-stats__body{display:flex;flex-direction:column;align-items:center;gap:var(--av-space-3);height:100%;text-align:center;color:inherit;text-decoration:none}
+.av-stats--left .av-stats__body{align-items:flex-start;text-align:left}
+.av-stats--right .av-stats__body{align-items:flex-end;text-align:right}
+.av-stats--inline .av-stats__body{flex-direction:row;align-items:center;justify-content:center;text-align:start}
+.av-stats--inline.av-stats--left .av-stats__body{justify-content:flex-start}
+.av-stats--inline.av-stats--right .av-stats__body{justify-content:flex-end}
+.av-stats__icon{flex:none;display:inline-flex;width:var(--av-stats-icon,32px);height:var(--av-stats-icon,32px);color:var(--av-accent)}
+.av-stats__icon>svg,.av-stats__icon>img{display:block;width:100%;height:100%;object-fit:contain}
+.av-stats__text{display:block;min-width:0;max-width:100%}
+.av-stats__figure{position:relative;display:inline-block;max-width:100%;font-family:var(--av-font-heading);font-weight:var(--av-heading-weight);font-style:var(--av-heading-style);font-size:var(--av-stats-fs);line-height:1.05;letter-spacing:var(--av-heading-spacing);text-transform:none;font-variant-numeric:tabular-nums lining-nums;overflow-wrap:anywhere}
+.av-stats__num--whole{white-space:nowrap}
+.av-stats--accent .av-stats__figure{color:var(--av-accent)}
+.av-stats__tick{position:absolute;inset:0}
+.av-stats__figure.av-is-counting>.av-stats__final{opacity:0}
+.av-stats__label{display:block;margin-top:var(--av-space-2);font-size:var(--av-text-md);font-weight:500;line-height:1.4;overflow-wrap:break-word}
+.av-stats__body[href] :is(.av-stats__label,.av-stats__figure:only-child>*){text-decoration:underline;text-underline-offset:.15em}
+.av-stats__body[href]:hover :is(.av-stats__label,.av-stats__figure:only-child>*){text-decoration-thickness:2px}
+.av-stats__note{margin:var(--av-space-6) 0 0;font-size:var(--av-text-sm);line-height:1.5;color:var(--av-fg-muted);text-align:center}
+.av-stats__note--left{width:fit-content;text-align:left}
+.av-stats__note--right{width:fit-content;margin-inline-start:auto;text-align:right}
+.av-stats--cards{row-gap:var(--av-grid-gap)}
+.av-stats--cards .av-stats__item{padding:var(--av-space-5) var(--av-space-4)}
+.av-stats--lines{--av-stats-cg:0px;gap:0}
+.av-stats--lines .av-stats__item{padding:var(--av-space-5) var(--av-space-4);border-top:1px solid var(--av-stats-bt,var(--av-border));border-inline-start:1px solid var(--av-stats-bs,var(--av-border))}
+.av-stats--m1>:nth-child(n),.av-stats--m2>:nth-child(2n+1),.av-stats--m3>:nth-child(3n+1){--av-stats-bs:transparent}
+.av-stats--m1>:nth-child(-n+1),.av-stats--m2>:nth-child(-n+2),.av-stats--m3>:nth-child(-n+3){--av-stats-bt:transparent}
+@supports (width: 1cqi){
+.av-stats__item{container-type:inline-size}
+.av-stats--inline .av-stats__item--icon{--av-stats-room:calc(100cqi - var(--av-stats-icon,32px) - var(--av-space-3))}
+.av-stats__figure{font-size:max(var(--av-text-lg),min(var(--av-stats-fs),calc(var(--av-stats-room,100cqi) * 1.5 / var(--av-stats-ch,4))))}
+}
+@media (min-width: 750px){
+.av-stats--t1{--av-stats-cols:1}
+.av-stats--t2{--av-stats-cols:2}
+.av-stats--t3{--av-stats-cols:3}
+.av-stats--cards .av-stats__item{padding:var(--av-space-6) var(--av-space-5)}
+.av-stats>:nth-child(n){--av-stats-bt:initial;--av-stats-bs:initial}
+.av-stats--t1>:nth-child(n),.av-stats--t2>:nth-child(2n+1),.av-stats--t3>:nth-child(3n+1){--av-stats-bs:transparent}
+.av-stats--t1>:nth-child(-n+1),.av-stats--t2>:nth-child(-n+2),.av-stats--t3>:nth-child(-n+3){--av-stats-bt:transparent}
+}
+@media (min-width: 990px){
+.av-stats--lines{--av-stats-cg:0px}
+.av-stats--d1{--av-stats-cols:1}
+.av-stats--d2{--av-stats-cols:2}
+.av-stats--d3{--av-stats-cols:3}
+.av-stats--d4{--av-stats-cols:4}
+.av-stats--d5{--av-stats-cols:5}
+.av-stats--d6{--av-stats-cols:6}
+.av-stats>:nth-child(n){--av-stats-bt:initial;--av-stats-bs:initial}
+.av-stats--d1>:nth-child(n),.av-stats--d2>:nth-child(2n+1),.av-stats--d3>:nth-child(3n+1),.av-stats--d4>:nth-child(4n+1),.av-stats--d5>:nth-child(5n+1),.av-stats--d6>:nth-child(6n+1){--av-stats-bs:transparent}
+.av-stats--d1>:nth-child(-n+1),.av-stats--d2>:nth-child(-n+2),.av-stats--d3>:nth-child(-n+3),.av-stats--d4>:nth-child(-n+4),.av-stats--d5>:nth-child(-n+5),.av-stats--d6>:nth-child(-n+6){--av-stats-bt:transparent}
+}
+@media print{
+.av-stats__tick{display:none}
+.av-stats__figure.av-is-counting>.av-stats__final{opacity:1}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Stats",
+  "max_blocks": 6,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Stats" },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "auto", "label": "Match item count" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5", "label": "5" },
+        { "value": "6", "label": "6" }
+      ],
+      "default": "auto",
+      "info": "Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "select",
+      "id": "size",
+      "label": "Number size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "xl", "label": "Extra large" }
+      ],
+      "default": "lg",
+      "info": "Long numbers shrink to fit their column."
+    },
+    {
+      "type": "select",
+      "id": "value_color",
+      "label": "Number colour",
+      "options": [
+        { "value": "accent", "label": "Accent" },
+        { "value": "text", "label": "Text colour" }
+      ],
+      "default": "accent"
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Stat alignment",
+      "default": "center"
+    },
+    {
+      "type": "select",
+      "id": "item_style",
+      "label": "Item style",
+      "options": [
+        { "value": "plain", "label": "Plain" },
+        { "value": "lines", "label": "Divider lines" },
+        { "value": "cards", "label": "Cards" }
+      ],
+      "default": "plain"
+    },
+    {
+      "type": "select",
+      "id": "icon_position",
+      "label": "Icon position",
+      "options": [
+        { "value": "top", "label": "Above the number" },
+        { "value": "start", "label": "Beside the number" }
+      ],
+      "default": "top"
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon size",
+      "min": 16,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "checkbox",
+      "id": "count_up",
+      "label": "Count up when scrolled into view",
+      "default": true,
+      "info": "Plain numbers such as 12,500 or 4.8 count up from zero once, in about 2 seconds. These show the final number at once: figures already on screen when the page opens (in the editor preview too), and every figure for shoppers who reduce motion. Other text shows as typed."
+    },
+    {
+      "type": "inline_richtext",
+      "id": "footnote",
+      "label": "Source note",
+      "info": "Optional small print under the stats: say where the figures come from and when you last checked them."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "stat",
+      "name": "Stat",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "users", "label": "People" },
+            { "value": "user-check", "label": "Person checked" },
+            { "value": "heart", "label": "Heart" },
+            { "value": "hand-heart", "label": "Hand with heart" },
+            { "value": "thumbs-up", "label": "Thumbs up" },
+            { "value": "award", "label": "Award" },
+            { "value": "medal", "label": "Medal" },
+            { "value": "trophy", "label": "Trophy" },
+            { "value": "crown", "label": "Crown" },
+            { "value": "badge-check", "label": "Badge check" },
+            { "value": "check-circle", "label": "Check in circle" },
+            { "value": "package", "label": "Package" },
+            { "value": "package-check", "label": "Package checked" },
+            { "value": "boxes", "label": "Boxes" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "plane", "label": "Plane" },
+            { "value": "ship", "label": "Ship" },
+            { "value": "globe", "label": "Globe" },
+            { "value": "map-pin", "label": "Map pin" },
+            { "value": "flag", "label": "Flag" },
+            { "value": "store", "label": "Store" },
+            { "value": "building", "label": "Building" },
+            { "value": "home", "label": "Home" },
+            { "value": "shopping-bag", "label": "Shopping bag" },
+            { "value": "shopping-cart", "label": "Shopping cart" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "timer", "label": "Timer" },
+            { "value": "calendar", "label": "Calendar" },
+            { "value": "hourglass", "label": "Hourglass" },
+            { "value": "rotate-ccw", "label": "Return arrow" },
+            { "value": "refresh-cw", "label": "Refresh" },
+            { "value": "shield-check", "label": "Shield check" },
+            { "value": "lock", "label": "Lock" },
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "recycle", "label": "Recycle" },
+            { "value": "trees", "label": "Trees" },
+            { "value": "droplet", "label": "Droplet" },
+            { "value": "sun", "label": "Sun" },
+            { "value": "waves", "label": "Waves" },
+            { "value": "mountain", "label": "Mountain" },
+            { "value": "zap", "label": "Lightning" },
+            { "value": "sparkles", "label": "Sparkles" },
+            { "value": "flame", "label": "Flame" },
+            { "value": "rocket", "label": "Rocket" },
+            { "value": "target", "label": "Target" },
+            { "value": "trending-up", "label": "Trending up" },
+            { "value": "bar-chart", "label": "Bar chart" },
+            { "value": "percent", "label": "Percent" },
+            { "value": "tag", "label": "Tag" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "piggy-bank", "label": "Piggy bank" },
+            { "value": "wallet", "label": "Wallet" },
+            { "value": "circle-dollar-sign", "label": "Dollar in circle" },
+            { "value": "banknote", "label": "Banknote" },
+            { "value": "message-circle", "label": "Chat bubble" },
+            { "value": "headphones", "label": "Headphones" },
+            { "value": "mail", "label": "Mail" },
+            { "value": "coffee", "label": "Coffee" },
+            { "value": "utensils", "label": "Cutlery" },
+            { "value": "scale", "label": "Scale" },
+            { "value": "ruler", "label": "Ruler" },
+            { "value": "infinity", "label": "Infinity" },
+            { "value": "lightbulb", "label": "Light bulb" }
+          ],
+          "default": "none"
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "Custom icon image",
+          "info": "Replaces the icon. Square images work best. Upload only artwork you are entitled to use."
+        },
+        {
+          "type": "text",
+          "id": "prefix",
+          "label": "Before the number",
+          "info": "For example $ or ~. A word of three letters or more, such as Over, gets a space after it."
+        },
+        {
+          "type": "text",
+          "id": "value",
+          "label": "Number",
+          "default": "100",
+          "info": "Enter only a figure your records back up: Shopify's rule is that themes “must not mislead or deceive merchants or customers with false data or claims”."
+        },
+        {
+          "type": "text",
+          "id": "suffix",
+          "label": "After the number",
+          "info": "For example +, % or k. A word of three letters or more, such as days, gets a space before it."
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Example: what this number counts — replace with a figure you can prove",
+          "info": "Say what the number counts and for which period, for example orders shipped since 2019."
+        },
+        {
+          "type": "url",
+          "id": "source_url",
+          "label": "Source link",
+          "info": "Optional page where shoppers can check the figure (the stat links to it); ratings and review counts always need one."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Stats",
+      "settings": {
+        "heading": "By the <strong>numbers</strong>",
+        "footnote": "Example note: say where these figures come from and when you last checked them."
+      },
+      "blocks": [
+        {
+          "type": "stat",
+          "settings": {
+            "value": "12,500",
+            "suffix": "+",
+            "label": "Example: orders shipped — replace with your real count"
+          }
+        },
+        {
+          "type": "stat",
+          "settings": {
+            "value": "30",
+            "suffix": "days",
+            "label": "Example: return window — match your refund policy"
+          }
+        },
+        {
+          "type": "stat",
+          "settings": {
+            "value": "98",
+            "suffix": "%",
+            "label": "Example: orders dispatched within 48 hours — use your own data"
+          }
+        },
+        {
+          "type": "stat",
+          "settings": {
+            "value": "15",
+            "label": "Example: countries we deliver to — list only those you ship to"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

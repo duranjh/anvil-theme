@@ -2,18 +2,36 @@
    plus the controls (.av-slider__arrow, __dots, __dot, __pause, __live). Tokens only (--av-slider-arrow,
    --av-slider-dot, --av-slider-dot-gap from theme settings); motion gated by prefers-reduced-motion and
    html[data-animations="off"]. Layout works without JS (plain scroll-snap row); the dots row Liquid renders empty
-   keeps its height before the script fills it, so nothing shifts. */
+   keeps its height before the script fills it, so nothing shifts.
+   Breakpoint inputs (DECISIONS 89, written inline by snippets/anvil-slider-attrs): --av-slider-per-view (phones),
+   --av-slider-per-view-tablet (750–989 px), --av-slider-per-view-desktop (990 px and up), the same three for
+   --av-slider-peek(-tablet|-desktop); av-slider--fits-m|t|d (every slide fits at that width: no peek, no dots row,
+   no arrows, no arrow gutter); arrows="desktop" (arrows from 750 px only, the card-carousel default);
+   av-slider--gutter (arrows sit beside the track, not over it, while it scrolls); autoplay keeps room for the pause
+   button at the end of the dots row, or in a row of its own without dots (--av-slider-pause-room);
+   av-slider--overlay puts the dots and pause button on the slides (heroes). */
 
 anvil-slider {
   --n: var(--av-slider-per-view, 1);
+  --av-slider-peek-now: var(--av-slider-peek, 0px);
   --av-slider-gap: var(--av-grid-gap, var(--av-space-4));
+  --av-slider-pause-room: calc(44px + var(--av-space-2));
+  --av-slider-gutter: calc(var(--av-slider-arrow, 44px) + var(--av-space-4));
   position: relative;
   display: block;
+}
+
+@media (min-width: 750px) {
+  anvil-slider {
+    --n: var(--av-slider-per-view-tablet, var(--av-slider-per-view, 1));
+    --av-slider-peek-now: var(--av-slider-peek-tablet, var(--av-slider-peek, 0px));
+  }
 }
 
 @media (min-width: 990px) {
   anvil-slider {
     --n: var(--av-slider-per-view-desktop, var(--av-slider-per-view, 1));
+    --av-slider-peek-now: var(--av-slider-peek-desktop, var(--av-slider-peek-tablet, var(--av-slider-peek, 0px)));
   }
 }
 
@@ -33,7 +51,7 @@ anvil-slider > [data-slider-track]::-webkit-scrollbar {
 }
 
 anvil-slider > [data-slider-track] > [data-slider-slide] {
-  flex: 0 0 calc((100% - var(--av-slider-peek, 0px) - (var(--n) - 1) * var(--av-slider-gap)) / var(--n));
+  flex: 0 0 calc((100% - var(--av-slider-peek-now) - (var(--n) - 1) * var(--av-slider-gap)) / var(--n));
   min-width: 0;
   scroll-snap-align: start;
 }
@@ -142,6 +160,151 @@ anvil-slider > [data-slider-track] > [data-slider-slide] {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* autoplay beside a dots row: the pause button sits at the end of the row, the dots keep clear of it */
+anvil-slider[autoplay]:not([autoplay="0"], .av-slider--overlay, .av-slider--inline) > .av-slider__dots {
+  min-height: 44px;
+  margin-top: var(--av-space-3);
+  padding-inline: var(--av-slider-pause-room);
+  align-content: center;
+}
+
+anvil-slider[autoplay]:not([autoplay="0"], .av-slider--overlay) > .av-slider__dots ~ .av-slider__pause {
+  inset-block-end: 0;
+}
+
+/* autoplay without dots: the pause button gets a row of its own under the slides, at the widths where they scroll */
+anvil-slider[autoplay]:not([autoplay="0"], [dots], .av-slider--overlay, .av-slider--inline) > .av-slider__pause {
+  inset-block-end: 0;
+}
+
+@media (max-width: 749px) {
+  anvil-slider[autoplay]:not([autoplay="0"], [dots], .av-slider--overlay, .av-slider--inline, .av-slider--fits-m) {
+    padding-block-end: var(--av-slider-pause-room);
+  }
+}
+
+@media (min-width: 750px) and (max-width: 989px) {
+  anvil-slider[autoplay]:not([autoplay="0"], [dots], .av-slider--overlay, .av-slider--inline, .av-slider--fits-t) {
+    padding-block-end: var(--av-slider-pause-room);
+  }
+}
+
+@media (min-width: 990px) {
+  anvil-slider[autoplay]:not([autoplay="0"], [dots], .av-slider--overlay, .av-slider--inline, .av-slider--fits-d) {
+    padding-block-end: var(--av-slider-pause-room);
+  }
+}
+
+/* Liquid knows when every slide fits at a width (snippets/anvil-slider-attrs), so the row is decided at first paint */
+@media (max-width: 749px) {
+  anvil-slider[arrows="desktop"] > .av-slider__arrow {
+    display: none;
+  }
+
+  anvil-slider.av-slider--fits-m {
+    --av-slider-peek-now: 0px;
+  }
+
+  anvil-slider.av-slider--fits-m > :is(.av-slider__dots, .av-slider__arrow) {
+    display: none;
+  }
+}
+
+@media (min-width: 750px) {
+  anvil-slider.av-slider--gutter[arrows] {
+    padding-inline: var(--av-slider-gutter);
+  }
+}
+
+@media (min-width: 750px) and (max-width: 989px) {
+  anvil-slider.av-slider--fits-t {
+    --av-slider-peek-now: 0px;
+  }
+
+  anvil-slider.av-slider--fits-t > :is(.av-slider__dots, .av-slider__arrow) {
+    display: none;
+  }
+
+  anvil-slider.av-slider--fits-t.av-slider--gutter[arrows] {
+    padding-inline: 0;
+  }
+}
+
+@media (min-width: 990px) {
+  anvil-slider.av-slider--fits-d {
+    --av-slider-peek-now: 0px;
+  }
+
+  anvil-slider.av-slider--fits-d > :is(.av-slider__dots, .av-slider__arrow) {
+    display: none;
+  }
+
+  anvil-slider.av-slider--fits-d.av-slider--gutter[arrows] {
+    padding-inline: 0;
+  }
+}
+
+/* av-slider--overlay (a hero): dots in a pill and the pause button sit on the slides, in the scheme's colours, so
+   their contrast follows the scheme rather than the photo. The section pads its slide content to clear them. */
+anvil-slider.av-slider--overlay > .av-slider__dots {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: var(--av-space-3);
+  inset-inline: 0;
+  width: fit-content;
+  max-width: calc(100% - 128px);
+  min-height: 44px;
+  margin: 0 auto;
+  padding: 0 var(--av-space-2);
+  align-items: center;
+  align-content: center;
+  border-radius: var(--av-radius-pill);
+  background: var(--av-bg);
+  color: var(--av-fg);
+  box-shadow: var(--av-shadow-sm);
+}
+
+anvil-slider.av-slider--overlay > .av-slider__dots:empty {
+  display: none;
+}
+
+anvil-slider.av-slider--overlay > .av-slider__pause {
+  inset-block-end: var(--av-space-3);
+  inset-inline-end: var(--av-space-3);
+}
+
+/* av-slider--inline (a one-line bar): borderless arrows and pause button centred on the line, at the theme's inline
+   control size (--av-inline-control, shared with the vertical ticker's pause button). */
+anvil-slider.av-slider--inline {
+  --av-slider-arrow: var(--av-inline-control, 32px);
+  padding-inline: calc(var(--av-slider-arrow) + var(--av-space-2));
+}
+
+anvil-slider.av-slider--inline[autoplay]:not([autoplay="0"]) {
+  padding-inline-end: calc(2 * var(--av-slider-arrow) + var(--av-space-3));
+}
+
+anvil-slider.av-slider--inline.av-is-static {
+  padding-inline: 0;
+}
+
+anvil-slider.av-slider--inline > :is(.av-slider__arrow, .av-slider__pause) {
+  border: 0;
+  border-radius: var(--av-radius-pill);
+  background: none;
+  box-shadow: none;
+  color: inherit;
+}
+
+anvil-slider.av-slider--inline > .av-slider__pause {
+  top: 50%;
+  inset-block-end: auto;
+  inset-inline-end: calc(var(--av-slider-arrow) + var(--av-space-1));
+  width: var(--av-slider-arrow);
+  height: var(--av-slider-arrow);
+  translate: 0 -50%;
 }
 
 /* everything fits: no controls */

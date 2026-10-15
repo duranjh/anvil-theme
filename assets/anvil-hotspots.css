@@ -1,6 +1,10 @@
 /* anvil-hotspots.css — <anvil-hotspots> spots and popovers. Spot positions come from --av-spot-x / --av-spot-y set
    inline by Liquid on .av-hotspots__spot-wrap. Tokens only; the pulse animates transform/opacity under
-   prefers-reduced-motion: no-preference and stops under html[data-animations="off"]. */
+   prefers-reduced-motion: no-preference and stops under html[data-animations="off"].
+   Dot modifiers (DECISIONS 97), on any ancestor of the element, for the shared dot settings of Image hotspots and
+   Shoppable image: dot_color .av-hotspots-dots--accent | --light | --dark | --button, dot_size --sm | --md | --lg, and
+   --pulse to let closed dots pulse (off by default: moving content can distract, WCAG 2.2.2). The dot reads
+   --av-hotspots-dot-bg, --av-hotspots-dot-fg, --av-hotspots-ring and --av-hotspots-inset. */
 
 anvil-hotspots {
   position: relative;
@@ -21,6 +25,17 @@ anvil-hotspots {
   translate: -50% -50%;
 }
 
+/* Each wrapper's translate makes its own stacking context: the wrapper of an open popover paints above later dots,
+   and a focused dot above an open popover (WCAG 2.4.11). Separate rules, so a browser without :has() keeps the
+   focus one. */
+.av-hotspots__spot-wrap:has([aria-expanded="true"]) {
+  z-index: 2;
+}
+
+.av-hotspots__spot-wrap:focus-within {
+  z-index: 3;
+}
+
 anvil-hotspots [data-spot] {
   position: relative;
   display: grid;
@@ -30,7 +45,7 @@ anvil-hotspots [data-spot] {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--av-on-accent);
+  color: var(--av-hotspots-dot-fg, var(--av-on-accent));
   cursor: pointer;
 }
 
@@ -38,18 +53,50 @@ anvil-hotspots [data-spot]::before,
 anvil-hotspots [data-spot]::after {
   content: "";
   position: absolute;
-  inset: 8px;
+  inset: var(--av-hotspots-inset, 8px);
   border-radius: var(--av-radius-pill);
 }
 
 anvil-hotspots [data-spot]::before {
-  background: var(--av-accent);
+  background: var(--av-hotspots-dot-bg, var(--av-accent));
   box-shadow: var(--av-shadow-sm);
 }
 
+anvil-hotspots [data-spot][aria-expanded="true"]::before {
+  box-shadow: 0 0 0 3px var(--av-hotspots-ring, var(--av-bg)), var(--av-shadow-sm);
+}
+
 anvil-hotspots [data-spot]::after {
-  border: 2px solid var(--av-accent);
+  border: 2px solid var(--av-hotspots-dot-bg, var(--av-accent));
   opacity: 0;
+}
+
+.av-hotspots-dots--light {
+  --av-hotspots-dot-bg: var(--av-bg);
+  --av-hotspots-dot-fg: var(--av-fg);
+  --av-hotspots-ring: var(--av-accent);
+}
+
+.av-hotspots-dots--dark {
+  --av-hotspots-dot-bg: var(--av-fg);
+  --av-hotspots-dot-fg: var(--av-bg);
+}
+
+.av-hotspots-dots--button {
+  --av-hotspots-dot-bg: var(--av-btn-bg);
+  --av-hotspots-dot-fg: var(--av-btn-fg);
+}
+
+.av-hotspots-dots--sm {
+  --av-hotspots-inset: 11px;
+}
+
+.av-hotspots-dots--lg {
+  --av-hotspots-inset: 4px;
+}
+
+.av-hotspots-dots--lg .av-hotspots__num {
+  font-size: var(--av-text-sm);
 }
 
 .av-hotspots__num {
@@ -99,7 +146,8 @@ anvil-hotspots [data-spot]::after {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  anvil-hotspots [data-spot]:not(.av-is-open)::after {
+  html:not([data-animations="off"]) .av-hotspots-dots--pulse anvil-hotspots [data-spot]:not(.av-is-open)::after,
+  html:not([data-animations="off"]) anvil-hotspots.av-hotspots-dots--pulse [data-spot]:not(.av-is-open)::after {
     animation: av-hotspot-pulse 2.4s var(--av-ease) infinite;
   }
 }
@@ -114,8 +162,4 @@ anvil-hotspots [data-spot]::after {
     transform: scale(1.9);
     opacity: 0;
   }
-}
-
-html[data-animations="off"] anvil-hotspots [data-spot]::after {
-  animation: none;
 }

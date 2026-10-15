@@ -1,0 +1,323 @@
+{%- liquid
+  assign s = section.settings
+
+  assign style = s.style | default: 'wave'
+  assign is_shape = true
+  if style == 'line' or style == 'icon'
+    assign is_shape = false
+  endif
+
+  # Automatic colour: shapes take the background of the picked scheme (the
+  # section they flow into), lines and icons take the border colour. The scheme
+  # class on the art element only re-defines the --av-* tokens there; without
+  # .av-scheme it paints no background of its own.
+  assign color = s.color | default: 'auto'
+  assign scheme_class = ''
+  if color == 'auto'
+    if is_shape and s.shape_scheme != blank
+      assign color = 'scheme'
+      assign scheme_class = ' av-scheme--' | append: s.shape_scheme.id
+    elsif is_shape
+      assign color = 'accent'
+    else
+      assign color = 'border'
+    endif
+  endif
+
+  assign art_class = 'av-divider__art av-divider__art--' | append: style | append: ' av-divider__art--c-' | append: color
+  # Band height for every style: shapes fill it, lines and icons sit centred in it.
+  assign band_mobile = s.height_mobile | default: 40
+  assign band_desktop = s.height | default: 64
+  assign art_style = '--av-divider-h: ' | append: band_mobile | append: 'px; --av-divider-hd: ' | append: band_desktop | append: 'px;'
+  assign shape_path = ''
+
+  if is_shape
+    assign art_class = art_class | append: ' av-divider__art--shape'
+    if s.flip
+      assign art_class = art_class | append: ' av-divider__art--flip'
+    endif
+    # Curve, peak and zigzag are symmetric about x = 600; only wave and angle mirror.
+    if s.mirror
+      if style == 'wave' or style == 'angle'
+        assign art_class = art_class | append: ' av-divider__art--mirror'
+      endif
+    endif
+    if s.width == 'full'
+      assign art_class = art_class | append: ' av-divider__art--bleed'
+    endif
+
+    # One path in a 1200 x 100 box, filled from the bottom edge up; flip and
+    # mirror are CSS transforms, so every shape is written once.
+    case style
+      when 'wave'
+        assign wave_count = s.waves | default: 2 | at_least: 1 | at_most: 6
+        assign wave_half = 600 | divided_by: wave_count
+        assign wave_ctrl = wave_half | divided_by: 2
+        assign wave_segs = wave_count | times: 2
+        assign shape_path = 'M0 40Q' | append: wave_ctrl | append: ' -40 ' | append: wave_half | append: ' 40'
+        for i in (2..wave_segs)
+          assign wave_x = wave_half | times: i
+          assign shape_path = shape_path | append: 'T' | append: wave_x | append: ' 40'
+        endfor
+        assign shape_path = shape_path | append: 'V100H0Z'
+      when 'curve'
+        assign shape_path = 'M0 100Q600 -100 1200 100Z'
+      when 'angle'
+        assign shape_path = 'M0 100L1200 0V100Z'
+      when 'peak'
+        assign shape_path = 'M0 100L600 0L1200 100Z'
+      when 'zigzag'
+        assign tooth_count = s.teeth | default: 24 | at_least: 2 | at_most: 48
+        assign tooth_w = 1200.0 | divided_by: tooth_count
+        assign shape_path = 'M0 100'
+        for i in (1..tooth_count)
+          assign tooth_tip = i | minus: 0.5 | times: tooth_w | round: 2
+          assign tooth_base = i | times: tooth_w | round: 2
+          assign shape_path = shape_path | append: 'L' | append: tooth_tip | append: ' 0L' | append: tooth_base | append: ' 100'
+        endfor
+        assign shape_path = shape_path | append: 'Z'
+    endcase
+  else
+    case s.line_style
+      when 'dashed', 'dotted', 'double'
+        assign line_style = s.line_style
+      else
+        assign line_style = 'solid'
+    endcase
+    assign art_style = art_style | append: ' --av-divider-t: ' | append: s.thickness | append: 'px; --av-divider-ls: ' | append: line_style | append: '; --av-divider-w: ' | append: s.line_width | append: '%;'
+  endif
+
+  if style == 'icon'
+    assign icon_px = s.icon_size | default: 24
+    assign icon_img_px = icon_px | times: 2
+    assign icon_img_widths = icon_px | append: ', ' | append: icon_img_px
+    assign icon_img_sizes = icon_px | append: 'px'
+    assign art_style = art_style | append: ' --av-divider-icon: ' | append: icon_px | append: 'px;'
+    # Eager in the first two template sections (snippets/anvil-above-fold); a divider in a section group stays lazy.
+    capture fold
+      render 'anvil-above-fold', section: section
+    endcapture
+    assign icon_loading = 'eager'
+    if fold contains 'lazy'
+      assign icon_loading = 'lazy'
+    endif
+  endif
+
+  assign art_class = art_class | append: scheme_class
+  assign art_first = false
+  if is_shape and s.flip
+    assign art_first = true
+  endif
+
+  # The flush rule applies only where the divider shows; on the other
+  # breakpoint the section is display:none and the neighbours keep the gap.
+  assign flush_open = ''
+  assign flush_close = ''
+  case s.show_on
+    when 'mobile'
+      assign flush_open = '@media (max-width: 749px) {'
+      assign flush_close = '}'
+    when 'desktop'
+      assign flush_open = '@media (min-width: 750px) {'
+      assign flush_close = '}'
+  endcase
+-%}
+{%- capture art -%}
+  <div class="{{ art_class }}" style="{{ art_style }}" aria-hidden="true">
+    {%- if is_shape -%}
+      <svg class="av-divider__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 100" preserveAspectRatio="none" focusable="false"><path d="{{ shape_path }}"/></svg>
+    {%- elsif style == 'icon' -%}
+      <span class="av-divider__mark">
+        {%- if s.icon_image != blank -%}
+          {{ s.icon_image | image_url: width: icon_img_px | image_tag: widths: icon_img_widths, sizes: icon_img_sizes, loading: icon_loading, alt: '' }}
+        {%- else -%}
+          {%- render 'anvil-icon', name: s.icon, size: icon_px -%}
+        {%- endif -%}
+      </span>
+    {%- endif -%}
+  </div>
+{%- endcapture -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-divider' %}>
+  <div class="av-section__inner">
+    {%- if art_first %}{{ art }}{% endif -%}
+    {% render 'anvil-section-head', section: section %}
+    {%- unless art_first %}{{ art }}{% endunless -%}
+  </div>
+  {%- if is_shape -%}
+    {% style %}
+      {{ flush_open }}
+      #shopify-section-{{ section.id }} > .av-section,
+      #shopify-section-{{ section.id }} + .shopify-section > .av-section {
+        margin-top: 0;
+      }
+      {{ flush_close }}
+    {% endstyle %}
+  {%- endif -%}
+</div>
+{% stylesheet %}
+.av-divider__art{color:var(--av-border);--av-divider-band:var(--av-divider-h,40px)}
+.av-divider__art--c-accent{color:var(--av-accent)}
+.av-divider__art--c-text{color:var(--av-fg)}
+.av-divider__art--c-scheme{color:var(--av-bg)}
+/* Shapes: the filled edge overlaps its neighbour by 1px so no hairline seam shows at fractional pixel positions. */
+.av-divider__art--shape{height:var(--av-divider-band);margin-bottom:-1px}
+.av-divider__art--flip{margin-top:-1px;margin-bottom:0}
+.av-divider__art--bleed{margin-inline:calc(var(--av-gutter) * -1)}
+.av-divider__svg{display:block;width:100%;height:100%;fill:currentColor}
+.av-divider__art--flip .av-divider__svg{transform:scaleY(-1)}
+.av-divider__art--mirror .av-divider__svg{transform:scaleX(-1)}
+.av-divider__art--flip.av-divider__art--mirror .av-divider__svg{transform:scale(-1)}
+/* Lines and icons: the rule is centred in the band; an icon taller than the band grows it. */
+.av-divider__art--line,.av-divider__art--icon{display:flex;align-items:center;gap:var(--av-space-4);width:var(--av-divider-w,100%);min-height:var(--av-divider-band);margin-inline:auto}
+.av-divider__art--line::before,.av-divider__art--icon::before,.av-divider__art--icon::after{content:"";flex:1 1 0;min-width:0;border-top:var(--av-divider-t,1px) var(--av-divider-ls,solid) currentColor}
+.av-divider__mark{flex:none;display:inline-flex;align-items:center;justify-content:center}
+.av-divider__mark > svg,.av-divider__mark > img{display:block;width:var(--av-divider-icon,24px);height:var(--av-divider-icon,24px);object-fit:contain}
+/* A flipped shape comes before the heading; the heading's own bottom margin would escape a section with 0 padding. */
+.av-divider__art + .av-section-head{margin-top:var(--av-space-6);margin-bottom:0}
+@media (min-width: 750px){
+.av-divider__art{--av-divider-band:var(--av-divider-hd,64px)}
+}
+/* High contrast forces the fill to CanvasText and every background to Canvas; a solid bar there means nothing, so the band stays empty. */
+@media (forced-colors: active){
+.av-divider__art--shape{visibility:hidden}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Section divider",
+  "disabled_on": { "groups": ["custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Section divider" },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "options": [
+        { "value": "line", "label": "Line" },
+        { "value": "icon", "label": "Line with icon" },
+        { "value": "wave", "label": "Wave" },
+        { "value": "curve", "label": "Curve" },
+        { "value": "angle", "label": "Angle" },
+        { "value": "peak", "label": "Peak" },
+        { "value": "zigzag", "label": "Zigzag" }
+      ],
+      "default": "wave",
+      "info": "Shapes sit flush against the sections above and below, even when Theme settings add space between sections. Set the paddings to 0 so they touch."
+    },
+    {
+      "type": "select",
+      "id": "color",
+      "label": "Colour",
+      "options": [
+        { "value": "auto", "label": "Automatic" },
+        { "value": "accent", "label": "Accent" },
+        { "value": "text", "label": "Text colour" },
+        { "value": "border", "label": "Border colour" }
+      ],
+      "default": "auto",
+      "info": "Automatic fills shapes with the background of the scheme picked below and draws lines in the border colour."
+    },
+    {
+      "type": "color_scheme",
+      "id": "shape_scheme",
+      "label": "Shape fill scheme",
+      "default": "scheme-2",
+      "info": "Fills the shape. Set Layout > Colour scheme to the section above and this to the section below; swap them when the shape is flipped. Gradient backgrounds fill with their base colour.",
+      "visible_if": "{{ section.settings.color == 'auto' and section.settings.style != 'line' and section.settings.style != 'icon' }}"
+    },
+    { "type": "range", "id": "height", "label": "Height on desktop", "min": 16, "max": 240, "step": 4, "unit": "px", "default": 64, "info": "Shapes fill this height; lines and icons sit centred in it." },
+    { "type": "range", "id": "height_mobile", "label": "Height on phones", "min": 8, "max": 160, "step": 4, "unit": "px", "default": 40 },
+    { "type": "header", "content": "Shape", "visible_if": "{{ section.settings.style != 'line' and section.settings.style != 'icon' }}" },
+    { "type": "checkbox", "id": "flip", "label": "Flip upside down", "default": false, "info": "Hangs the shape from the top edge so it flows out of the section above.", "visible_if": "{{ section.settings.style != 'line' and section.settings.style != 'icon' }}" },
+    { "type": "checkbox", "id": "mirror", "label": "Mirror left to right", "default": false, "visible_if": "{{ section.settings.style == 'wave' or section.settings.style == 'angle' }}" },
+    { "type": "range", "id": "waves", "label": "Waves", "min": 1, "max": 6, "step": 1, "default": 2, "visible_if": "{{ section.settings.style == 'wave' }}" },
+    { "type": "range", "id": "teeth", "label": "Zigzag teeth", "min": 4, "max": 48, "step": 2, "default": 24, "visible_if": "{{ section.settings.style == 'zigzag' }}" },
+    { "type": "header", "content": "Line and icon", "visible_if": "{{ section.settings.style == 'line' or section.settings.style == 'icon' }}" },
+    {
+      "type": "select",
+      "id": "line_style",
+      "label": "Line style",
+      "options": [
+        { "value": "solid", "label": "Solid" },
+        { "value": "dashed", "label": "Dashed" },
+        { "value": "dotted", "label": "Dotted" },
+        { "value": "double", "label": "Double" }
+      ],
+      "default": "solid",
+      "info": "Double needs a thickness of 3 px or more.",
+      "visible_if": "{{ section.settings.style == 'line' or section.settings.style == 'icon' }}"
+    },
+    { "type": "range", "id": "thickness", "label": "Thickness", "min": 1, "max": 8, "step": 1, "unit": "px", "default": 1, "visible_if": "{{ section.settings.style == 'line' or section.settings.style == 'icon' }}" },
+    { "type": "range", "id": "line_width", "label": "Line width", "min": 10, "max": 100, "step": 5, "unit": "%", "default": 100, "visible_if": "{{ section.settings.style == 'line' or section.settings.style == 'icon' }}" },
+    {
+      "type": "select",
+      "id": "icon",
+      "label": "Icon",
+      "options": [
+        { "value": "sparkles", "label": "Sparkles" },
+        { "value": "star", "label": "Star" },
+        { "value": "heart", "label": "Heart" },
+        { "value": "leaf", "label": "Leaf" },
+        { "value": "feather", "label": "Feather" },
+        { "value": "flame", "label": "Flame" },
+        { "value": "crown", "label": "Crown" },
+        { "value": "snowflake", "label": "Snowflake" },
+        { "value": "sun", "label": "Sun" },
+        { "value": "moon", "label": "Moon" },
+        { "value": "droplet", "label": "Droplet" },
+        { "value": "waves", "label": "Waves" },
+        { "value": "mountain", "label": "Mountain" },
+        { "value": "trees", "label": "Trees" },
+        { "value": "infinity", "label": "Infinity" },
+        { "value": "zap", "label": "Lightning" },
+        { "value": "gift", "label": "Gift" },
+        { "value": "award", "label": "Award" },
+        { "value": "flag", "label": "Flag" },
+        { "value": "target", "label": "Target" },
+        { "value": "quote", "label": "Quote" },
+        { "value": "plus", "label": "Plus" },
+        { "value": "x", "label": "Cross" },
+        { "value": "scissors", "label": "Scissors" },
+        { "value": "coffee", "label": "Coffee" },
+        { "value": "music", "label": "Music" },
+        { "value": "hand-heart", "label": "Hand with heart" }
+      ],
+      "default": "sparkles",
+      "visible_if": "{{ section.settings.style == 'icon' }}"
+    },
+    {
+      "type": "image_picker",
+      "id": "icon_image",
+      "label": "Custom icon image",
+      "info": "Replaces the icon. Square images work best. Upload only artwork you are entitled to use.",
+      "visible_if": "{{ section.settings.style == 'icon' }}"
+    },
+    { "type": "range", "id": "icon_size", "label": "Icon size", "min": 16, "max": 64, "step": 4, "unit": "px", "default": 24, "visible_if": "{{ section.settings.style == 'icon' }}" }
+  ],
+  "presets": [
+    {
+      "name": "Section divider",
+      "settings": {
+        "width": "full",
+        "pad_top": 0,
+        "pad_bottom": 0
+      }
+    }
+  ]
+}
+{% endschema %}

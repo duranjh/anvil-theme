@@ -1,0 +1,297 @@
+{%- liquid
+  assign s = section.settings
+  assign design = request.design_mode
+
+  # Lines that render: a blank line is skipped on the storefront and kept in the editor (with a note) so the
+  # merchant can still select it. Counted first for the "Slide N of M" names. Never put a tag delimiter inside a
+  # comment line of a liquid tag: it would end the tag early.
+  assign line_count = 0
+  for block in section.blocks
+    if block.settings.text != blank or design
+      assign line_count = line_count | plus: 1
+    endif
+  endfor
+  assign multi = false
+  if line_count > 1
+    assign multi = true
+  endif
+
+  assign transition = s.transition | default: 'slide'
+  assign text_size = s.text_size | default: 'md'
+  assign align = s.text_align | default: 'center'
+  assign interval = s.autoplay | default: 4
+  assign line_h = s.height | default: 40
+
+  assign root_class = 'av-ticker-vertical av-ticker-vertical--' | append: transition
+  assign root_class = root_class | append: ' av-ticker-vertical--' | append: text_size
+  assign root_class = root_class | append: ' av-ticker-vertical--' | append: align
+  if s.uppercase
+    assign root_class = root_class | append: ' av-ticker-vertical--upper'
+  endif
+  if multi
+    assign root_class = root_class | append: ' av-ticker-vertical--multi av-enhance'
+    # strip_html keeps the heading's stored entities (an ampersand is saved as an entity), so the label is printed
+    # with escape_once, which leaves those entities as they are instead of escaping them a second time.
+    assign region_label = s.heading | strip_html | strip
+    if region_label == blank
+      assign region_label = 'anvil.a11y.highlights' | t
+    endif
+    assign pause_label = 'anvil.a11y.pause' | t
+    assign play_label = 'anvil.a11y.play' | t
+  endif
+  assign empty_label = 'anvil.editor.block_empty' | t
+  assign n = 0
+-%}
+{%- if line_count > 0 -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-ticker-vertical' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if line_count > 0 -%}
+      <anvil-ticker-vertical
+        class="{{ root_class }}"
+        style="--av-ticker-vertical-h: {{ line_h }}px;"
+        {%- if multi %}
+          interval="{{ interval }}"
+          role="region"
+          aria-roledescription="{{ 'anvil.a11y.carousel' | t }}"
+          aria-label="{{ region_label | escape_once }}"
+        {%- endif %}
+      >
+        {%- if multi -%}
+          <button
+            type="button"
+            class="av-ticker-vertical__toggle av-enhanced-only"
+            aria-label="{{ pause_label | escape }}"
+            data-anvil-toggle
+            data-anvil-pause="{{ pause_label | escape }}"
+            data-anvil-play="{{ play_label | escape }}"
+          >
+            {%- render 'anvil-icon', name: 'pause', size: 18, class: 'av-ticker-vertical__ico-pause' -%}
+            {%- render 'anvil-icon', name: 'play', size: 18, class: 'av-ticker-vertical__ico-play' -%}
+          </button>
+        {%- endif -%}
+        <div class="av-ticker-vertical__viewport"{% if multi %} aria-live="polite" data-anvil-viewport{% endif %}>
+          {%- for block in section.blocks -%}
+            {%- liquid
+              assign text = block.settings.text
+              assign link = block.settings.link
+              if text == blank
+                unless design
+                  continue
+                endunless
+              endif
+              assign n = n | plus: 1
+              # A link around the whole line cannot hold the text's own links (no nested anchors).
+              if link != blank and text contains '<a'
+                assign text = text | strip_html
+              endif
+            -%}
+            <div
+              class="av-ticker-vertical__item{% if n == 1 %} av-is-current{% endif %}"
+              {%- if multi %}
+                role="group"
+                aria-label="{{ 'anvil.a11y.slide_of' | t: index: n, total: line_count }}"
+                data-anvil-line
+              {%- endif %}
+              {{ block.shopify_attributes }}
+            >
+              {%- if text == blank -%}
+                <span class="av-ticker-vertical__text av-example-note">{{ empty_label }}</span>
+              {%- elsif link != blank -%}
+                <a class="av-ticker-vertical__text av-ticker-vertical__link" href="{{ link }}">{{ text }}</a>
+              {%- else -%}
+                <span class="av-ticker-vertical__text">{{ text }}</span>
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+      </anvil-ticker-vertical>
+      {%- if multi -%}
+        <script type="module" src="{{ 'anvil-ticker-vertical.js' | asset_url }}"></script>
+      {%- endif -%}
+    {%- endif -%}
+  </div>
+</div>
+{%- elsif design -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-ticker-vertical' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {% render 'anvil-editor-empty' %}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+.av-ticker-vertical{--av-ticker-vertical-btn:var(--av-inline-control,32px);position:relative;display:block;font-size:var(--av-text-md);line-height:1.4}
+.av-ticker-vertical--sm{font-size:var(--av-text-sm)}
+.av-ticker-vertical--lg{font-size:var(--av-text-lg)}
+.av-ticker-vertical--xl{font-size:var(--av-text-xl)}
+.av-ticker-vertical--upper{text-transform:uppercase;letter-spacing:0.06em}
+/* Room for the pause button on both sides keeps centred lines centred; reserved from the first paint so nothing moves
+   when the button appears. */
+.av-ticker-vertical--multi{padding-inline:calc(var(--av-ticker-vertical-btn) + var(--av-space-2))}
+/* Every line sits in the same grid cell, so the strip is as tall as its tallest line (or the height setting) and never
+   changes height while it rotates. overflow: clip cannot be scrolled by focus, unlike hidden. */
+.av-ticker-vertical__viewport{display:grid;min-height:var(--av-ticker-vertical-h,40px);padding:var(--av-space-1);overflow:hidden;overflow:clip}
+.av-ticker-vertical__item{grid-area:1 / 1;display:flex;align-items:center;justify-content:center;min-width:0;text-align:center;opacity:0;pointer-events:none}
+.av-ticker-vertical--left .av-ticker-vertical__item{justify-content:flex-start;text-align:start}
+.av-ticker-vertical--right .av-ticker-vertical__item{justify-content:flex-end;text-align:end}
+.av-ticker-vertical__item.av-is-current{opacity:1;pointer-events:auto}
+/* Waiting lines sit just below the viewport's padding box, lines that left just above it. */
+.av-ticker-vertical--slide .av-ticker-vertical__item{transform:translateY(calc(100% + var(--av-space-1)))}
+.av-ticker-vertical--slide .av-ticker-vertical__item.av-is-leaving{transform:translateY(calc(-100% - var(--av-space-1)))}
+.av-ticker-vertical--slide .av-ticker-vertical__item.av-is-current{transform:none}
+/* A focused link in a hidden line brings that line forward, with or without JavaScript. The swap is instant
+   (transition: none on both sides), so the focused link is visible at once and two lines never overlap. */
+.av-ticker-vertical__viewport:focus-within .av-ticker-vertical__item:not(:focus-within){opacity:0;pointer-events:none;transition:none}
+.av-ticker-vertical .av-ticker-vertical__item:focus-within{opacity:1;pointer-events:auto;transform:none;transition:none}
+/* Slide: both lines move together. Fade: the old line fades out first, then the new one fades in, so two lines never
+   overlap. Only when the shopper allows motion and Theme settings keep animations on. */
+@media (prefers-reduced-motion: no-preference){
+html:not([data-animations="off"]) .av-ticker-vertical__item{transition:opacity var(--av-dur) var(--av-ease),transform var(--av-dur) var(--av-ease)}
+html:not([data-animations="off"]) .av-ticker-vertical--fade .av-ticker-vertical__item{transition-duration:calc(var(--av-dur) / 2)}
+html:not([data-animations="off"]) .av-ticker-vertical--fade .av-ticker-vertical__item.av-is-current{transition-delay:calc(var(--av-dur) / 2)}
+}
+.av-ticker-vertical .av-ticker-vertical__item.av-is-instant{transition:none}
+.av-ticker-vertical__text{min-width:0;overflow-wrap:anywhere}
+.av-ticker-vertical__text a,.av-ticker-vertical__link{color:inherit;text-decoration:underline;text-underline-offset:0.15em}
+.av-ticker-vertical__link:hover{text-decoration-thickness:2px}
+/* The global ring (2px at a 3px offset) would reach 5px past the link and lose its outer edge to the viewport's 4px
+   padding and clip; at a 1px offset it ends 3px out, inside the padding. */
+.av-ticker-vertical__text a:focus-visible,.av-ticker-vertical__link:focus-visible{outline-offset:1px}
+/* Pause button: the theme's inline control (32 px, borderless pill), like the announcement bar's. */
+.av-ticker-vertical__toggle{position:absolute;z-index:1;inset-block-start:50%;inset-inline-end:0;display:grid;place-items:center;width:var(--av-ticker-vertical-btn);height:var(--av-ticker-vertical-btn);padding:0;border:0;border-radius:var(--av-radius-pill);background:none;color:inherit;translate:0 -50%;cursor:pointer}
+.av-ticker-vertical__toggle:hover{background:rgb(var(--av-fg-rgb) / 0.08)}
+.av-ticker-vertical__toggle .av-ticker-vertical__ico-play,.av-ticker-vertical.av-is-paused .av-ticker-vertical__ico-pause{display:none}
+.av-ticker-vertical.av-is-paused .av-ticker-vertical__ico-play{display:block}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Ticker (vertical)",
+  "max_blocks": 12,
+  "disabled_on": { "groups": ["custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Ticker (vertical)" },
+    {
+      "type": "range",
+      "id": "autoplay",
+      "label": "Auto-advance every",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 4,
+      "info": "Shoppers can pause with the button beside the lines, and rotation waits while the pointer or keyboard focus is on them. It starts paused on the first line for shoppers who prefer reduced motion, and for every shopper when animations are off in Theme settings."
+    },
+    {
+      "type": "range",
+      "id": "height",
+      "label": "Height",
+      "min": 24,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "default": 40,
+      "info": "Minimum height of the line area. A line that wraps on a small screen makes it taller instead of being cut off."
+    },
+    {
+      "type": "select",
+      "id": "transition",
+      "label": "Transition",
+      "options": [
+        { "value": "slide", "label": "Slide up" },
+        { "value": "fade", "label": "Fade" }
+      ],
+      "default": "slide"
+    },
+    {
+      "type": "select",
+      "id": "text_size",
+      "label": "Text size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "xl", "label": "Extra large" }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Text alignment",
+      "default": "center"
+    },
+    {
+      "type": "checkbox",
+      "id": "uppercase",
+      "label": "Uppercase text",
+      "default": false
+    }
+  ],
+  "blocks": [
+    {
+      "type": "text",
+      "name": "Text",
+      "settings": [
+        {
+          "type": "inline_richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "Example: replace with a message that is true for your store",
+          "info": "State only what is true for your store: offers, shipping thresholds and dates must match your settings and policies. No deadlines or stock levels that are not real."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link",
+          "info": "Optional. Makes the whole line a link. If the text has its own links, the line is then shown as plain text without links, bold or italic."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Ticker (vertical)",
+      "settings": {
+        "pad_top": 12,
+        "pad_bottom": 12
+      },
+      "blocks": [
+        {
+          "type": "text",
+          "settings": {
+            "text": "Example: <strong>free shipping</strong> on orders over $50 — replace with your real threshold"
+          }
+        },
+        {
+          "type": "text",
+          "settings": {
+            "text": "Example: 30-day returns — replace with the window in your refund policy"
+          }
+        },
+        {
+          "type": "text",
+          "settings": {
+            "text": "Example: new arrivals every week — replace with news that is true for your store"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

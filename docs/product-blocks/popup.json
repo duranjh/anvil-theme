@@ -46,7 +46,7 @@
         },
         {
           "value": "info",
-          "label": "Information"
+          "label": "Info"
         },
         {
           "value": "truck",
@@ -62,7 +62,7 @@
         },
         {
           "value": "help-circle",
-          "label": "Question"
+          "label": "Question mark"
         },
         {
           "value": "file-text",
@@ -70,7 +70,7 @@
         },
         {
           "value": "shield-check",
-          "label": "Shield"
+          "label": "Shield check"
         }
       ],
       "default": "none"

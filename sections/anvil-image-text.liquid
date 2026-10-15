@@ -1,0 +1,734 @@
+{%- liquid
+  assign s = section.settings
+
+  # Layout classes. Phones stack the media above or below the text; from 750 px the two sit side by side.
+  assign media_w = s.image_width | default: 50
+  assign side = s.image_side | default: 'left'
+  assign side_mobile = s.image_side_mobile | default: 'top'
+  assign v_align = s.valign | default: 'center'
+  assign align_d = s.text_align | default: 'left'
+  assign align_m = s.text_align_mobile | default: 'left'
+
+  assign row_class = 'av-image-text av-image-text--' | append: side
+  assign row_class = row_class | append: ' av-image-text--m-' | append: side_mobile
+  assign row_class = row_class | append: ' av-image-text--v-' | append: v_align
+  assign row_class = row_class | append: ' av-image-text--ca-m-' | append: align_m
+  assign row_class = row_class | append: ' av-image-text--ca-d-' | append: align_d
+
+  # Content box: the shared .av-box container (Theme settings > Containers) in its own colour scheme.
+  assign content_class = 'av-image-text__content'
+  if s.box
+    assign box_scheme = 'scheme-1'
+    if s.box_scheme != blank
+      assign box_scheme = s.box_scheme.id
+    endif
+    assign content_class = content_class | append: ' av-image-text__content--card av-box av-scheme av-scheme--' | append: box_scheme
+  endif
+
+  # Media in the first two template sections (snippets/anvil-above-fold) loads eagerly. Only the first section's
+  # media is the likely LCP image, and only when it shows on every device.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign media_loading = 'eager'
+  assign media_priority = false
+  if fold == 'lazy'
+    assign media_loading = 'lazy'
+  elsif fold == 'lcp' and s.show_on == 'all'
+    assign media_priority = true
+  endif
+
+  # Heading blocks are h3. With no section heading, a visually hidden h2 sits above the row whenever a heading
+  # block renders, so the outline never jumps from the page's h1 to an h3 (CONVENTIONS §3).
+  assign has_block_heading = false
+  assign accent_style = s.accent_style | default: 'color'
+  assign accent_open = '<span class="av-accent av-accent--' | append: accent_style | append: '">'
+
+  assign load_product_js = false
+-%}
+{%- capture content_html -%}
+  {%- assign in_row = false -%}
+  {%- for block in section.blocks -%}
+    {%- assign b = block.settings -%}
+    {%- comment -%} Consecutive button blocks share one row. {%- endcomment -%}
+    {%- liquid
+      if block.type == 'button' and in_row == false
+        echo '<div class="av-image-text__buttons">'
+        assign in_row = true
+      elsif block.type != 'button' and in_row
+        echo '</div>'
+        assign in_row = false
+      endif
+    -%}
+    {%- case block.type -%}
+      {%- when 'eyebrow' -%}
+        {%- if b.text != blank -%}
+          <p class="av-image-text__eyebrow av-image-text__eyebrow--{{ b.style | default: 'plain' }}" {{ block.shopify_attributes }}>{{ b.text | escape }}</p>
+        {%- elsif request.design_mode -%}
+          <p class="av-image-text__note av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+        {%- endif -%}
+
+      {%- when 'heading' -%}
+        {%- liquid
+          # The theme Heading block's size scale (blocks/anvil-heading.liquid).
+          case b.size
+            when 'xs'
+              assign size_class = 'av-text--lg'
+            when 'sm'
+              assign size_class = 'av-text--xl'
+            when 'lg'
+              assign size_class = 'av-text--3xl'
+            when 'xl'
+              assign size_class = 'av-text--4xl'
+            else
+              assign size_class = 'av-text--2xl'
+          endcase
+        -%}
+        {%- if b.heading != blank -%}
+          {%- assign has_block_heading = true -%}
+          <h3 class="av-image-text__heading {{ size_class }}" {{ block.shopify_attributes }}>{{ b.heading | replace: '<strong>', accent_open | replace: '</strong>', '</span>' }}</h3>
+        {%- elsif request.design_mode -%}
+          <p class="av-image-text__note av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+        {%- endif -%}
+
+      {%- when 'text' -%}
+        {%- if b.text != blank -%}
+          <div class="av-image-text__text av-image-text__text--{{ b.size | default: 'md' }} av-rte" {{ block.shopify_attributes }}>{{ b.text }}</div>
+        {%- elsif request.design_mode -%}
+          <p class="av-image-text__note av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+        {%- endif -%}
+
+      {%- when 'checklist' -%}
+        {%- liquid
+          # Up to 12 non-blank lines; blank lines do not count toward the cap.
+          assign lines = b.lines | newline_to_br | split: '<br />'
+          assign line_count = 0
+          for line in lines
+            assign line_text = line | strip
+            if line_text != blank
+              assign line_count = line_count | plus: 1
+              if line_count >= 12
+                break
+              endif
+            endif
+          endfor
+        -%}
+        {%- if line_count > 0 -%}
+          {%- capture check_icon -%}{% render 'anvil-icon', name: b.icon, size: 20 %}{%- endcapture -%}
+          {%- assign shown_lines = 0 -%}
+          <ul class="av-image-text__checklist" role="list" {{ block.shopify_attributes }}>
+            {%- for line in lines -%}
+              {%- assign line_text = line | strip -%}
+              {%- if line_text != blank -%}
+                <li class="av-image-text__check">
+                  <span class="av-image-text__check-icon">{{ check_icon }}</span>
+                  <span class="av-image-text__check-text">{{ line_text | escape }}</span>
+                </li>
+                {%- assign shown_lines = shown_lines | plus: 1 -%}
+                {%- if shown_lines >= line_count -%}{%- break -%}{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+        {%- elsif request.design_mode -%}
+          <p class="av-image-text__note av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+        {%- endif -%}
+
+      {%- when 'stars' -%}
+        {%- liquid
+          # Product-page sections can read the template's product; elsewhere it is nil.
+          assign rated = b.product | default: product
+          assign rating = rated.metafields.reviews.rating.value
+          assign rating_count = rated.metafields.reviews.rating_count.value
+        -%}
+        {%- if rating != blank -%}
+          <div class="av-image-text__stars" {{ block.shopify_attributes }}>
+            {%- render 'anvil-stars', rating: rating.rating, max: rating.scale_max, size: 18 -%}
+            {%- if b.show_number -%}
+              <span class="av-image-text__rating" aria-hidden="true">{{ rating.rating | round: 1 }}/{{ rating.scale_max | round }}</span>
+            {%- endif -%}
+            {%- if b.show_count and rating_count != blank -%}
+              <span class="av-image-text__count" aria-hidden="true">({{ rating_count }})</span><span class="av-visually-hidden">{{ 'anvil.stars.count' | t: count: rating_count }}</span>
+            {%- endif -%}
+          </div>
+        {%- elsif request.design_mode -%}
+          {%- if rated == blank -%}
+            <p class="av-image-text__note av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.atc_no_product' | t }}</p>
+          {%- else -%}
+            <p class="av-image-text__note av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.rating_missing' | t }}</p>
+          {%- endif -%}
+        {%- endif -%}
+
+      {%- when 'button' -%}
+        {%- liquid
+          # One button per block, as in the theme Button block; consecutive button blocks share one row.
+          assign label = b.label | strip | escape
+          assign btn_style = b.style | default: 'primary'
+          assign btn_icon = ''
+          if btn_style == 'link_arrow'
+            assign btn_style = 'link'
+            assign btn_icon = 'arrow-right'
+          endif
+        -%}
+        {%- if label != blank and b.url != blank -%}
+          <span class="av-image-text__button" {{ block.shopify_attributes }}>
+            {%- render 'anvil-button', label: label, url: b.url, style: btn_style, size: b.size, icon: btn_icon -%}
+          </span>
+        {%- elsif request.design_mode -%}
+          <p class="av-image-text__note av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+        {%- endif -%}
+
+      {%- when 'atc' -%}
+        {%- assign buy = b.product | default: product -%}
+        {%- if buy != blank -%}
+          {%- liquid
+            assign buy_variant = buy.first_available_variant | default: buy.selected_or_first_available_variant
+            # A product with a variant choice, a subscription or a minimum quantity is opened instead of added.
+            # A single variant with a named option (e.g. "Color: Black") has nothing to choose, so it adds in one click.
+            assign link_mode = ''
+            if buy.has_only_default_variant == false and buy.variants.size > 1
+              assign link_mode = 'options'
+            elsif buy.requires_selling_plan or buy_variant.quantity_rule.min > 1
+              assign link_mode = 'view'
+            endif
+            assign btn_style = b.style | default: 'primary'
+            assign add_label = b.label | strip | escape
+            if add_label == blank
+              assign add_label = 'anvil.product.add_to_cart' | t
+            endif
+            assign form_id = 'anvil-it-atc-' | append: block.id
+            assign link_label = 'anvil.product.choose_options' | t
+            if link_mode == 'view'
+              assign link_label = 'anvil.card.view' | t
+            endif
+            assign sold_label = 'anvil.product.sold_out' | t
+            # Several add buttons can share a page, so each one's name carries the product title
+            # (anvil-button escapes aria_label).
+            assign link_name = link_label | append: ': ' | append: buy.title
+            assign sold_name = sold_label | append: ': ' | append: buy.title
+          -%}
+          <div class="av-image-text__atc" {{ block.shopify_attributes }}>
+            {%- if b.show_price -%}
+              {%- if link_mode == 'options' -%}
+                {%- render 'anvil-price', product: buy, class: 'av-image-text__price' -%}
+              {%- else -%}
+                {%- render 'anvil-price', variant: buy_variant, class: 'av-image-text__price' -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- if link_mode != '' -%}
+              {%- render 'anvil-button', label: link_label, url: buy.url, style: btn_style, aria_label: link_name -%}
+            {%- elsif buy_variant.available -%}
+              {%- assign load_product_js = true -%}
+              <anvil-product-form form-id="{{ form_id }}">
+                {%- form 'product', buy, id: form_id, class: 'av-image-text__form' -%}
+                  <input type="hidden" name="id" value="{{ buy_variant.id }}">
+                  <input type="hidden" name="quantity" value="1">
+                  <button class="av-btn av-btn--{{ btn_style }} av-btn--md" type="submit" name="add">
+                    <span class="av-btn__label" data-anvil-bind="add_label">{{ add_label }}</span>
+                    <span class="av-visually-hidden">: {{ buy.title | escape }}</span>
+                  </button>
+                  <div class="av-form-message av-form-message--error" role="alert" data-anvil-form-error></div>
+                  <p class="av-visually-hidden" role="status" data-anvil-form-status></p>
+                {%- endform -%}
+              </anvil-product-form>
+            {%- else -%}
+              {%- render 'anvil-button', label: sold_label, style: 'secondary', disabled: true, aria_label: sold_name -%}
+            {%- endif -%}
+          </div>
+        {%- elsif request.design_mode -%}
+          <p class="av-image-text__note av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.atc_no_product' | t }}</p>
+        {%- endif -%}
+    {%- endcase -%}
+  {%- endfor -%}
+  {%- if in_row -%}{{ '</div>' }}{%- endif -%}
+  {%- if section.blocks.size == 0 -%}
+    {% render 'anvil-editor-empty' %}
+  {%- endif -%}
+{%- endcapture -%}
+{%- liquid
+  # The blocks render first, so the layout knows whether any of them shows. With nothing to show on the
+  # storefront (no blocks, or every block empty), the content column is dropped and the media spans the row.
+  assign content_html = content_html | strip
+  assign has_content = true
+  if content_html == ''
+    assign has_content = false
+    assign row_class = row_class | append: ' av-image-text--solo'
+  endif
+
+  # Image sizes. Side by side, the media column is media_w % of the inner width from 750 px, capped by the page or
+  # narrow width (the 1100 px "half" cap). Alone, it spans the inner width (the 2200 px full-bleed cap).
+  assign max_inner = settings.page_width | default: 1400
+  if s.width == 'narrow'
+    assign max_inner = settings.narrow_width | default: 800
+  endif
+  assign cap_bp = max_inner | at_least: 750
+  if has_content
+    assign img_widths = '375, 550, 750, 900, 1100'
+    if s.width == 'full'
+      assign img_widths = '375, 550, 750, 900, 1100, 1500'
+      assign img_sizes = '(min-width: 750px) ' | append: media_w | append: 'vw, 100vw'
+    else
+      assign media_px = max_inner | times: media_w | divided_by: 100
+      assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: media_px | append: 'px, (min-width: 750px) ' | append: media_w | append: 'vw, 100vw'
+    endif
+  else
+    assign img_widths = '375, 550, 750, 1100, 1500, 1800, 2200'
+    if s.width == 'full'
+      assign img_sizes = '100vw'
+    else
+      assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: max_inner | append: 'px, 100vw'
+    endif
+  endif
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-image-text' %}>
+  <div class="av-section__inner">
+    {%- liquid
+      assign fallback = ''
+      if has_block_heading
+        assign fallback = 'anvil.a11y.highlights' | t
+      endif
+    -%}
+    {% render 'anvil-section-head', section: section, fallback: fallback %}
+    <div class="{{ row_class }}" style="--av-image-text-media: {{ media_w }}%;">
+      <div class="av-image-text__media">
+        {%- render 'anvil-media',
+          image: s.image,
+          video: s.video,
+          video_url: s.video_url,
+          autoplay: s.video_autoplay,
+          ratio: s.image_ratio,
+          widths: img_widths,
+          sizes: img_sizes,
+          loading: media_loading,
+          priority: media_priority,
+          placeholder: 'lifestyle-1'
+        -%}
+      </div>
+      {%- if has_content -%}
+        <div class="{{ content_class }}">
+          {{- content_html -}}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+  {%- if load_product_js -%}
+    <script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>
+  {%- endif -%}
+</div>
+{% stylesheet %}
+.av-image-text{--av-it-items:flex-start;--av-it-text:left;display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-6);align-items:center}
+.av-image-text--v-top{align-items:start}
+.av-image-text--v-bottom{align-items:end}
+.av-image-text--m-bottom .av-image-text__media{order:2}
+.av-image-text--ca-m-center{--av-it-items:center;--av-it-text:center}
+.av-image-text--ca-m-right{--av-it-items:flex-end;--av-it-text:right}
+.av-image-text__media{min-width:0}
+.av-image-text__content{display:flex;flex-direction:column;align-items:var(--av-it-items);gap:var(--av-space-4);min-width:0;text-align:var(--av-it-text)}
+.av-image-text__content > *{max-width:100%}
+.av-image-text__content--card{padding:var(--av-space-6) var(--av-space-5)}
+.av-image-text__eyebrow{font-size:var(--av-text-xs);font-weight:600;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;color:var(--av-fg-muted)}
+.av-image-text__eyebrow--accent{color:var(--av-accent)}
+.av-image-text__eyebrow--pill{padding:var(--av-space-1) var(--av-space-3);border-radius:var(--av-radius-pill);background:var(--av-accent);color:var(--av-on-accent)}
+.av-image-text__eyebrow + .av-image-text__heading{margin-top:calc(var(--av-space-2) * -1)}
+.av-image-text__heading{overflow-wrap:break-word}
+.av-image-text__text{max-width:65ch}
+.av-image-text .av-image-text__text--sm{font-size:var(--av-text-sm)}
+.av-image-text .av-image-text__text--lg{font-size:var(--av-text-lg)}
+.av-image-text__checklist{display:grid;gap:var(--av-space-3);text-align:start}
+.av-image-text__check{display:flex;align-items:flex-start;gap:var(--av-space-3);font-size:var(--av-text-md);line-height:1.5}
+.av-image-text__check-icon{flex:none;display:inline-flex;margin-top:calc((1.5em - 20px) / 2);color:var(--av-accent)}
+.av-image-text__check-text{min-width:0;overflow-wrap:anywhere}
+.av-image-text__stars{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2);font-size:var(--av-text-sm);line-height:1.4}
+.av-image-text__rating{font-weight:600}
+.av-image-text__count{color:var(--av-fg-muted)}
+.av-image-text__buttons{display:flex;flex-wrap:wrap;justify-content:var(--av-it-items);gap:var(--av-space-3);margin-top:var(--av-space-2)}
+.av-image-text__buttons:empty{display:none}
+.av-image-text__button{display:inline-flex}
+.av-image-text__atc,.av-image-text__form{display:flex;flex-direction:column;align-items:var(--av-it-items);gap:var(--av-space-3)}
+.av-image-text__atc{margin-top:var(--av-space-2)}
+.av-image-text__note{margin:0}
+@media (min-width: 750px){
+.av-image-text{grid-template-columns:var(--av-image-text-media,50%) minmax(0,1fr);gap:var(--av-space-7)}
+.av-image-text--right{grid-template-columns:minmax(0,1fr) var(--av-image-text-media,50%)}
+.av-image-text--solo{grid-template-columns:minmax(0,1fr)}
+.av-image-text--m-bottom .av-image-text__media{order:0}
+.av-image-text--right .av-image-text__media{order:2}
+.av-image-text--ca-d-left{--av-it-items:flex-start;--av-it-text:left}
+.av-image-text--ca-d-center{--av-it-items:center;--av-it-text:center}
+.av-image-text--ca-d-right{--av-it-items:flex-end;--av-it-text:right}
+.av-image-text__content--card{padding:var(--av-space-7) var(--av-space-6)}
+}
+@media (min-width: 990px){
+.av-image-text{gap:var(--av-space-8)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Image with text",
+  "max_blocks": 10,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Image with text" },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image",
+      "info": "Show the real product or result. Upload only images you are entitled to use. Also the cover of a YouTube or Vimeo video."
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "Video",
+      "info": "A video uploaded to Shopify. Replaces the image."
+    },
+    {
+      "type": "video_url",
+      "id": "video_url",
+      "label": "YouTube or Vimeo link",
+      "accept": ["youtube", "vimeo"],
+      "info": "Used when no Shopify video is set. Nothing loads from YouTube or Vimeo until the shopper presses play."
+    },
+    {
+      "type": "checkbox",
+      "id": "video_autoplay",
+      "label": "Play uploaded videos muted while in view",
+      "default": false,
+      "info": "Only when the shopper allows motion. Controls stay visible, so it can always be paused. YouTube and Vimeo videos always wait for a tap."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" }
+      ],
+      "default": "adapt"
+    },
+    {
+      "type": "range",
+      "id": "image_width",
+      "label": "Image width",
+      "min": 40,
+      "max": 60,
+      "step": 5,
+      "unit": "%",
+      "default": 50,
+      "info": "Share of the row on tablets and desktop. Phones show the image full width."
+    },
+    {
+      "type": "select",
+      "id": "image_side",
+      "label": "Image position on desktop",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "select",
+      "id": "image_side_mobile",
+      "label": "Image position on phones",
+      "options": [
+        { "value": "top", "label": "Above the text" },
+        { "value": "bottom", "label": "Below the text" }
+      ],
+      "default": "top"
+    },
+    { "type": "header", "content": "Content" },
+    {
+      "type": "select",
+      "id": "valign",
+      "label": "Vertical alignment on desktop",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "center", "label": "Middle" },
+        { "value": "bottom", "label": "Bottom" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "checkbox",
+      "id": "box",
+      "label": "Show content box",
+      "default": false
+    },
+    {
+      "type": "color_scheme",
+      "id": "box_scheme",
+      "label": "Content box colour scheme",
+      "default": "scheme-1",
+      "visible_if": "{{ section.settings.box }}",
+      "info": "Its border, corners and shadow follow Theme settings > Containers."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Text alignment on desktop",
+      "default": "left"
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align_mobile",
+      "label": "Text alignment on phones",
+      "default": "left"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "eyebrow",
+      "name": "Eyebrow",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Example eyebrow",
+          "info": "A short label above the heading. Words like \"Best seller\" or \"New\" must be true for this product."
+        },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Style",
+          "options": [
+            { "value": "plain", "label": "Muted text" },
+            { "value": "accent", "label": "Accent text" },
+            { "value": "pill", "label": "Accent pill" }
+          ],
+          "default": "plain"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "name": "Heading",
+      "settings": [
+        {
+          "type": "inline_richtext",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Example: your heading",
+          "info": "Bold a word to give it the section's accent style. Claims such as \"clinically proven\" need evidence you can show."
+        },
+        {
+          "type": "select",
+          "id": "size",
+          "label": "Size",
+          "options": [
+            { "value": "xs", "label": "Extra small" },
+            { "value": "sm", "label": "Small" },
+            { "value": "md", "label": "Medium" },
+            { "value": "lg", "label": "Large" },
+            { "value": "xl", "label": "Extra large" }
+          ],
+          "default": "md"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "Text",
+      "settings": [
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "<p>Example: replace it with your own words. Only state what is true for your store.</p>",
+          "info": "Results, guarantees and delivery times must match your product and your policies."
+        },
+        {
+          "type": "select",
+          "id": "size",
+          "label": "Size",
+          "options": [
+            { "value": "sm", "label": "Small" },
+            { "value": "md", "label": "Medium" },
+            { "value": "lg", "label": "Large" }
+          ],
+          "default": "md"
+        }
+      ]
+    },
+    {
+      "type": "checklist",
+      "name": "Checklist",
+      "settings": [
+        {
+          "type": "textarea",
+          "id": "lines",
+          "label": "Lines",
+          "default": "Example: first benefit\nExample: second benefit\nExample: third benefit",
+          "info": "One item per line, up to 12. List only features and promises your product and policies back up."
+        },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "check", "label": "Check" },
+            { "value": "check-circle", "label": "Check in circle" },
+            { "value": "badge-check", "label": "Badge check" },
+            { "value": "shield-check", "label": "Shield check" },
+            { "value": "star", "label": "Star" },
+            { "value": "heart", "label": "Heart" },
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "sparkles", "label": "Sparkles" },
+            { "value": "zap", "label": "Lightning" }
+          ],
+          "default": "check"
+        }
+      ]
+    },
+    {
+      "type": "stars",
+      "name": "Rating stars",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product",
+          "info": "Stars come only from the reviews.rating metafield your review app writes; without it nothing shows. Leave empty to use the page's product on product pages."
+        },
+        {
+          "type": "checkbox",
+          "id": "show_number",
+          "label": "Show the rating number",
+          "default": true
+        },
+        {
+          "type": "checkbox",
+          "id": "show_count",
+          "label": "Show the review count",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "button",
+      "name": "Button",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Shop now"
+        },
+        {
+          "type": "url",
+          "id": "url",
+          "label": "Link",
+          "info": "A button without a link is hidden from shoppers.",
+          "default": "/collections/all"
+        },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Style",
+          "options": [
+            { "value": "primary", "label": "Solid button" },
+            { "value": "secondary", "label": "Outline button" },
+            { "value": "link", "label": "Text link" },
+            { "value": "link_arrow", "label": "Text link with arrow" }
+          ],
+          "default": "primary"
+        },
+        {
+          "type": "select",
+          "id": "size",
+          "label": "Size",
+          "options": [
+            { "value": "sm", "label": "Small" },
+            { "value": "md", "label": "Medium" },
+            { "value": "lg", "label": "Large" }
+          ],
+          "default": "md"
+        }
+      ]
+    },
+    {
+      "type": "atc",
+      "name": "Add to cart",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product",
+          "info": "Adds the first available variant. Products with options, subscriptions or a minimum quantity link to the product page instead. Leave empty to use the page's product on product pages."
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Button label",
+          "default": "Add to cart"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_price",
+          "label": "Show the price",
+          "default": true
+        },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Button style",
+          "options": [
+            { "value": "primary", "label": "Solid button" },
+            { "value": "secondary", "label": "Outline button" }
+          ],
+          "default": "primary"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Image with text",
+      "blocks": [
+        {
+          "type": "eyebrow",
+          "settings": {
+            "text": "Example eyebrow"
+          }
+        },
+        {
+          "type": "heading",
+          "settings": {
+            "heading": "Example: say what <strong>changes</strong> for the shopper",
+            "size": "lg"
+          }
+        },
+        {
+          "type": "text",
+          "settings": {
+            "text": "<p>Example: describe one real benefit in two or three sentences. Only state what is true for your store.</p>"
+          }
+        },
+        { "type": "checklist" },
+        {
+          "type": "button",
+          "settings": {}
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

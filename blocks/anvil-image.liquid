@@ -4,11 +4,11 @@
   Settings (id · type · values · default):
   - image · image_picker
   - alt · text
-  - ratio · select · adapt | 1:1 | 4:5 | 3:4 | 16:9 | 21:9 · default "adapt"
+  - image_ratio · select · adapt | 1:1 | 4:5 | 3:4 | 16:9 | 21:9 · default "adapt"
   - width · range · 10–100 step 5% · default 100
   - align · text_alignment · default "center"
   - link · url
-  - link_label · text
+  - link_name · text
   - caption · text
 
   @example
@@ -17,15 +17,45 @@
 {%- liquid
   assign s = block.settings
   assign img_sizes = '(min-width: 750px) ' | append: s.width | append: 'vw, 100vw'
+  assign img_widths = ''
+  # Inside a multi-column section (anvil-columns: cols_desktop + cols_mobile, the same rules as its grid) the image
+  # is one column wide, so sizes divides by the column count and the srcset stops at 1100 px (CONVENTIONS §11).
+  if section.settings.cols_desktop != blank and section.settings.cols_mobile != blank
+    assign n_d = section.blocks.size | at_least: 1 | at_most: 4
+    unless section.settings.cols_desktop == 'auto'
+      assign n_d = section.settings.cols_desktop | plus: 0
+    endunless
+    assign n_t = n_d
+    if n_d == 4
+      assign n_t = 2
+    endif
+    assign n_m = section.settings.cols_mobile | plus: 0 | at_least: 1 | at_most: n_d
+    assign w_d = s.width | divided_by: n_d
+    assign w_t = s.width | divided_by: n_t
+    assign w_m = 100 | divided_by: n_m
+    assign img_sizes = '(min-width: 990px) ' | append: w_d | append: 'vw, (min-width: 750px) ' | append: w_t | append: 'vw, ' | append: w_m | append: 'vw'
+    if n_d > 1
+      assign img_widths = '300, 450, 600, 900, 1100'
+    endif
+  endif
+  # Media in the first two template sections loads eagerly (snippets/anvil-above-fold, CONVENTIONS §11); a block
+  # never sets fetchpriority.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign img_loading = 'eager'
+  if fold contains 'lazy'
+    assign img_loading = 'lazy'
+  endif
   comment
     A linked image needs a name: the alt text, else the image's own alt, else the link description.
   endcomment
   assign img_alt = s.alt
   if s.link != blank
-    assign img_alt = s.alt | default: s.image.alt | default: s.link_label
+    assign img_alt = s.alt | default: s.image.alt | default: s.link_name
   endif
   capture media_html
-    render 'anvil-media', image: s.image, ratio: s.ratio, sizes: img_sizes, alt: img_alt, placeholder: 'image', class: 'av-image-block__media'
+    render 'anvil-media', image: s.image, ratio: s.image_ratio, sizes: img_sizes, widths: img_widths, loading: img_loading, alt: img_alt, placeholder: 'image', class: 'av-image-block__media'
   endcapture
 -%}
 <figure class="av-image-block av-image-block--{{ s.align }}" style="--av-image-width: {{ s.width }}%;" {{ block.shopify_attributes }}>
@@ -52,11 +82,11 @@
   "settings": [
     { "type": "image_picker", "id": "image", "label": "Image" },
     { "type": "text", "id": "alt", "label": "Alt text", "info": "Describe what the image shows. Required when the image links somewhere; leave empty for a purely decorative image." },
-    { "type": "select", "id": "ratio", "label": "Aspect ratio", "options": [ { "value": "adapt", "label": "Adapt to image" }, { "value": "1:1", "label": "Square" }, { "value": "4:5", "label": "Portrait 4:5" }, { "value": "3:4", "label": "Portrait 3:4" }, { "value": "16:9", "label": "Landscape 16:9" }, { "value": "21:9", "label": "Wide 21:9" } ], "default": "adapt" },
+    { "type": "select", "id": "image_ratio", "label": "Image shape", "options": [ { "value": "adapt", "label": "Original" }, { "value": "1:1", "label": "Square (1:1)" }, { "value": "4:5", "label": "Portrait (4:5)" }, { "value": "3:4", "label": "Portrait (3:4)" }, { "value": "16:9", "label": "Landscape (16:9)" }, { "value": "21:9", "label": "Wide (21:9)" } ], "default": "adapt" },
     { "type": "range", "id": "width", "label": "Width", "min": 10, "max": 100, "step": 5, "unit": "%", "default": 100 },
     { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "center" },
     { "type": "url", "id": "link", "label": "Link" },
-    { "type": "text", "id": "link_label", "label": "Link description", "info": "Read out by screen readers when the image has no alt text, for example \"Shop the summer collection\"." },
+    { "type": "text", "id": "link_name", "label": "Link description", "info": "Read out by screen readers when the image has no alt text, for example \"Shop the summer collection\"." },
     { "type": "text", "id": "caption", "label": "Caption" }
   ],
   "presets": [ { "name": "Image" } ]

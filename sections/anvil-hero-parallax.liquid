@@ -1,0 +1,508 @@
+{%- liquid
+  assign s = section.settings
+
+  # Images. The desktop image serves every screen unless a different phone image is picked; a phone image on its
+  # own serves every screen too. art is true only for two different images (art direction with <picture>).
+  assign img_d = s.image
+  if img_d == blank
+    assign img_d = s.image_mobile
+  endif
+  assign img_m = img_d
+  assign art = false
+  if s.image != blank and s.image_mobile != blank
+    if s.image.id != s.image_mobile.id
+      assign art = true
+      assign img_m = s.image_mobile
+    endif
+  endif
+
+  # Focal points from the image picker. image_tag would write them inline, where a stylesheet cannot switch them per
+  # breakpoint, so the tag gets object-position: inherit (shopify.dev, image focal points) and the picture element
+  # takes the phone or desktop point from custom properties.
+  assign fx_d = img_d.presentation.focal_point.x | default: 50
+  assign fy_d = img_d.presentation.focal_point.y | default: 50
+  assign fx_m = img_m.presentation.focal_point.x | default: 50
+  assign fy_m = img_m.presentation.focal_point.y | default: 50
+
+  # Movement. strength is the share of the hero's height the image travels above and below its resting place;
+  # the layer is that much taller on each side so no edge ever shows. The theme's animation switch
+  # (html[data-animations="off"]), touch screens and reduced motion turn it off in the stylesheet and the module, so
+  # the same markup serves the editor and the Section Rendering API (CONVENTIONS §8).
+  assign strength = s.strength | default: 0
+  assign move = false
+  if strength > 0
+    assign move = true
+  endif
+  # shift is the same distance as a share of the taller layer, because a translate percentage refers to the layer.
+  assign k = 0
+  if move
+    assign k = strength | divided_by: 100.0
+  endif
+  assign grow = k | times: 2 | plus: 1
+  assign shift = k | divided_by: grow | times: 100 | round: 3
+
+  # Heights are minimums: long content makes the hero taller instead of being cut off. h_ref is the desktop minimum
+  # height in px, used below to size the image request (full screen sizes it from 100vh instead).
+  case s.height_mobile
+    when 'sm'
+      assign min_m = '320px'
+    when 'lg'
+      assign min_m = '560px'
+    when 'full'
+      assign min_m = 'auto'
+    else
+      assign min_m = '440px'
+  endcase
+  case s.height_desktop
+    when 'sm'
+      assign min_d = '440px'
+      assign h_ref = 440
+    when 'lg'
+      assign min_d = '720px'
+      assign h_ref = 720
+    when 'full'
+      assign min_d = 'auto'
+      assign h_ref = 0
+    else
+      assign min_d = '560px'
+      assign h_ref = 560
+  endcase
+
+  # Content position: nine spots on desktop, top / middle / bottom on phones (full width there). The horizontal
+  # spot also sets the text alignment that blocks without their own setting (app blocks) inherit.
+  assign pos_parts = s.position_desktop | default: 'middle-center' | split: '-'
+  case pos_parts[0]
+    when 'top'
+      assign v_d = 'flex-start'
+    when 'bottom'
+      assign v_d = 'flex-end'
+    else
+      assign v_d = 'center'
+  endcase
+  case pos_parts[1]
+    when 'left'
+      assign h_d = 'flex-start'
+      assign text_side = 'left'
+    when 'right'
+      assign h_d = 'flex-end'
+      assign text_side = 'right'
+    else
+      assign h_d = 'center'
+      assign text_side = 'center'
+  endcase
+  case s.position_mobile
+    when 'top'
+      assign v_m = 'flex-start'
+    when 'bottom'
+      assign v_m = 'flex-end'
+    else
+      assign v_m = 'center'
+  endcase
+
+  # Loading (snippets/anvil-above-fold): media in the first two template sections is eager with high fetch priority
+  # (the likely LCP image), and the first one also sends a preload hint; a hero in a section group is always lazy.
+  # The hint has no media query, so it is skipped when a separate phone image exists (phones would download the
+  # desktop image too).
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign load = 'lazy'
+  assign fetch = 'auto'
+  if fold != 'lazy'
+    assign load = 'eager'
+    assign fetch = 'high'
+  endif
+  assign preload = false
+  if fold == 'lcp' and section.index == 1 and art == false
+    assign preload = true
+  endif
+
+  # Desktop sizes (from 750 px). A cover image fills the layer, which is the hero's width (capped at the page or
+  # narrow width when framed) and its height x grow. So the image is drawn at max(hero width, layer height x image
+  # shape): a fixed number of px for the fixed heights, a share of 100vh for full screen. Phones keep 100vw.
+  assign cap = 0
+  case s.width
+    when 'page'
+      assign cap = settings.page_width | default: 1400
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 800
+  endcase
+  assign sizes_d = '100vw'
+  if img_d != blank
+    assign g = grow | times: img_d.aspect_ratio | at_least: 0.1
+    assign sizes_d = ''
+    if s.height_desktop == 'full'
+      # Height-bound while the window is narrower than g x its height, width-bound above that ratio.
+      assign g_r = g | round: 3
+      assign tall = 'calc(100vh * ' | append: g_r | append: ')'
+      if cap > 0
+        assign cap_h = cap | divided_by: g | ceil
+        assign sizes_d = '(min-width: ' | append: cap | append: 'px) and (min-height: ' | append: cap_h | append: 'px) ' | append: tall | append: ', (min-width: ' | append: cap | append: 'px) ' | append: cap | append: 'px, '
+      endif
+      assign g_q = g | times: 1000 | round
+      assign sizes_d = sizes_d | append: '(min-width: 750px) and (min-aspect-ratio: ' | append: g_q | append: '/1000) 100vw, (min-width: 750px) ' | append: tall | append: ', '
+    else
+      assign drawn = h_ref | times: g | round
+      if cap > 0 and drawn >= cap
+        assign sizes_d = '(min-width: 750px) ' | append: drawn | append: 'px, '
+      else
+        if cap > 0
+          assign sizes_d = '(min-width: ' | append: cap | append: 'px) ' | append: cap | append: 'px, '
+        endif
+        if drawn > 750
+          assign sizes_d = sizes_d | append: '(min-width: ' | append: drawn | append: 'px) 100vw, (min-width: 750px) ' | append: drawn | append: 'px, '
+        endif
+      endif
+    endif
+    assign sizes_d = sizes_d | append: '100vw'
+  endif
+  assign img_widths = '550, 750, 1100, 1500, 1800, 2200'
+
+  if art
+    assign m_srcset = ''
+    assign m_list = '550,750,1100,1500' | split: ','
+    for w in m_list
+      assign wn = w | plus: 0
+      if wn <= img_m.width
+        assign m_url = img_m | image_url: width: wn
+        assign m_srcset = m_srcset | append: m_url | append: ' ' | append: wn | append: 'w, '
+      endif
+    endfor
+    if m_srcset == ''
+      assign m_url = img_m | image_url: width: img_m.width
+      assign m_srcset = m_url | append: ' ' | append: img_m.width | append: 'w'
+    else
+      assign m_srcset = m_srcset | remove_last: ', '
+    endif
+  endif
+
+  # Heading level: the one H1 guard (snippets/anvil-main-heading-tag).
+  capture main_tag
+    render 'anvil-main-heading-tag', section: section, tag: s.heading_tag
+  endcapture
+  assign main_tag = main_tag | strip
+
+  assign has_head = false
+  if s.heading != blank or s.subheading != blank
+    assign has_head = true
+  endif
+  assign has_content = false
+  if has_head or section.blocks.size > 0
+    assign has_content = true
+  endif
+
+  assign hero_class = 'av-hero-parallax'
+  if s.width != 'full'
+    assign hero_class = hero_class | append: ' av-hero-parallax--framed'
+  endif
+  if s.height_mobile == 'full'
+    assign hero_class = hero_class | append: ' av-hero-parallax--hm-full'
+  endif
+  if s.height_desktop == 'full'
+    assign hero_class = hero_class | append: ' av-hero-parallax--hd-full'
+  endif
+  if move
+    assign hero_class = hero_class | append: ' av-hero-parallax--move'
+  endif
+
+  assign box_class = 'av-hero-parallax__box av-hero-parallax__box--' | append: text_side
+  if s.box and has_content
+    assign box_scheme = s.box_scheme.id | default: 'scheme-1'
+    assign box_class = box_class | append: ' av-box av-scheme av-scheme--' | append: box_scheme
+  endif
+  assign box_w = s.content_width | default: 640
+  assign gap = 24
+  if s.gap != nil
+    assign gap = s.gap
+  endif
+
+  assign overlay_a = s.overlay | default: 0 | divided_by: 100.0
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-hero-parallax' %}>
+  <div class="av-section__inner{% if s.width == 'full' %} av-section__inner--bleed{% endif %}">
+    <anvil-hero-parallax class="{{ hero_class }}" strength="{{ strength }}" style="--av-hero-parallax-s: {{ k }}; --av-hero-parallax-shift: {{ shift }}%; --av-hero-parallax-min-m: {{ min_m }}; --av-hero-parallax-min-d: {{ min_d }}; --av-hero-parallax-pos-m: {{ fx_m }}% {{ fy_m }}%; --av-hero-parallax-pos-d: {{ fx_d }}% {{ fy_d }}%; --av-hero-parallax-v-m: {{ v_m }}; --av-hero-parallax-v-d: {{ v_d }}; --av-hero-parallax-h-d: {{ h_d }}; --av-hero-parallax-box-w: {{ box_w }}px; --av-hero-parallax-gap: {{ gap }}px;">
+      <div class="av-hero-parallax__media">
+        <div class="av-hero-parallax__layer" data-anvil-parallax>
+          {%- if img_d != blank -%}
+            <picture class="av-hero-parallax__picture">
+              {%- if art -%}
+                <source media="(max-width: 749px)" srcset="{{ m_srcset | escape }}" sizes="100vw" width="{{ img_m.width }}" height="{{ img_m.height }}">
+              {%- endif -%}
+              {{ img_d | image_url: width: 2200 | image_tag: widths: img_widths, sizes: sizes_d, loading: load, fetchpriority: fetch, preload: preload, class: 'av-hero-parallax__img', style: 'object-position: inherit;' }}
+            </picture>
+          {%- else -%}
+            {{ 'lifestyle-2' | placeholder_svg_tag: 'av-hero-parallax__placeholder' }}
+          {%- endif -%}
+        </div>
+      </div>
+      {%- if overlay_a > 0 -%}
+        <div class="av-overlay av-hero-parallax__overlay" style="--av-overlay-strength: {{ overlay_a }};{% if s.overlay_color == 'scheme' %} --av-overlay-rgb: var(--av-bg-rgb);{% endif %}"></div>
+      {%- endif -%}
+      <div class="av-hero-parallax__content">
+        <div class="{{ box_class }}">
+          {% render 'anvil-section-head', section: section, tag: main_tag %}
+          {%- unless has_content -%}
+            {% render 'anvil-editor-empty' %}
+          {%- endunless -%}
+          {% content_for 'blocks' %}
+        </div>
+      </div>
+    </anvil-hero-parallax>
+  </div>
+  {%- if move -%}
+    <script type="module" src="{{ 'anvil-hero-parallax.js' | asset_url }}"></script>
+  {%- endif -%}
+</div>
+{% stylesheet %}
+/* The hero is a one-cell grid: the media and the overlay fill it, the content sets its height above the minimum. */
+.av-hero-parallax{position:relative;display:grid;grid-template-columns:minmax(0,1fr);isolation:isolate;min-height:var(--av-hero-parallax-min-m,440px);background:rgb(var(--av-fg-rgb) / 0.06)}
+.av-hero-parallax--hm-full{min-height:100vh;min-height:100svh}
+.av-hero-parallax--framed{border-radius:var(--av-radius-media)}
+.av-hero-parallax__media{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
+.av-hero-parallax__layer{position:absolute;inset:0}
+.av-hero-parallax__picture,.av-hero-parallax__img,.av-hero-parallax__placeholder{position:absolute;inset:0;display:block;width:100%;height:100%}
+.av-hero-parallax__picture{object-position:var(--av-hero-parallax-pos-m,50% 50%)}
+.av-hero-parallax__img{object-fit:cover}
+.av-hero-parallax__placeholder{box-sizing:border-box;padding:8%;color:rgb(var(--av-fg-rgb) / 0.35);fill:currentColor}
+.av-hero-parallax__overlay{z-index:1;border-radius:inherit}
+.av-hero-parallax__content{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:var(--av-hero-parallax-v-m,center);width:100%;max-width:var(--av-page-width);margin-inline:auto;padding:calc(var(--av-space-6) + var(--av-overlap-pad,0px)) var(--av-gutter) var(--av-space-6)}
+.av-hero-parallax__box{display:flex;flex-direction:column;gap:var(--av-hero-parallax-gap,24px);width:100%;text-align:center}
+.av-hero-parallax__box--left{text-align:left}
+.av-hero-parallax__box--right{text-align:right}
+.av-hero-parallax__box>*{min-width:0}
+.av-hero-parallax__box .av-section-head{margin:0}
+.av-hero-parallax__box .av-section-head__sub{color:inherit}
+@media (min-width: 750px){
+.av-hero-parallax{min-height:var(--av-hero-parallax-min-d,560px)}
+.av-hero-parallax--hd-full{min-height:100vh;min-height:100svh}
+.av-hero-parallax__picture{object-position:var(--av-hero-parallax-pos-d,50% 50%)}
+.av-hero-parallax__content{justify-content:var(--av-hero-parallax-v-d,center);align-items:var(--av-hero-parallax-h-d,center);padding-block:calc(var(--av-space-8) + var(--av-overlap-pad,0px)) var(--av-space-8)}
+.av-hero-parallax__box{max-width:var(--av-hero-parallax-box-w,640px)}
+.av-hero-parallax__box.av-box{padding:var(--av-space-7)}
+}
+/* Movement: only on a hovering, fine pointer with motion allowed. The layer grows by strength x height above and
+   below, then travels from -shift (hero entering at the bottom) to +shift (leaving at the top), so the image moves
+   slower than the page. Browsers with scroll-driven animations run it here; assets/anvil-hero-parallax.js writes
+   the same transform elsewhere. */
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine){
+html:not([data-animations="off"]) .av-hero-parallax--move .av-hero-parallax__layer{inset:calc(var(--av-hero-parallax-s,0) * -100%) 0;will-change:transform}
+@supports (animation-timeline: view()){
+html:not([data-animations="off"]) .av-hero-parallax--move .av-hero-parallax__media{view-timeline:--av-hero-parallax block}
+html:not([data-animations="off"]) .av-hero-parallax--move .av-hero-parallax__layer{animation:av-hero-parallax 1ms linear both;animation-timeline:--av-hero-parallax}
+}
+}
+@keyframes av-hero-parallax{from{transform:translate3d(0,calc(var(--av-hero-parallax-shift,0%) * -1),0)}to{transform:translate3d(0,var(--av-hero-parallax-shift,0%),0)}}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Parallax hero",
+  "max_blocks": 8,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Parallax hero" },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Background image",
+      "info": "Set a focal point in the picker so the subject stays in view as the hero crops and moves. Keep words out of the image and write them in blocks, so phones and screen readers can read them."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "Phone image",
+      "info": "Optional. Shown below 750 px wide; the background image is used when this is empty."
+    },
+    {
+      "type": "range",
+      "id": "strength",
+      "label": "Parallax strength",
+      "min": 0,
+      "max": 50,
+      "step": 5,
+      "unit": "%",
+      "default": 25,
+      "info": "How far the image lags behind the page. 0 keeps it still. Stronger settings crop the image more, because it needs room to travel. The image stays still on touch screens, for shoppers who ask for reduced motion and when theme animations are off."
+    },
+    {
+      "type": "select",
+      "id": "height_desktop",
+      "label": "Height on desktop",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "full", "label": "Full screen" }
+      ],
+      "default": "lg"
+    },
+    {
+      "type": "select",
+      "id": "height_mobile",
+      "label": "Height on phones",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "full", "label": "Full screen" }
+      ],
+      "default": "md",
+      "info": "Long content makes the hero taller rather than cutting text off."
+    },
+    {
+      "type": "range",
+      "id": "overlay",
+      "label": "Overlay opacity",
+      "min": 0,
+      "max": 90,
+      "step": 5,
+      "unit": "%",
+      "default": 35,
+      "info": "Raise it until the text reads clearly over the busiest part of the image, on phones too."
+    },
+    {
+      "type": "select",
+      "id": "overlay_color",
+      "label": "Overlay colour",
+      "options": [
+        { "value": "shadow", "label": "Theme shadow colour" },
+        { "value": "scheme", "label": "Colour scheme background" }
+      ],
+      "default": "shadow",
+      "info": "The scheme background suits text in that scheme's text colour."
+    },
+    { "type": "header", "content": "Content" },
+    {
+      "type": "select",
+      "id": "position_desktop",
+      "label": "Content position on desktop",
+      "options": [
+        { "value": "top-left", "label": "Top left" },
+        { "value": "top-center", "label": "Top centre" },
+        { "value": "top-right", "label": "Top right" },
+        { "value": "middle-left", "label": "Middle left" },
+        { "value": "middle-center", "label": "Middle centre" },
+        { "value": "middle-right", "label": "Middle right" },
+        { "value": "bottom-left", "label": "Bottom left" },
+        { "value": "bottom-center", "label": "Bottom centre" },
+        { "value": "bottom-right", "label": "Bottom right" }
+      ],
+      "default": "middle-center",
+      "info": "Left and right also align app blocks. Each theme block keeps its own alignment setting."
+    },
+    {
+      "type": "select",
+      "id": "position_mobile",
+      "label": "Content position on phones",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "middle", "label": "Middle" },
+        { "value": "bottom", "label": "Bottom" }
+      ],
+      "default": "middle"
+    },
+    {
+      "type": "range",
+      "id": "content_width",
+      "label": "Content width on desktop",
+      "min": 320,
+      "max": 900,
+      "step": 20,
+      "unit": "px",
+      "default": 640
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between blocks",
+      "min": 0,
+      "max": 64,
+      "step": 4,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "checkbox",
+      "id": "box",
+      "label": "Show content box",
+      "default": false,
+      "info": "Puts the content on a solid panel in its own colour scheme, so it stays readable over any image."
+    },
+    {
+      "type": "color_scheme",
+      "id": "box_scheme",
+      "label": "Content box colour scheme",
+      "default": "scheme-1",
+      "visible_if": "{{ section.settings.box }}"
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading level",
+      "options": [
+        { "value": "h2", "label": "H2" },
+        { "value": "h1", "label": "H1 (main page heading)" }
+      ],
+      "default": "h2",
+      "info": "H1 only when this is the first section of a template whose page has no title of its own (not on product, collection, page, blog or article templates). Otherwise it stays H2."
+    }
+  ],
+  "blocks": [
+    { "type": "@theme" },
+    { "type": "@app" }
+  ],
+  "presets": [
+    {
+      "name": "Parallax hero",
+      "settings": {
+        "heading": "Example: say what you <strong>sell</strong>",
+        "head_size": "xl",
+        "color_scheme": "scheme-4",
+        "width": "full",
+        "pad_top": 0,
+        "pad_bottom": 0,
+        "height_desktop": "lg",
+        "height_mobile": "md",
+        "strength": 25,
+        "overlay": 35
+      },
+      "blocks": [
+        {
+          "type": "anvil-text",
+          "settings": {
+            "text": "<p>Example: one or two sentences on what shoppers get. Replace it with words that are true for your store.</p>",
+            "size": "lg",
+            "align": "center",
+            "width": "full"
+          }
+        },
+        {
+          "type": "anvil-button",
+          "settings": {
+            "label": "Shop all products",
+            "url": "/collections/all",
+            "style": "primary",
+            "size": "lg",
+            "align": "center"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

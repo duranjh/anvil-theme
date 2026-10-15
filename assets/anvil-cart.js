@@ -4,7 +4,8 @@
  * Reads, inside the element: [data-anvil-line="<line key>"] (holds [data-anvil-quantity], [data-anvil-step="-1|1"],
  * [data-anvil-remove], optional [data-anvil-line-error]); [data-anvil-gift-key] on gift lines (clamped to 0–1;
  * removal stores sessionStorage['anvil_gift_dismissed:' + key], WAVE1-CONTRACTS §5); [data-anvil-note] (saved on
- * change as an untracked save, no re-render); [data-anvil-discount-input] + [data-anvil-discount-apply],
+ * change as an untracked save, no re-render); [data-anvil-cart-terms] (the cart page's policies box, saved the same
+ * way to the cart attribute anvil_terms_accepted); [data-anvil-discount-input] + [data-anvil-discount-apply],
  * [data-anvil-code] / [data-anvil-remove-code]; [data-anvil-cart-error]. Sections to re-render: every
  * [data-anvil-cart-render] on the page (≤ 5; anvil-core.js swaps them). Messages: the dialog's [data-anvil-live],
  * else a page-level polite region. .av-fallback-only / .av-enhanced-only switch on :defined.
@@ -160,6 +161,12 @@ class CartForm extends HTMLElement {
   };
 
   #onChange = (e) => {
+    if (e.target.matches('[data-anvil-cart-terms]')) {
+      // Cart page policies box: saved now (untracked, no re-render), so a later re-render keeps the tick.
+      const attributes = { anvil_terms_accepted: e.target.checked ? 'yes' : '' };
+      cartApi().then((c) => c.cartUpdate({ attributes }, { source: 'terms', track: false })).catch(() => {});
+      return;
+    }
     if (!e.target.matches('[data-anvil-note]')) return;
     clearTimeout(this.#noteTimer);
     const note = e.target.value;

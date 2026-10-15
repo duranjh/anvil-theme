@@ -440,12 +440,12 @@
 
       {%- when 'image' -%}
         {%- if bs.image != blank -%}
-          {%- assign im_name = bs.link_label | default: bs.image.alt | default: bs.link -%}
+          {%- assign im_name = bs.link_name | default: bs.image.alt | default: bs.link -%}
           {%- capture im_media -%}
             {%- if bs.link != blank -%}
-              {% render 'anvil-media', image: bs.image, ratio: bs.ratio, widths: '280, 420, 560, 840, 1120', sizes: '(min-width: 750px) 560px, 100vw', alt: '' %}
+              {% render 'anvil-media', image: bs.image, ratio: bs.image_ratio, widths: '280, 420, 560, 840, 1120', sizes: '(min-width: 750px) 560px, 100vw', alt: '' %}
             {%- else -%}
-              {% render 'anvil-media', image: bs.image, ratio: bs.ratio, widths: '280, 420, 560, 840, 1120', sizes: '(min-width: 750px) 560px, 100vw' %}
+              {% render 'anvil-media', image: bs.image, ratio: bs.image_ratio, widths: '280, 420, 560, 840, 1120', sizes: '(min-width: 750px) 560px, 100vw' %}
             {%- endif -%}
           {%- endcapture -%}
           <div class="av-cart-drawer__image" style="--av-cart-image-w: {{ bs.width | default: 100 }}%">
@@ -594,7 +594,7 @@
   "settings": [
     {
       "type": "paragraph",
-      "content": "Width, open-after-add, vendors and the savings line are set under Theme settings > Cart and Drawers & popups. With no blocks added, the drawer shows line items, the discount field and order note (when switched on in Theme settings), subtotals, the checkout button and payment icons."
+      "content": "Shows only while Theme settings > Cart > Cart type is Drawer. Width, open-after-add, vendors and the savings line are set under Theme settings > Cart and Drawers & popups, the quantity style under Quantity picker. With no blocks added, the drawer shows line items, the discount field and order note (when switched on in Theme settings), subtotals, the checkout button and payment icons."
     },
     {
       "type": "paragraph",
@@ -725,7 +725,7 @@
       "type": "text_icon",
       "name": "Text with icon",
       "settings": [
-        { "type": "select", "id": "icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "lock", "label": "Lock" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "tag", "label": "Tag" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "star", "label": "Star" }, { "value": "leaf", "label": "Leaf" }, { "value": "message-circle", "label": "Chat" }, { "value": "credit-card", "label": "Card" } ], "default": "check-circle" },
+        { "type": "select", "id": "icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check in circle" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package checked" }, { "value": "shield-check", "label": "Shield check" }, { "value": "lock", "label": "Lock" }, { "value": "rotate-ccw", "label": "Return arrow" }, { "value": "gift", "label": "Gift" }, { "value": "tag", "label": "Tag" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "star", "label": "Star" }, { "value": "leaf", "label": "Leaf" }, { "value": "message-circle", "label": "Chat bubble" }, { "value": "credit-card", "label": "Credit card" } ], "default": "check-circle" },
         { "type": "image_picker", "id": "icon_image", "label": "Custom icon", "info": "Replaces the icon." },
         { "type": "inline_richtext", "id": "text", "label": "Text", "default": "Example: free returns within 30 days — replace with a promise your store keeps", "info": "State only what your shipping and returns policies back up." },
         { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" } ], "default": "sm" },
@@ -738,10 +738,10 @@
       "name": "Image",
       "settings": [
         { "type": "image_picker", "id": "image", "label": "Image" },
-        { "type": "select", "id": "ratio", "label": "Shape", "options": [ { "value": "adapt", "label": "Original" }, { "value": "1:1", "label": "Square" }, { "value": "4:5", "label": "Portrait" }, { "value": "16:9", "label": "Landscape" }, { "value": "21:9", "label": "Wide" } ], "default": "adapt" },
+        { "type": "select", "id": "image_ratio", "label": "Image shape", "options": [ { "value": "adapt", "label": "Original" }, { "value": "1:1", "label": "Square (1:1)" }, { "value": "4:5", "label": "Portrait (4:5)" }, { "value": "16:9", "label": "Landscape (16:9)" }, { "value": "21:9", "label": "Wide (21:9)" } ], "default": "adapt" },
         { "type": "range", "id": "width", "label": "Width", "min": 20, "max": 100, "step": 5, "unit": "%", "default": 100 },
         { "type": "url", "id": "link", "label": "Link" },
-        { "type": "text", "id": "link_label", "label": "Link description", "info": "Says where the link goes, for screen readers. Needed when the image is linked." },
+        { "type": "text", "id": "link_name", "label": "Link description", "info": "Says where the link goes, for screen readers. Needed when the image is linked." },
         { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
       ]
     },
@@ -751,22 +751,22 @@
       "settings": [
         { "type": "range", "id": "columns_mobile", "label": "Columns", "min": 1, "max": 4, "step": 1, "default": 2 },
         { "type": "header", "content": "Item 1" },
-        { "type": "select", "id": "item_1_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat" } ], "default": "truck" },
+        { "type": "select", "id": "item_1_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check in circle" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package checked" }, { "value": "shield-check", "label": "Shield check" }, { "value": "rotate-ccw", "label": "Return arrow" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat bubble" } ], "default": "truck" },
         { "type": "image_picker", "id": "item_1_image", "label": "Custom icon" },
         { "type": "text", "id": "item_1_heading", "label": "Heading", "default": "Example: tracked shipping", "info": "Short, and true for your store. Leave heading and text empty to hide this item." },
         { "type": "inline_richtext", "id": "item_1_text", "label": "Text" },
         { "type": "header", "content": "Item 2" },
-        { "type": "select", "id": "item_2_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat" } ], "default": "rotate-ccw" },
+        { "type": "select", "id": "item_2_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check in circle" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package checked" }, { "value": "shield-check", "label": "Shield check" }, { "value": "rotate-ccw", "label": "Return arrow" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat bubble" } ], "default": "rotate-ccw" },
         { "type": "image_picker", "id": "item_2_image", "label": "Custom icon" },
         { "type": "text", "id": "item_2_heading", "label": "Heading", "default": "Example: easy returns", "info": "Short, and true for your store. Leave heading and text empty to hide this item." },
         { "type": "inline_richtext", "id": "item_2_text", "label": "Text" },
         { "type": "header", "content": "Item 3" },
-        { "type": "select", "id": "item_3_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat" } ], "default": "none" },
+        { "type": "select", "id": "item_3_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check in circle" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package checked" }, { "value": "shield-check", "label": "Shield check" }, { "value": "rotate-ccw", "label": "Return arrow" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat bubble" } ], "default": "none" },
         { "type": "image_picker", "id": "item_3_image", "label": "Custom icon" },
         { "type": "text", "id": "item_3_heading", "label": "Heading", "info": "Short, and true for your store. Leave heading and text empty to hide this item." },
         { "type": "inline_richtext", "id": "item_3_text", "label": "Text" },
         { "type": "header", "content": "Item 4" },
-        { "type": "select", "id": "item_4_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package" }, { "value": "shield-check", "label": "Shield" }, { "value": "rotate-ccw", "label": "Return" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat" } ], "default": "none" },
+        { "type": "select", "id": "item_4_icon", "label": "Icon", "options": [ { "value": "none", "label": "None" }, { "value": "check-circle", "label": "Check in circle" }, { "value": "truck", "label": "Truck" }, { "value": "package-check", "label": "Package checked" }, { "value": "shield-check", "label": "Shield check" }, { "value": "rotate-ccw", "label": "Return arrow" }, { "value": "gift", "label": "Gift" }, { "value": "clock", "label": "Clock" }, { "value": "heart", "label": "Heart" }, { "value": "message-circle", "label": "Chat bubble" } ], "default": "none" },
         { "type": "image_picker", "id": "item_4_image", "label": "Custom icon" },
         { "type": "text", "id": "item_4_heading", "label": "Heading", "info": "Short, and true for your store. Leave heading and text empty to hide this item." },
         { "type": "inline_richtext", "id": "item_4_text", "label": "Text" },
@@ -823,7 +823,7 @@
       "type": "custom_liquid",
       "name": "Custom Liquid",
       "settings": [
-        { "type": "liquid", "id": "custom_liquid", "label": "Liquid code", "info": "Renders exactly as written. Do not use it for timers, stock counts, ratings or reviews that are not real; Anvil's own blocks show these from real data." },
+        { "type": "liquid", "id": "custom_liquid", "label": "Liquid code", "info": "Renders exactly as written. Do not use it for timers, stock counts, viewer counts, ratings or reviews that are not real; Anvil's own blocks show these from real data." },
         { "type": "checkbox", "id": "place_in_footer", "label": "Show in the footer", "default": false }
       ]
     }

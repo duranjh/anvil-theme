@@ -1,0 +1,111 @@
+/* anvil-accordion.css — accordion rows around <anvil-collapsible> (DECISIONS 91), shared by the FAQ and Collapsible
+   content sections. Markup: <anvil-collapsible class="av-accordion av-accordion--lines|cards"> with
+   <details class="av-accordion__item"><summary class="av-accordion__summary"> … <h3 class="av-accordion__title">,
+   <span class="av-accordion__toggle"> (a chevron, or .av-accordion__open / .av-accordion__close for plus and minus)
+   and <div class="av-accordion__body">. Settings: item_style lines | cards, toggle_icon chevron | plus. The toggle
+   turns only when the shopper allows motion and Theme settings keep animations on. */
+
+.av-accordion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--av-space-3);
+  min-width: 0;
+}
+
+.av-accordion--lines {
+  gap: 0;
+  border-top: 1px solid var(--av-border);
+}
+
+.av-accordion--lines .av-accordion__item {
+  border-bottom: 1px solid var(--av-border);
+}
+
+.av-accordion--cards .av-accordion__item {
+  border: var(--av-border-w-card) solid var(--av-border);
+  border-radius: var(--av-radius-card);
+  background: rgb(var(--av-fg-rgb) / var(--av-surface-tint));
+  box-shadow: var(--av-shadow-sm);
+}
+
+.av-accordion__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-3);
+  min-height: 44px;
+  padding-block: var(--av-space-4);
+}
+
+.av-accordion--cards .av-accordion__summary,
+.av-accordion--cards .av-accordion__body {
+  padding-inline: var(--av-space-5);
+}
+
+.av-accordion__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--av-font-body);
+  font-size: var(--av-text-md);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: normal;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+.av-accordion__summary:hover .av-accordion__title {
+  color: var(--av-accent);
+}
+
+.av-accordion__toggle {
+  display: inline-flex;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--av-fg);
+}
+
+.av-accordion__toggle svg {
+  width: 100%;
+  height: 100%;
+}
+
+.av-accordion__open,
+.av-accordion__close {
+  display: inline-flex;
+  width: 100%;
+  height: 100%;
+}
+
+.av-accordion__close,
+.av-accordion__item[open]:not(.av-is-closing) .av-accordion__open {
+  display: none;
+}
+
+.av-accordion__item[open]:not(.av-is-closing) .av-accordion__close {
+  display: inline-flex;
+}
+
+.av-accordion__item[open]:not(.av-is-closing) .av-accordion__toggle > svg {
+  transform: rotate(180deg);
+}
+
+.av-accordion__body {
+  padding-block: 0 var(--av-space-5);
+}
+
+.av-accordion__body > :first-child {
+  margin-top: 0;
+}
+
+.av-accordion__body > :last-child {
+  margin-bottom: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-animations="off"]) .av-accordion__toggle > svg {
+    transition: transform var(--av-dur) var(--av-ease);
+  }
+}

@@ -25,6 +25,12 @@ skipped, so the script can run while other owners are still writing theirs.
 A fragment that exists but is broken (bad JSON, wrong shape, a duplicate
 setting id) is reported as an error and skipped.
 
+Icon labels (DECISIONS 92). docs/icons.json is the one list of icon names and their editor labels. Every icon
+select (a `select` whose id is `icon` or ends in `_icon` and whose option values are all names from that list, or
+`none`) in sections/*.liquid, blocks/*.liquid and docs/product-blocks/*.json takes its labels from it; a select keeps
+its own subset and order. The labels are rewritten in place (only the label strings change); --check reports drift.
+The product fragments are fixed before the two product schemas are built, so those follow.
+
 Exit codes: 0 when everything is in sync (or was written), 1 when --check
 finds a section out of date, when a fragment is broken, or (with --strict)
 when a fragment is missing, 2 for a usage or file error.
@@ -401,6 +407,122 @@ def apply(root, rel, schema, check, log):
     return False
 
 
+# --------------------------------------------------------------------------- icon labels (DECISIONS 92)
+ICON_LIST = os.path.join("docs", "icons.json")
+ICON_ID_RE = re.compile(r"(^|_)icon$")
+
+
+def load_icons(root):
+    with open(os.path.join(root, ICON_LIST), "r", encoding="utf-8") as fh:
+        data = json.load(fh)
+    labels = {o["value"]: o["label"] for o in data["icons"]}
+    labels["none"] = data.get("none", "None")
+    return labels
+
+
+def icon_selects(settings_lists, labels):
+    """Yield (setting, wanted labels) for every icon select whose labels drift, in document order, plus every
+    setting with an icon-like id (so the text cursor can skip the ones that need nothing)."""
+    for settings in settings_lists:
+        for st in settings or []:
+            if not isinstance(st, dict) or not ICON_ID_RE.search(str(st.get("id", ""))):
+                continue
+            opts = st.get("options") if st.get("type") == "select" else None
+            if not opts or not all(o.get("value") in labels for o in opts):
+                yield st, None
+                continue
+            want = [labels[o["value"]] for o in opts]
+            yield st, (want if want != [o.get("label") for o in opts] else None)
+
+
+def relabel_text(text, items):
+    """Rewrite option labels inside the JSON text: for each (setting, wanted labels) find the setting's `"id"` after
+    the cursor, then its `"options"` array, and replace the labels in order."""
+    pos = 0
+    for st, want in items:
+        m = re.compile(r'"id"\s*:\s*' + re.escape(json.dumps(st["id"]))).search(text, pos)
+        if not m:
+            return None
+        pos = m.end()
+        if want is None:
+            continue
+        o = re.compile(r'"options"\s*:\s*\[').search(text, pos)
+        if not o:
+            return None
+        depth, i = 1, o.end()
+        while depth and i < len(text):
+            if text[i] == '"':
+                i += 1
+                while text[i] != '"':
+                    i += 2 if text[i] == "\\" else 1
+            elif text[i] in "[{":
+                depth += 1
+            elif text[i] in "]}":
+                depth -= 1
+            i += 1
+        span = text[o.end():i]
+        labels_iter = iter(want)
+        span = re.sub(r'("label"\s*:\s*)"(?:[^"\\]|\\.)*"', lambda mm: mm.group(1) + json.dumps(next(labels_iter), ensure_ascii=False), span)
+        text = text[:o.end()] + span + text[i:]
+        pos = o.end() + len(span)
+    return text
+
+
+def sync_icon_labels(root, check, log):
+    """Returns True when --check finds drift."""
+    try:
+        labels = load_icons(root)
+    except (OSError, ValueError, KeyError) as exc:
+        log.error(ICON_LIST, f"cannot read the icon list: {exc}")
+        return True
+    drift = False
+    paths = []
+    for folder in ("sections", "blocks"):
+        d = os.path.join(root, folder)
+        paths += [os.path.join(folder, n) for n in sorted(os.listdir(d)) if n.endswith(".liquid")]
+    d = os.path.join(root, FRAGMENT_DIR)
+    if os.path.isdir(d):
+        paths += [os.path.join(FRAGMENT_DIR, n) for n in sorted(os.listdir(d)) if n.endswith(".json")]
+    for rel in paths:
+        if rel in (MAIN_FILE, FEATURED_FILE):
+            continue  # generated from the fragments
+        path = os.path.join(root, rel)
+        with open(path, "r", encoding="utf-8") as fh:
+            text = fh.read()
+        if rel.endswith(".json"):
+            start, end = 0, len(text)
+        else:
+            m = SCHEMA_RE.search(text)
+            if not m:
+                continue
+            start, end = m.start(2), m.end(2)
+        body = text[start:end]
+        try:
+            data = json.loads(body)
+        except ValueError:
+            continue
+        if isinstance(data, list):
+            lists = [data]
+        else:
+            lists = [data.get("settings")] + [b.get("settings") for b in data.get("blocks") or [] if isinstance(b, dict)]
+        items = list(icon_selects(lists, labels))
+        if not any(w for _s, w in items):
+            continue
+        fixed = relabel_text(body, items)
+        if fixed is None or json.loads(fixed) == data:
+            log.error(rel, "icon labels drift but could not be rewritten in place")
+            drift = True
+            continue
+        if check:
+            print(f"{rel}: [E] icon labels differ from {ICON_LIST}; run python3 scripts/sync-block-schemas.py", file=sys.stderr)
+            drift = True
+            continue
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text[:start] + fixed + text[end:])
+        log.info(f"{rel}: icon labels synced from {ICON_LIST}")
+    return drift
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true", help="exit 1 when a section schema is out of date; write nothing")
@@ -415,6 +537,7 @@ def main():
         return 2
 
     log = Log(quiet=args.quiet)
+    icon_drift = sync_icon_labels(root, args.check, log)
     main_schema, featured_schema = build(root, log)
     if log.missing:
         msg = f"{len(log.missing)} block fragment(s) not written yet, skipped: {', '.join(log.missing)}"
@@ -423,7 +546,7 @@ def main():
         else:
             log.warn(FRAGMENT_DIR, msg)
 
-    drift = False
+    drift = icon_drift
     for rel, schema in ((MAIN_FILE, main_schema), (FEATURED_FILE, featured_schema)):
         result = apply(root, rel, schema, args.check, log)
         if result is None:

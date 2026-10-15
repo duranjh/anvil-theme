@@ -152,9 +152,20 @@
         "share"
       ],
       "settings": {}
+    },
+    "related": {
+      "type": "anvil-related-products",
+      "settings": {
+        "heading": "More to <strong>explore</strong>",
+        "intent": "related",
+        "limit": 4,
+        "layout": "grid",
+        "cols_desktop": "4"
+      }
     }
   },
   "order": [
-    "main"
+    "main",
+    "related"
   ]
 }

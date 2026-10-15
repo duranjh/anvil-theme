@@ -294,7 +294,7 @@ const nativeSubmit = (form) => HTMLFormElement.prototype.submit.call(form);
 
 class ProductForm extends HTMLElement {
   connectedCallback() {
-    this.form = this.closest('form') || document.getElementById(this.getAttribute('form-id'));
+    this.form = this.closest('form') || this.querySelector('form') || document.getElementById(this.getAttribute('form-id'));
     this.form?.addEventListener('submit', this.onSubmit);
   }
 

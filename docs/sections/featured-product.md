@@ -26,4 +26,5 @@ Savings only from compare-at (rounded down, DECISIONS 43); "Most popular"-style 
 `/cart/add` reading the last of two `id` values (the no-JS select), `variant | json` fields, Section Rendering with `section_id` on product URLs, app blocks rendered from the section loop, emoji detection in Emoji benefits, payment icon SVG ids repeated on one page. See STATUS §4.
 
 ## Fix pass (2026-10-15)
-Shopify reads `?variant=` only on product pages, so here every variant change is client-side: price, compare-at, savings, sale labels and classes, unit price, SKU, and the Inventory and Urgency text lines (rendered from the product JSON's tracked inventory, DECISIONS 53). No server-truth fetch runs outside the product's own page. Payment icon ids are unique per row (`uid`).
+- Uses the shared pieces: the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87).
+- Availability: `disabled_on` groups ["*"] (CONVENTIONS §4, DECISIONS 100).

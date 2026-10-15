@@ -30,38 +30,45 @@
     },
     {
       "type": "select",
-      "id": "ratio",
-      "label": "Aspect ratio",
+      "id": "image_ratio",
+      "label": "Image shape",
       "options": [
         {
           "value": "adapt",
-          "label": "Adapt to media"
+          "label": "Original"
         },
         {
           "value": "1:1",
-          "label": "Square"
+          "label": "Square (1:1)"
         },
         {
           "value": "4:5",
-          "label": "Portrait 4:5"
+          "label": "Portrait (4:5)"
         },
         {
           "value": "3:4",
-          "label": "Portrait 3:4"
+          "label": "Portrait (3:4)"
         },
         {
           "value": "16:9",
-          "label": "Landscape 16:9"
+          "label": "Landscape (16:9)"
         }
       ],
       "default": "adapt"
     },
     {
       "type": "checkbox",
-      "id": "autoplay",
-      "label": "Autoplay muted (uploaded videos)",
+      "id": "video_autoplay",
+      "label": "Play uploaded videos muted while in view",
       "default": false,
-      "info": "Plays muted while on screen and never when the shopper prefers reduced motion. Controls stay visible so it can be paused."
+      "info": "Only when the shopper allows motion. Controls stay visible, so it can always be paused. YouTube and Vimeo videos always wait for a tap."
+    },
+    {
+      "type": "checkbox",
+      "id": "muted",
+      "label": "Start without sound",
+      "default": false,
+      "info": "For uploaded videos that wait for a tap. Shoppers can turn the sound on with the video's controls. Videos that play by themselves always start without sound."
     },
     {
       "type": "checkbox",

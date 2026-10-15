@@ -6,19 +6,25 @@
   @param {object} [image] - Image object; also used as the poster of an external video
   @param {object} [video] - Shopify video or external_video media object
   @param {object} [video_url] - video_url setting value (YouTube or Vimeo)
-  @param {string} [ratio] - adapt | 1:1 | 4:5 | 3:4 | 16:9 | 21:9 (default adapt)
+  @param {string} [ratio] - adapt | 1:1 | 4:5 | 3:4 | 9:16 | 16:9 | 21:9 (default adapt)
   @param {string} [widths] - Comma-separated srcset widths; the last one is the base width (default up to 2200)
   @param {string} [sizes] - sizes attribute (default 100vw)
   @param {string} [loading] - lazy | eager (default lazy)
-  @param {boolean} [priority] - LCP media: eager, fetchpriority high and preload
-  @param {string} [alt] - Alt text; defaults to the media's own alt
+  @param {boolean} [priority] - LCP media: eager, fetchpriority high and preload (an image, or the cover of a
+    YouTube/Vimeo facade)
+  @param {string} [alt] - Alt text; defaults to the media's own alt (a blank value falls back too)
+  @param {boolean} [decorative] - Image: write alt="" because a link or heading around it already names it
+  @param {string} [play_label] - YouTube/Vimeo facade: hidden name of the play link (default "Play video")
   @param {string} [fit] - cover | contain (default cover)
   @param {string} [placeholder] - placeholder_svg_tag name used when nothing is set (default image)
   @param {string} [class] - Extra classes on the box
   @param {boolean} [autoplay] - Shopify video: play muted and looping while in view, started by anvil-core.js only when
     the shopper allows motion; controls stay visible so it can always be paused (WCAG 2.2.2)
+  @param {string} [autoplay_scope] - all | mobile: with autoplay, where it applies (default all; mobile = below 750 px)
   @param {boolean} [loop] - Shopify video: loop (default follows autoplay)
   @param {boolean} [controls] - Shopify video: show controls (default true; autoplay keeps them on)
+  @param {boolean} [muted] - Shopify video without autoplay: start without sound (autoplay always starts muted)
+  Shopify videos load preload="metadata" when eager or priority, else preload="none" (only the poster loads).
 
   @example
   {% render 'anvil-media', image: s.image, ratio: '16:9', sizes: '(min-width: 990px) 50vw, 100vw' %}
@@ -65,6 +71,8 @@
       assign ratio_value = '4 / 5'
     when '3:4'
       assign ratio_value = '3 / 4'
+    when '9:16'
+      assign ratio_value = '9 / 16'
     when '16:9'
       assign ratio_value = '16 / 9'
     when '21:9'
@@ -100,6 +108,18 @@
     assign alt_text = 'anvil.media.video' | t
   endif
   assign alt_text = alt_text | default: '' | escape
+  assign img_alt = alt_text
+  if decorative
+    assign img_alt = ''
+  endif
+  assign play_text = play_label | default: ''
+  if play_text == blank
+    assign play_text = 'anvil.media.play' | t
+  endif
+  assign video_preload = 'none'
+  if media_loading == 'eager' or priority
+    assign video_preload = 'metadata'
+  endif
 
   assign classes = 'av-media av-media-frame av-media--' | append: media_fit | append: ' av-media--' | append: ratio_class | append: ' av-media--' | append: kind
   if class != blank
@@ -115,19 +135,23 @@
     assign video_controls = true
   endif
 -%}
-<div class="{{ classes }}" style="--av-media-ratio: {{ ratio_value }};"{% if autoplay and kind == 'video' %} data-anvil-autoplay{% endif %}>
+<div class="{{ classes }}" style="--av-media-ratio: {{ ratio_value }};"{% if autoplay and kind == 'video' %} data-anvil-autoplay{% if autoplay_scope == 'mobile' %}="mobile"{% endif %}{% endif %}>
   {%- case kind -%}
     {%- when 'image' -%}
       {%- if priority -%}
-        {{ image | image_url: width: max_width | image_tag: widths: media_widths, sizes: media_sizes, loading: 'eager', fetchpriority: 'high', preload: true, alt: alt_text, class: 'av-media__img' }}
+        {{ image | image_url: width: max_width | image_tag: widths: media_widths, sizes: media_sizes, loading: 'eager', fetchpriority: 'high', preload: true, alt: img_alt, class: 'av-media__img' }}
       {%- else -%}
-        {{ image | image_url: width: max_width | image_tag: widths: media_widths, sizes: media_sizes, loading: media_loading, alt: alt_text, class: 'av-media__img' }}
+        {{ image | image_url: width: max_width | image_tag: widths: media_widths, sizes: media_sizes, loading: media_loading, alt: img_alt, class: 'av-media__img' }}
       {%- endif -%}
     {%- when 'video' -%}
       {%- if autoplay -%}
-        {{ video | video_tag: image_size: poster_size, loop: video_loop, muted: true, controls: video_controls, playsinline: true, preload: 'metadata', class: 'av-media__video' }}
+        {{ video | video_tag: image_size: poster_size, loop: video_loop, muted: true, controls: video_controls, playsinline: true, preload: video_preload, class: 'av-media__video' }}
       {%- else -%}
-        {{ video | video_tag: image_size: poster_size, loop: video_loop, controls: video_controls, playsinline: true, preload: 'metadata', class: 'av-media__video' }}
+        {%- if muted -%}
+          {{ video | video_tag: image_size: poster_size, loop: video_loop, muted: true, controls: video_controls, playsinline: true, preload: video_preload, class: 'av-media__video' }}
+        {%- else -%}
+          {{ video | video_tag: image_size: poster_size, loop: video_loop, controls: video_controls, playsinline: true, preload: video_preload, class: 'av-media__video' }}
+        {%- endif -%}
       {%- endif -%}
     {%- when 'external' -%}
       {%- liquid
@@ -140,14 +164,16 @@
         endif
       -%}
       <anvil-video-facade class="av-media__facade" data-anvil-embed="{{ embed_url }}" data-anvil-title="{{ alt_text }}">
-        {%- if poster != blank -%}
+        {%- if poster != blank and priority -%}
+          {{ poster | image_url: width: max_width | image_tag: widths: media_widths, sizes: media_sizes, loading: 'eager', fetchpriority: 'high', preload: true, alt: '', class: 'av-media__img av-media__poster' }}
+        {%- elsif poster != blank -%}
           {{ poster | image_url: width: max_width | image_tag: widths: media_widths, sizes: media_sizes, loading: media_loading, alt: '', class: 'av-media__img av-media__poster' }}
         {%- else -%}
           {{ placeholder_name | placeholder_svg_tag: 'av-media__placeholder' }}
         {%- endif -%}
         <a class="av-media__play" href="{{ watch_url }}" target="_blank" rel="noopener" data-anvil-play>
           {%- render 'anvil-icon', name: 'play', size: 28 -%}
-          <span class="av-visually-hidden">{{ 'anvil.media.play' | t }}</span>
+          <span class="av-visually-hidden">{{ play_text }}</span>
         </a>
         <script type="module">
           if (!customElements.get('anvil-video-facade')) {

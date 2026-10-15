@@ -1,0 +1,522 @@
+{%- liquid
+  assign s = section.settings
+  assign slide_count = section.blocks.size
+
+  # Slides in view: phones, tablets and desktop, each capped at the slide count so a short row fills the width
+  # instead of leaving empty columns. Tablets follow the shared grid rule (up to 3; 4 become 2).
+  assign count_cap = slide_count | at_least: 1
+  assign cols_m = s.cols_mobile | default: '1' | plus: 0 | at_least: 1 | at_most: count_cap
+  assign cols_d = s.cols_desktop | default: '3' | plus: 0 | at_least: 1 | at_most: count_cap
+  assign cols_t = cols_d | at_most: 3
+  if cols_d == 4
+    assign cols_t = 2
+  endif
+  assign cols_t = cols_t | at_least: cols_m | at_most: cols_d
+  assign gap = s.gap | default: 16
+
+  # Auto-advance never runs while a slide holds a video (uploaded or YouTube/Vimeo), so videos never slide away on
+  # their own. Only the shopper moves the row then. The editor says so under the slider.
+  assign autoplay = s.autoplay | default: 0
+  assign autoplay_blocked = false
+  if autoplay > 0
+    for item in section.blocks
+      if item.settings.video != blank or item.settings.video_url != blank
+        assign autoplay = 0
+        assign autoplay_blocked = true
+        break
+      endif
+    endfor
+  endif
+
+  # Shape: anvil-media draws every ratio, 9:16 included.
+  assign media_ratio = s.image_ratio | default: '4:5'
+  assign media_fit = s.fit | default: 'cover'
+  if media_ratio == 'adapt'
+    assign media_fit = 'cover'
+  endif
+
+  # sizes: page or narrow width caps the row, so wide screens never fetch more than one slide of that width.
+  # The cap clause never starts below 990 px, so a narrow cap cannot shadow the tablet and phone clauses.
+  # One slide per view on desktop is a full-bleed image (up to 2200 px); otherwise slides are at most half width.
+  case s.width
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 0
+    when 'full'
+      assign cap = 0
+    else
+      assign cap = settings.page_width | default: 0
+  endcase
+  assign img_sizes = ''
+  if cap > 0
+    assign col_px = cap | divided_by: cols_d
+    assign cap_bp = cap | at_least: 990
+    assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: col_px | append: 'px, '
+  endif
+  assign img_sizes = img_sizes | append: '(min-width: 990px) calc(100vw / ' | append: cols_d | append: '), (min-width: 750px) calc(100vw / ' | append: cols_t | append: '), calc(100vw / ' | append: cols_m | append: ')'
+  assign img_widths = '300, 450, 600, 750, 900, 1100'
+  if cols_d == 1
+    assign img_widths = '375, 550, 750, 1100, 1500, 1800, 2200'
+  endif
+  # Uploaded videos: anvil-media makes one poster (not responsive) at the last width, and the browser fetches it at
+  # page load wherever the slide sits, so the poster stays small.
+  assign poster_widths = '300, 450, 600, 750'
+  if cols_d == 1
+    assign poster_widths = '375, 550, 750, 1100'
+  elsif cols_d == 2
+    assign poster_widths = '300, 450, 600, 750, 900'
+  endif
+
+  # First two template sections (snippets/anvil-above-fold): the slides a phone shows load eagerly, and in the first
+  # section the first image is the likely LCP element. Other slides in view load lazily right after layout, so
+  # desktop loses almost nothing and phones keep their bandwidth for the LCP image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign eager_ok = true
+  if fold == 'lazy'
+    assign eager_ok = false
+  endif
+  assign lcp_ok = false
+  if fold == 'lcp'
+    assign lcp_ok = true
+  endif
+
+  assign cap_style = s.caption_style | default: 'below'
+  assign cap_align = s.text_align | default: 'left'
+  assign cap_size = s.caption_size | default: 'sm'
+
+  # Cards in view, peek, arrows, dots and the pause button's room come from the slider (snippets/anvil-slider-attrs).
+  assign root_class = 'av-media-slider av-media-slider--' | append: cap_style | append: ' av-media-slider--align-' | append: cap_align | append: ' av-media-slider--cap-' | append: cap_size
+  assign arrows = 'none'
+  if s.show_arrows
+    assign arrows = 'all'
+  endif
+
+  assign slider_label = s.heading | strip_html | strip
+  if slider_label == blank
+    assign slider_label = 'anvil.media_slider.label' | t
+  endif
+
+  assign link_fallback = 'anvil.a11y.learn_more' | t
+
+  capture icon_arrow
+    render 'anvil-icon', name: 'arrow-right', size: 16
+  endcapture
+
+  assign ph_names = 'lifestyle-1,lifestyle-2,image,product-1,product-2,product-3' | split: ','
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-media-slider' %}>
+  <div class="av-section__inner">
+    {%- if slide_count > 0 or request.design_mode -%}
+      {% render 'anvil-section-head', section: section %}
+    {%- endif -%}
+    {%- if slide_count > 0 -%}
+      {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      {%- capture slider_style -%}--av-slider-gap: {{ gap }}px;{%- endcapture -%}
+      <anvil-slider {% render 'anvil-slider-attrs', count: slide_count, per_view: cols_m, per_view_tablet: cols_t, per_view_desktop: cols_d, peek: 'auto', arrows: arrows, dots: s.show_dots, autoplay: autoplay, loop: s.loop, label: slider_label, class: root_class, style: slider_style %}>
+        <div class="av-media-slider__track" data-slider-track>
+          {%- for block in section.blocks -%}
+            {%- liquid
+              assign b = block.settings
+              assign ph_i = forloop.index0 | modulo: 6
+              assign ph_name = ph_names[ph_i]
+
+              assign kind = 'image'
+              if b.video != blank
+                assign kind = 'video'
+              elsif b.video_url != blank
+                assign kind = 'external'
+              elsif b.image == blank
+                assign kind = 'placeholder'
+              endif
+
+              assign caption = b.caption | strip
+              assign label = b.button_label | strip
+              assign alt_typed = b.alt | strip
+
+              # Image slides (and untouched placeholders) become one link. Video slides never do: a link may not hold
+              # the player's controls or the facade's play button, so they get a text link under the media instead.
+              assign has_link = false
+              assign wrap_link = false
+              if b.button_link != blank
+                assign has_link = true
+                if kind == 'image' or kind == 'placeholder'
+                  assign wrap_link = true
+                endif
+              endif
+
+              # A link needs a name: its caption, its label or the image's alt text, else a hidden fallback. When the
+              # caption or label names it, the image inside goes silent (alt="", CONVENTIONS §5), so the name is not
+              # read twice.
+              assign link_named = false
+              if wrap_link and kind == 'image'
+                if caption != blank or label != blank
+                  assign link_named = true
+                endif
+              endif
+              assign link_unnamed = false
+              if wrap_link and caption == blank and label == blank and alt_typed == blank
+                if kind == 'placeholder' or b.image.alt == blank
+                  assign link_unnamed = true
+                endif
+              endif
+
+              # Names for videos: the caption, else the typed alt text. An uploaded video without a caption labels its
+              # figure; a YouTube/Vimeo facade names its play button and player after it.
+              assign media_title = caption | default: alt_typed
+              assign figure_label = ''
+              if kind == 'video' and caption == blank
+                assign figure_label = alt_typed | default: b.video.alt | strip
+              endif
+              assign media_alt = alt_typed
+              if kind == 'external'
+                assign media_alt = media_title
+              endif
+
+              assign play_muted = false
+              if kind == 'video' and s.video_autoplay
+                assign play_muted = true
+              endif
+
+              assign load = 'lazy'
+              if eager_ok and forloop.index <= cols_m
+                assign load = 'eager'
+              endif
+              assign media_widths = img_widths
+              if kind == 'video'
+                assign media_widths = poster_widths
+              endif
+              assign prio = false
+              if lcp_ok and forloop.first and kind == 'image'
+                assign prio = true
+              endif
+            -%}
+            {%- liquid
+              # anvil-media switches (integration pass): every facade's play link is named after its slide
+              # (play_label), an image inside a link the caption or label already names goes silent (decorative),
+              # and a lazy video slide fetches no metadata until it plays (the snippet's preload="none" when lazy).
+              assign play_named = ''
+              if kind == 'external' and media_title != blank
+                assign play_named = 'anvil.media.play_title' | t: title: media_title
+              endif
+            -%}
+            {%- capture media_html -%}
+              {%- render 'anvil-media', image: b.image, video: b.video, video_url: b.video_url, ratio: media_ratio, fit: media_fit, widths: media_widths, sizes: img_sizes, loading: load, priority: prio, alt: media_alt, decorative: link_named, play_label: play_named, placeholder: ph_name, autoplay: play_muted, class: 'av-media-slider__media' -%}
+            {%- endcapture -%}
+            <div class="av-media-slider__slide" data-slider-slide {{ block.shopify_attributes }}>
+              {%- if wrap_link -%}
+                <a class="av-media-slider__link av-hover-zoom" href="{{ b.button_link }}">
+              {%- endif -%}
+              <figure class="av-media-slider__figure{% if kind == 'video' or kind == 'external' %} av-media-slider__figure--video{% endif %}"{% if figure_label != blank %} aria-label="{{ figure_label | escape }}"{% endif %}>
+                {{- media_html -}}
+                {%- if caption != blank -%}
+                  <figcaption class="av-media-slider__cap">{{ caption | escape }}</figcaption>
+                {%- endif -%}
+              </figure>
+              {%- if wrap_link -%}
+                {%- if label != blank -%}
+                  <span class="av-media-slider__cta">{{ label | escape }}{{ icon_arrow }}</span>
+                {%- endif -%}
+                {%- if link_unnamed -%}
+                  <span class="av-visually-hidden">{{ link_fallback }}</span>
+                {%- endif -%}
+                </a>
+              {%- elsif has_link -%}
+                <a class="av-media-slider__cta" href="{{ b.button_link }}">
+                  {%- if label != blank -%}{{ label | escape }}{%- else -%}{{ link_fallback }}{%- endif -%}
+                  {{- icon_arrow -}}
+                </a>
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+        {%- if s.show_dots -%}
+          <div class="av-slider__dots" data-slider-dots></div>
+        {%- endif -%}
+      </anvil-slider>
+      <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+      {%- if request.design_mode and autoplay_blocked -%}
+        <p class="av-media-slider__note av-example-note">{{ 'anvil.editor.slider_autoplay_video' | t }}</p>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{% stylesheet %}
+/* Slides in view, peek, arrows, dots and the pause button's room come from <anvil-slider>; the shape from anvil-media
+   (9:16 included); zoom on hover from the shared .av-hover-zoom. */
+/* Phones: the row runs to the screen edges while the first slide keeps the page margin. The block padding (taken back by
+   the margins) leaves room for a linked slide's focus ring, which the scroll row would otherwise clip. */
+.av-media-slider > [data-slider-track]{margin-inline:calc(-1 * var(--av-gutter));padding-inline:var(--av-gutter);scroll-padding-inline:var(--av-gutter);margin-block:calc(-1 * var(--av-space-2));padding-block:var(--av-space-2)}
+.av-media-slider__slide{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+.av-media-slider--align-center .av-media-slider__slide{align-items:center;text-align:center}
+.av-media-slider--align-right .av-media-slider__slide{align-items:flex-end;text-align:end}
+.av-media-slider__link{display:flex;flex-direction:column;align-items:inherit;align-self:stretch;color:inherit;text-decoration:none}
+.av-media-slider__figure{position:relative;align-self:stretch;margin:0}
+.av-media-slider__cap{margin-top:var(--av-space-3);font-size:var(--av-text-sm);line-height:1.45;overflow-wrap:anywhere}
+.av-media-slider--cap-md .av-media-slider__cap{font-size:var(--av-text-md)}
+.av-media-slider--cap-lg .av-media-slider__cap{font-size:var(--av-text-lg);line-height:1.35}
+/* Caption on the media: a box in the section's own colours, so its contrast follows the colour scheme. */
+.av-media-slider--overlay .av-media-slider__cap{position:absolute;z-index:1;inset-block-end:var(--av-space-3);inset-inline-start:var(--av-space-3);max-width:calc(100% - 2 * var(--av-space-3));margin:0;padding:var(--av-space-2) var(--av-space-3);border-radius:var(--av-radius-badge);background:var(--av-bg);color:var(--av-fg);box-shadow:var(--av-shadow-sm)}
+.av-media-slider--overlay.av-media-slider--align-center .av-media-slider__cap{inset-inline-end:var(--av-space-3);width:fit-content;margin-inline:auto}
+.av-media-slider--overlay.av-media-slider--align-right .av-media-slider__cap{inset-inline-start:auto;inset-inline-end:var(--av-space-3)}
+/* Video slides keep the caption under the player, so it never covers the player's own controls or a loaded embed. */
+.av-media-slider--overlay .av-media-slider__figure--video .av-media-slider__cap{position:static;width:auto;max-width:none;margin:var(--av-space-3) 0 0;padding:0;border-radius:0;background:none;color:inherit;box-shadow:none}
+.av-media-slider__cta{display:inline-flex;align-items:center;gap:var(--av-space-1);min-height:24px;margin-top:var(--av-space-2);font-size:var(--av-text-sm);font-weight:600;color:inherit;text-decoration:underline;text-underline-offset:0.2em}
+.av-media-slider__cta svg{flex:none}
+.av-media-slider__cta svg:dir(rtl){scale:-1 1}
+.av-media-slider__link:hover .av-media-slider__cta,.av-media-slider__cta:hover{color:var(--av-accent)}
+.av-media-slider__note{margin:var(--av-space-3) 0 0}
+@media (min-width: 750px){
+.av-media-slider > [data-slider-track]{margin-inline:calc(-1 * var(--av-space-2));padding-inline:var(--av-space-2);scroll-padding-inline:var(--av-space-2)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Media slider",
+  "max_blocks": 20,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Media slider" },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "9:16", "label": "Vertical (9:16)" },
+        { "value": "16:9", "label": "Landscape (16:9)" },
+        { "value": "21:9", "label": "Wide (21:9)" }
+      ],
+      "default": "4:5"
+    },
+    {
+      "type": "select",
+      "id": "fit",
+      "label": "Media fit",
+      "options": [
+        { "value": "cover", "label": "Crop to fill the shape" },
+        { "value": "contain", "label": "Show the whole image" }
+      ],
+      "default": "cover",
+      "visible_if": "{{ section.settings.image_ratio != 'adapt' }}"
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1",
+      "info": "In a slider this is the number in view."
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5", "label": "5" }
+      ],
+      "default": "3",
+      "info": "In a slider this is the number in view. Tablets show up to 3; 4 columns become 2. With fewer slides than this, they share the row."
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between slides",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "unit": "px",
+      "default": 16
+    },
+    { "type": "header", "content": "Slider controls" },
+    {
+      "type": "range",
+      "id": "autoplay",
+      "label": "Auto-advance every",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 0,
+      "info": "0 turns it off. It pauses on hover and focus, starts paused when the shopper prefers reduced motion, and always shows a pause button. It stays off while any slide holds a video."
+    },
+    {
+      "type": "checkbox",
+      "id": "loop",
+      "label": "Wrap around at the ends",
+      "default": false,
+      "info": "The arrows go from the last slide back to the first. Auto-advance always wraps."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "Show dots",
+      "default": true
+    },
+    { "type": "header", "content": "Captions" },
+    {
+      "type": "select",
+      "id": "caption_style",
+      "label": "Caption position",
+      "options": [
+        { "value": "below", "label": "Under the media" },
+        { "value": "overlay", "label": "On the media, in a box" }
+      ],
+      "default": "below",
+      "info": "On video slides the caption sits under the player."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Caption alignment",
+      "default": "left"
+    },
+    {
+      "type": "select",
+      "id": "caption_size",
+      "label": "Caption size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" }
+      ],
+      "default": "sm"
+    },
+    { "type": "header", "content": "Videos" },
+    {
+      "type": "checkbox",
+      "id": "video_autoplay",
+      "label": "Play uploaded videos muted while in view",
+      "default": false,
+      "info": "Only when the shopper allows motion. Controls stay visible, so it can always be paused. YouTube and Vimeo videos always wait for a tap."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "Slide",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Shown when no video is set, and used as the cover of a YouTube or Vimeo link. Use only photos you have the right to use."
+        },
+        {
+          "type": "text",
+          "id": "alt",
+          "label": "Alt text",
+          "info": "Describes the image or video for screen readers. Leave blank to use the alt text saved with the file."
+        },
+        {
+          "type": "video",
+          "id": "video",
+          "label": "Video",
+          "info": "Show products as they really are. Say in the caption when a creator was paid or got the product free."
+        },
+        {
+          "type": "video_url",
+          "id": "video_url",
+          "label": "YouTube or Vimeo link",
+          "accept": ["youtube", "vimeo"],
+          "info": "Used when no video is uploaded. Nothing loads from YouTube or Vimeo until a shopper presses play."
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "Caption",
+          "default": "Example: say what this slide shows",
+          "info": "Describe what is really shown. Call something a customer photo or a real result only when it is one."
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "Link",
+          "info": "On image slides the whole slide becomes the link; video slides get a text link under the player."
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Link label",
+          "info": "Shown under the slide, for example \"Shop the look\".",
+          "visible_if": "{{ block.settings.button_link != blank }}"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Media slider",
+      "settings": {
+        "heading": "See it <strong>up close</strong>"
+      },
+      "blocks": [
+        {
+          "type": "slide",
+          "settings": {
+            "caption": "Example: replace with what this photo shows"
+          }
+        },
+        {
+          "type": "slide",
+          "settings": {
+            "caption": "Example: a close-up of a detail"
+          }
+        },
+        {
+          "type": "slide",
+          "settings": {
+            "caption": "Example: the product in use"
+          }
+        },
+        {
+          "type": "slide",
+          "settings": {
+            "caption": "Example: upload a short video or paste a YouTube link"
+          }
+        },
+        {
+          "type": "slide",
+          "settings": {
+            "caption": "Example: link a slide to a product or collection"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

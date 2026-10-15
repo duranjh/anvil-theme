@@ -15,3 +15,7 @@ Two or more blocks become an `<anvil-slider>` (inline per-view custom properties
 
 ## Uncertain
 The `/discount/CODE?redirect=` link is Shopify's documented shareable discount URL; confirm the redirect keeps the market/locale prefix on a store with several markets.
+
+## Fix pass (2026-10-15)
+- Uses the shared pieces: slider attributes, peek, arrows and dots per width from `snippets/anvil-slider-attrs` (DECISIONS 89).
+- Availability: `enabled_on` "groups": ["header"] (CONVENTIONS §4).

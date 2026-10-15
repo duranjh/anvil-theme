@@ -4,7 +4,9 @@
  * Markup: for each spot a wrapper .av-hotspots__spot-wrap (style="--av-spot-x: 40%; --av-spot-y: 60%") holding
  * <button data-spot aria-expanded="false" aria-controls="popId"> and <div class="av-hotspots__pop" id="popId" hidden>.
  * The popover may also simply follow the button as its next sibling. Click / Enter / Space toggles; one popover is
- * open at a time; Esc closes and returns focus to the spot; clicking or focusing outside closes. Popovers get
+ * open at a time; Esc closes and returns focus to the spot; clicking or focusing outside closes, and so does a click
+ * on the image away from every spot and open popover (a phone shopper can dismiss a popover that covers the next
+ * dot without leaving the image; clicks inside a popover keep it open). Popovers get
  * .av-is-flip-y / .av-is-left / .av-is-right so they stay inside the element. Emits anvil:hotspot:toggle {spot, open}
  * (bubbles). shopify:block:select on a spot block opens it; deselect closes.
  * Methods: open(spot), close(spot, refocus?), closeAll(except?). Property: spots.
@@ -74,7 +76,10 @@ class Hotspots extends HTMLElement {
 
   #onClick = (e) => {
     const spot = e.target.closest('[data-spot]');
-    if (!spot || !this.contains(spot)) return;
+    if (!spot || !this.contains(spot)) {
+      if (!this.spots.some((s) => this.popFor(s)?.contains(e.target))) this.closeAll();
+      return;
+    }
     e.preventDefault();
     if (spot.getAttribute('aria-expanded') === 'true') this.close(spot);
     else this.open(spot);

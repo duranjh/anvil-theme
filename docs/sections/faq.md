@@ -27,7 +27,7 @@ The 13 chassis settings come first, verbatim (see CONVENTIONS §4). Then:
 |---|---|---|---|
 | `open_first` | checkbox | `true` | the first item actually rendered (a blank question is skipped on the storefront) gets the `open` attribute (works without JS) |
 | `single_open` | checkbox | `false` | adds the `single` attribute to `<anvil-collapsible>`; with JS, opening one item closes the others. Without JS every item can stay open |
-| `icon_style` | select `plus` / `chevron` | `plus` | plus/minus pair swapped by CSS on `[open]`, or one chevron rotated 180° on `[open]` |
+| `toggle_icon` | select `plus` / `chevron` | `plus` | plus/minus pair swapped by CSS on `[open]`, or one chevron rotated 180° on `[open]` |
 | `item_style` | select `lines` / `cards` | `lines` | divider lines between items, or boxed items using the card radius/border tokens |
 | `two_columns` | checkbox | `false` | ≥ 990 px: two-column grid, rows aligned at the top. Below that always one column |
 | `json_ld` | checkbox | `false` | emits a `FAQPage` JSON-LD block (see below). Carries an honesty `info` |
@@ -105,3 +105,11 @@ Both are rendered only in `request.design_mode`; the storefront reads no fixed s
 - State classes renamed to `av-is-*`; the root's type class is `av-s-anvil-faq` (DECISIONS 31).
 - `templates/page.faq.json` now uses two FAQ sections (anchors `shipping` and `product`); only the first emits `FAQPage` JSON-LD (owner decision G, DECISIONS 26). Other templates carry example FAQ sections with `json_ld: false`.
 - The height animation is the documented exception in CONVENTIONS §8 (owner decision B, DECISIONS 21).
+
+## Integration pass (2026-10-15)
+- Every template FAQ keeps `json_ld: false`; `scripts/check-templates.py` fails any template or group that ships an FAQ with it on.
+
+## Fix pass (2026-10-15)
+- Setting ids follow the theme-wide vocabulary (CONVENTIONS §5; DECISIONS 82–100); the tables above use the new ids: `icon_style` → `toggle_icon`. Saved templates were migrated.
+- Uses the shared pieces: the editor-only empty note from `snippets/anvil-editor-empty` (DECISIONS 87); accordion rows from `assets/anvil-accordion.css` (DECISIONS 91); a hidden fallback heading through `anvil-section-head` (DECISIONS 84).
+- Availability: `disabled_on` groups ["*"] (CONVENTIONS §4, DECISIONS 100).

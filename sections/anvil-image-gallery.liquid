@@ -1,0 +1,427 @@
+{%- liquid
+  assign s = section.settings
+
+  assign layout = s.layout | default: 'grid'
+  # Columns follow the shared grid rule (.av-grid: tablets up to 3, 4 become 2); the slider shows the same counts.
+  assign cols_d = s.cols_desktop | default: '3' | plus: 0 | at_least: 2 | at_most: 6
+  assign cols_t = cols_d | at_most: 3
+  if cols_d == 4
+    assign cols_t = 2
+  endif
+  assign cols_m = s.cols_mobile | default: '2' | plus: 0
+  assign gap = s.gap | default: 12
+  assign autoplay = s.autoplay | default: 0
+
+  # Masonry keeps every image's own shape; the other layouts use the chosen ratio.
+  assign ratio = s.image_ratio | default: '1:1'
+  if layout == 'masonry'
+    assign ratio = 'adapt'
+  endif
+
+  # Images the lightbox can show (blocks with a picked image), counted once for the "N of M" link names.
+  assign image_total = section.blocks | map: 'settings' | map: 'image' | compact | size
+  assign lightbox_on = false
+  if s.lightbox and image_total > 0
+    assign lightbox_on = true
+  endif
+
+  # sizes: page or narrow width caps the row, so wide screens never fetch more than one column of that width.
+  case s.width
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 0
+    when 'full'
+      assign cap = 0
+    else
+      assign cap = settings.page_width | default: 0
+  endcase
+  assign tablet_cols = cols_t
+  # The cap entry starts at 990 px at the earliest: below that, tablets and the slider show fewer, wider columns,
+  # and the viewport-fraction entries (which can only overestimate) take over.
+  assign img_sizes = ''
+  if cap > 0
+    assign col_px = cap | divided_by: cols_d
+    assign cap_bp = cap | at_least: 990
+    assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: col_px | append: 'px, '
+  endif
+  assign img_sizes = img_sizes | append: '(min-width: 990px) calc(100vw / ' | append: cols_d | append: '), (min-width: 750px) calc(100vw / ' | append: tablet_cols | append: '), calc(100vw / ' | append: cols_m | append: ')'
+  assign img_widths = '300, 450, 600, 750, 900, 1100, 1500'
+
+  # First two template sections (snippets/anvil-above-fold): the first desktop row loads eagerly; in the first section
+  # the first image is the likely LCP. Masonry fills column by column, so its first row is the top of each column:
+  # roughly every per_col-th block.
+  assign per_col = section.blocks.size | plus: cols_d | minus: 1 | divided_by: cols_d | at_least: 1
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign eager_ok = true
+  if fold == 'lazy'
+    assign eager_ok = false
+  endif
+  assign lcp_ok = false
+  if fold == 'lcp'
+    assign lcp_ok = true
+  endif
+
+  assign ph_names = 'lifestyle-1,product-1,lifestyle-2,product-2,image,product-3' | split: ','
+  assign ph_ratios = '4:5,1:1,3:4,16:9,1:1,4:5' | split: ','
+
+  assign list_label = s.heading | strip_html | strip
+  if list_label == blank
+    assign list_label = 'anvil.image_gallery.label' | t
+  endif
+
+  assign root_class = 'av-image-gallery av-image-gallery--' | append: layout
+  # Zoom on hover (shared .av-hover-zoom) only on images that open the lightbox.
+  assign open_class = 'av-image-gallery__open'
+  if s.hover_zoom
+    assign open_class = open_class | append: ' av-hover-zoom'
+  endif
+  assign list_class = 'av-image-gallery__list av-grid av-grid--c' | append: cols_d | append: ' av-grid--m' | append: cols_m
+
+  assign item_tag = 'li'
+  if layout == 'slider'
+    assign item_tag = 'div'
+  endif
+
+  if lightbox_on
+    capture icon_zoom
+      render 'anvil-icon', name: 'zoom-in', size: 18
+    endcapture
+  endif
+  assign lb_index = 0
+-%}
+{%- if section.blocks.size > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-image-gallery' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if section.blocks.size > 0 -%}
+      <anvil-image-gallery class="{{ root_class }}" style="--av-grid-space: {{ gap }}px;">
+        {%- if layout == 'slider' -%}
+          {%- liquid
+            assign arrows = 'none'
+            if s.show_arrows
+              assign arrows = 'all'
+            endif
+            assign slider_style = '--av-slider-gap: ' | append: gap | append: 'px;'
+          -%}
+          {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+          <anvil-slider {% render 'anvil-slider-attrs', count: section.blocks.size, per_view: cols_m, per_view_tablet: cols_t, per_view_desktop: cols_d, peek: 'auto', arrows: arrows, dots: s.show_dots, autoplay: autoplay, label: list_label, class: 'av-image-gallery__slider', style: slider_style %}>
+            <div class="av-image-gallery__track" data-slider-track>
+        {%- else -%}
+          <ul class="{{ list_class }}" role="list">
+        {%- endif -%}
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign b = block.settings
+            assign img = b.image
+            assign ph_i = forloop.index0 | modulo: 6
+            assign ph_name = ph_names[ph_i]
+
+            assign item_ratio = ratio
+            if img == blank and layout == 'masonry'
+              assign item_ratio = ph_ratios[ph_i]
+            endif
+
+            assign load = 'lazy'
+            if eager_ok
+              if layout == 'masonry'
+                assign col_pos = forloop.index0 | modulo: per_col
+                if col_pos == 0
+                  assign load = 'eager'
+                endif
+              elsif forloop.index <= cols_d
+                assign load = 'eager'
+              endif
+            endif
+            assign prio = false
+            if lcp_ok and forloop.first and img != blank
+              assign prio = true
+            endif
+
+            assign caption = b.caption | strip
+            assign has_link = false
+            if lightbox_on and img != blank
+              assign has_link = true
+              assign lb_index = lb_index | plus: 1
+            endif
+          -%}
+          <{{ item_tag }} class="av-image-gallery__item"{% if layout == 'slider' %} data-slider-slide{% endif %} {{ block.shopify_attributes }}>
+            <figure class="av-image-gallery__figure">
+              {%- if has_link -%}
+                <a class="{{ open_class }}" href="{{ img | image_url: width: 2200 }}" data-anvil-lb-open data-anvil-w="{{ img.width }}">
+                  {%- render 'anvil-media', image: img, ratio: item_ratio, widths: img_widths, sizes: img_sizes, loading: load, priority: prio, alt: b.alt, placeholder: ph_name -%}
+                  <span class="av-image-gallery__zoom" aria-hidden="true">{{ icon_zoom }}</span>
+                  <span class="av-visually-hidden">{{ 'anvil.image_gallery.enlarge' | t: index: lb_index, total: image_total }}</span>
+                </a>
+              {%- else -%}
+                {%- render 'anvil-media', image: img, ratio: item_ratio, widths: img_widths, sizes: img_sizes, loading: load, priority: prio, alt: b.alt, placeholder: ph_name -%}
+              {%- endif -%}
+              {%- if s.show_captions and caption != blank -%}
+                <figcaption class="av-image-gallery__cap">{{ caption | escape }}</figcaption>
+              {%- endif -%}
+            </figure>
+          </{{ item_tag }}>
+        {%- endfor -%}
+        {%- if layout == 'slider' -%}
+            </div>
+            {%- if s.show_dots -%}
+              <div class="av-slider__dots" data-slider-dots></div>
+            {%- endif -%}
+          </anvil-slider>
+          <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+        {%- else -%}
+          </ul>
+        {%- endif -%}
+
+        {%- if lightbox_on -%}
+          {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+          <anvil-dialog id="anvil-image-gallery-lb-{{ section.id }}" class="av-image-gallery__lb-host" data-anvil-lb-host>
+            <dialog class="av-image-gallery__lb" aria-label="{{ 'anvil.image_gallery.viewer' | t }}">
+              <button type="button" class="av-image-gallery__lb-close" data-anvil-close autofocus aria-label="{{ 'anvil.a11y.close' | t }}">
+                {%- render 'anvil-icon', name: 'x', size: 20 -%}
+              </button>
+              <div class="av-image-gallery__lb-track" data-anvil-lb-track data-anvil-slide="{{ 'anvil.a11y.slide' | t | escape }}" tabindex="0" role="region" aria-roledescription="{{ 'anvil.a11y.carousel' | t | escape }}" aria-label="{{ list_label | escape_once }}"></div>
+              <div class="av-image-gallery__lb-bar">
+                <button type="button" class="av-image-gallery__lb-btn" data-anvil-lb-prev aria-label="{{ 'anvil.image_gallery.previous' | t }}">
+                  {%- render 'anvil-icon', name: 'chevron-left', size: 20 -%}
+                </button>
+                <p class="av-image-gallery__lb-count" data-anvil-lb-count data-anvil-text="{{ 'anvil.image_gallery.count' | t: index: '[index]', total: '[total]' | escape }}" aria-live="polite" aria-atomic="true"></p>
+                <button type="button" class="av-image-gallery__lb-btn" data-anvil-lb-next aria-label="{{ 'anvil.image_gallery.next' | t }}">
+                  {%- render 'anvil-icon', name: 'chevron-right', size: 20 -%}
+                </button>
+              </div>
+            </dialog>
+          </anvil-dialog>
+          <script type="module" src="{{ 'anvil-image-gallery.js' | asset_url }}"></script>
+        {%- endif -%}
+      </anvil-image-gallery>
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Columns and gap from the shared .av-grid (masonry reads the same column count); the slider from <anvil-slider>;
+   zoom on hover from the shared .av-hover-zoom. */
+.av-image-gallery{display:block}
+.av-image-gallery__list{padding:0;list-style:none}
+.av-image-gallery--grid .av-image-gallery__list{align-items:start}
+.av-image-gallery--masonry .av-image-gallery__list{display:block;columns:var(--av-grid-n);column-gap:var(--av-grid-space);margin-bottom:calc(-1 * var(--av-grid-space))}
+.av-image-gallery__item{min-width:0;margin:0}
+.av-image-gallery--masonry .av-image-gallery__item{display:block;margin:0 0 var(--av-grid-space);break-inside:avoid}
+.av-image-gallery__figure{margin:0}
+.av-image-gallery__cap{margin-top:var(--av-space-2);font-size:var(--av-text-sm);line-height:1.45;color:var(--av-fg-muted);overflow-wrap:anywhere}
+.av-image-gallery__open{position:relative;display:block;color:inherit;cursor:zoom-in}
+/* Focus ring drawn inside the link, above the positioned media: the slider track clips anything outside the slide. */
+.av-image-gallery__open::after{content:"";position:absolute;inset:0;pointer-events:none}
+.av-image-gallery__open:focus-visible{outline:2px solid transparent}
+.av-image-gallery__open:focus-visible::after{outline:2px solid var(--av-accent);outline-offset:-2px}
+.av-image-gallery__zoom{position:absolute;inset-block-end:var(--av-space-2);inset-inline-end:var(--av-space-2);display:grid;place-items:center;width:32px;height:32px;border-radius:var(--av-radius-pill);background:var(--av-bg);color:var(--av-fg);box-shadow:var(--av-shadow-sm);pointer-events:none}
+@media (hover:hover){
+.av-image-gallery__zoom{opacity:0}
+.av-image-gallery__open:hover .av-image-gallery__zoom,.av-image-gallery__open:focus-visible .av-image-gallery__zoom{opacity:1}
+}
+/* Lightbox: a full-screen native dialog in the section's colour scheme; slides are built by anvil-image-gallery.js. */
+.av-image-gallery__lb{width:100%;height:100%;max-width:100%;max-height:100%;margin:0;padding:0;border:0;overflow:hidden;background:var(--av-bg);color:var(--av-fg)}
+.av-image-gallery__lb[open]{display:grid;grid-template-rows:minmax(0,1fr) auto}
+.av-image-gallery__lb-track{position:relative;display:flex;min-height:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior:contain;scrollbar-width:none}
+.av-image-gallery__lb-track::-webkit-scrollbar{display:none}
+.av-image-gallery__lb-track:focus-visible{outline-offset:-4px}
+.av-image-gallery__lb-slide{flex:0 0 100%;display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0;margin:0;padding:calc(44px + var(--av-space-5)) var(--av-space-4) 0;scroll-snap-align:center;scroll-snap-stop:always}
+.av-image-gallery__lb-slide img{display:block;width:100%;height:100%;object-fit:contain}
+.av-image-gallery__lb-cap{max-width:60ch;margin:var(--av-space-3) auto 0;font-size:var(--av-text-sm);line-height:1.45;text-align:center;color:var(--av-fg-muted)}
+.av-image-gallery__lb-bar{display:flex;align-items:center;justify-content:center;gap:var(--av-space-3);padding:var(--av-space-3) var(--av-space-4) calc(var(--av-space-3) + env(safe-area-inset-bottom,0px))}
+.av-image-gallery__lb-btn,.av-image-gallery__lb-close{display:grid;place-items:center;width:44px;height:44px;padding:0;border:var(--av-border-w-button) solid var(--av-border);border-radius:var(--av-radius-button);background:var(--av-bg);color:var(--av-fg);cursor:pointer}
+.av-image-gallery__lb-btn[hidden]{display:none}
+.av-image-gallery__lb-btn svg:dir(rtl){scale:-1 1}
+.av-image-gallery__lb-close{position:absolute;z-index:1;top:calc(var(--av-space-3) + env(safe-area-inset-top,0px));inset-inline-end:var(--av-space-3)}
+.av-image-gallery__lb-count{min-width:7ch;margin:0;font-size:var(--av-text-sm);font-variant-numeric:tabular-nums;text-align:center}
+@media (min-width:990px){.av-image-gallery__lb-slide{padding-inline:var(--av-space-9)}}
+@media (prefers-reduced-motion:no-preference){
+html:not([data-animations="off"]) .av-image-gallery__lb[open]{animation:av-image-gallery-in var(--av-dur) var(--av-ease)}
+}
+@keyframes av-image-gallery-in{from{opacity:0}}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Image gallery",
+  "max_blocks": 30,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Image gallery" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "grid", "label": "Grid" },
+        { "value": "masonry", "label": "Masonry" },
+        { "value": "slider", "label": "Slider" }
+      ],
+      "default": "grid",
+      "info": "Masonry stacks images in columns and keeps each image's own shape."
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5", "label": "5" },
+        { "value": "6", "label": "6" }
+      ],
+      "default": "3",
+      "info": "In a slider this is the number in view. Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "2",
+      "info": "In a slider this is the number in view."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" }
+      ],
+      "default": "1:1",
+      "info": "Other shapes crop images to fit. Masonry always uses the original shape."
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between images",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "checkbox",
+      "id": "show_captions",
+      "label": "Show captions",
+      "default": true,
+      "info": "Under the images and in the lightbox."
+    },
+    {
+      "type": "checkbox",
+      "id": "hover_zoom",
+      "label": "Zoom images on hover",
+      "default": true,
+      "info": "Only on images that open the lightbox, and only when theme animations are on and the shopper allows motion."
+    },
+    { "type": "header", "content": "Lightbox" },
+    {
+      "type": "checkbox",
+      "id": "lightbox",
+      "label": "Enlarge images in a lightbox",
+      "default": true,
+      "info": "Tapping an image opens it full screen with previous and next buttons. Without JavaScript the image opens on its own."
+    },
+    {
+      "type": "header",
+      "content": "Slider",
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true,
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "Show dots",
+      "default": true,
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    {
+      "type": "range",
+      "id": "autoplay",
+      "label": "Auto-advance every",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 0,
+      "info": "0 turns it off. It pauses on hover and focus, starts paused when the shopper prefers reduced motion, and always shows a pause button.",
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "image",
+      "name": "Image",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Upload only photos you own or are licensed to use."
+        },
+        {
+          "type": "text",
+          "id": "alt",
+          "label": "Alt text",
+          "info": "Describe what the image shows for screen readers. Leave blank to use the alt text saved with the image."
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "Caption",
+          "info": "Optional. Only state what is true for the product or result shown."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Image gallery",
+      "settings": {
+        "heading": "In <strong>pictures</strong>"
+      },
+      "blocks": [
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" }
+      ]
+    }
+  ]
+}
+{% endschema %}

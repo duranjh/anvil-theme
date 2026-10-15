@@ -1,0 +1,789 @@
+{%- liquid
+  assign s = section.settings
+
+  # Media in the first two template sections loads eagerly (snippets/anvil-above-fold).
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign top_section = true
+  if fold contains 'lazy'
+    assign top_section = false
+  endif
+
+  comment
+    First pass: count the posts that render (a post with neither text nor image is skipped on the storefront and
+    kept in the editor so it can still be selected). Counts and the network icon show only on a post that links
+    to the original, where a shopper can check them (CONVENTIONS §10, as Testimonials' stars), so this pass also
+    notes whether any count shows, whether typed counts or an icon stay hidden for want of a link (the editor
+    says why), and whether every post links to its original (the disclosure line cannot be switched off while
+    one does not). The only for-loop tag over section.blocks is the rendering loop below.
+  endcomment
+  assign card_count = 0
+  assign any_count_shown = false
+  assign counts_hidden = false
+  assign icon_hidden = false
+  assign all_linked = true
+  for block in section.blocks
+    assign sc_text = block.settings.text | strip
+    assign sc_has_content = false
+    if sc_text != blank or block.settings.image != blank
+      assign sc_has_content = true
+    endif
+    if sc_has_content or request.design_mode
+      assign card_count = card_count | plus: 1
+    endif
+    assign sc_counted = false
+    if block.settings.likes > 0 or block.settings.comments > 0 or block.settings.shares > 0
+      assign sc_counted = true
+    endif
+    if block.settings.post_url == blank
+      if sc_counted
+        assign counts_hidden = true
+      endif
+      if block.settings.platform_icon != blank
+        assign icon_hidden = true
+      endif
+      if sc_has_content
+        assign all_linked = false
+      endif
+    elsif sc_counted
+      assign any_count_shown = true
+    endif
+  endfor
+
+  assign show_link_note = false
+  if request.design_mode
+    if icon_hidden
+      assign show_link_note = true
+    elsif s.show_counts
+      if any_count_shown == false or counts_hidden
+        assign show_link_note = true
+      endif
+    endif
+  endif
+
+  assign layout = s.layout | default: 'grid'
+  assign is_slider = false
+  if layout == 'slider'
+    assign is_slider = true
+  endif
+
+  comment
+    Only the slider caps its per-view count at the number of posts (a lone slide fills the row). Grid and masonry
+    keep the merchant's columns, so a single post stays card-sized and the 600 w srcset stays adequate.
+  endcomment
+  assign cols = s.cols_desktop | default: '3' | plus: 0 | at_least: 1
+  if is_slider
+    assign cols = cols | at_most: card_count | at_least: 1
+  endif
+  # Tablets follow the shared grid rule (up to 3; 4 become 2).
+  assign cols_t = cols | at_most: 3
+  if cols == 4
+    assign cols_t = 2
+  endif
+  assign cols_m = 1
+  unless is_slider
+    assign cols_m = s.cols_mobile | default: '1' | plus: 0 | at_most: cols_t
+  endunless
+
+  assign vw_d = 100 | divided_by: cols
+  assign vw_t = 100 | divided_by: cols_t
+  if is_slider
+    assign vw_m = 85
+  else
+    assign vw_m = 100 | divided_by: cols_m
+  endif
+  assign img_sizes = '(min-width: 990px) ' | append: vw_d | append: 'vw, (min-width: 750px) ' | append: vw_t | append: 'vw, ' | append: vw_m | append: 'vw'
+
+  capture surface
+    render 'anvil-surface', style: s.card_style
+  endcapture
+  assign surface = surface | strip
+  assign root_class = 'av-social-cards av-social-cards--' | append: layout | append: ' av-social-cards--t-' | append: s.text_size
+  if surface != blank
+    assign root_class = root_class | append: ' av-social-cards--boxed'
+  endif
+  unless is_slider
+    assign root_class = root_class | append: ' av-grid av-grid--c' | append: cols | append: ' av-grid--m' | append: cols_m
+  endunless
+  assign img_ratio = s.image_ratio | default: '1:1'
+  if img_ratio == 'theme'
+    assign img_ratio = settings.card_image_ratio | default: '4:5'
+  endif
+
+  # Slider only: cards in view, peek, arrows, dots and the pause button's room come from snippets/anvil-slider-attrs.
+  assign autoplay = 0
+  if is_slider and card_count > 1
+    assign autoplay = s.autoplay | default: 0
+  endif
+  assign arrows = 'none'
+  if s.show_arrows
+    assign arrows = 'desktop'
+  endif
+
+  comment
+    The region label is escaped once: escape_once for the heading (inline_richtext already stores entities such
+    as &amp;), nothing for the translation (t output is escaped already).
+  endcomment
+  assign slider_label = s.heading | strip_html | strip
+  if slider_label == blank
+    assign slider_label = 'anvil.social_cards.label' | t
+  endif
+
+  assign label_view = 'anvil.social_cards.view_post' | t
+  assign label_new_tab = 'anvil.a11y.new_window' | t
+
+  comment
+    Translations come back from t already escaped, so only the merchant's own text is escaped here.
+  endcomment
+  assign disclosure = s.disclosure | strip | escape
+  if disclosure == blank
+    assign disclosure = 'anvil.social_cards.disclosure' | t
+  endif
+
+  # Icons are rendered once and printed per card.
+  assign like_icon = s.like_icon | default: 'heart'
+  capture icon_likes
+    render 'anvil-icon', name: like_icon, size: 18
+  endcapture
+  capture icon_comments
+    render 'anvil-icon', name: 'message-circle', size: 18
+  endcapture
+  capture icon_shares
+    render 'anvil-icon', name: 'share-2', size: 18
+  endcapture
+  assign count_keys = 'likes,comments,shares' | split: ','
+  assign sep = ' <span class="av-social-cards__sep" aria-hidden="true">·</span> '
+
+  assign item_tag = 'li'
+  if is_slider
+    assign item_tag = 'div'
+  endif
+  assign card_n = 0
+-%}
+{%- if card_count > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-social-cards' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if card_count > 0 -%}
+      {%- if is_slider -%}
+        {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+        <anvil-slider {% render 'anvil-slider-attrs', count: card_count, per_view: 1, per_view_tablet: cols_t, per_view_desktop: cols, peek: 'auto', arrows: arrows, gutter: true, dots: s.show_dots, autoplay: autoplay, label: slider_label, class: root_class %}>
+        <div class="av-social-cards__track" data-slider-track>
+      {%- else -%}
+        <ul class="{{ root_class }}" role="list">
+      {%- endif -%}
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign b = block.settings
+          assign text = b.text | strip
+          if text == blank and b.image == blank and request.design_mode == false
+            continue
+          endif
+          assign card_n = card_n | plus: 1
+
+          assign media_loading = 'lazy'
+          if top_section and card_n <= cols
+            assign media_loading = 'eager'
+          endif
+
+          assign name = b.name | strip
+          assign handle = b.handle | strip
+          assign platform = b.platform | strip
+          assign uid = 'av-sc-' | append: section.id | append: '-' | append: block.id
+
+          comment
+            Initials for the avatar fallback: first letters of the first and last word of the name, else the first
+            letter of the username.
+          endcomment
+          assign initials = ''
+          if name != blank
+            assign name_parts = name | split: ' '
+            assign initials = name_parts.first | slice: 0
+            if name_parts.size > 1
+              assign last_initial = name_parts.last | slice: 0
+              assign initials = initials | append: last_initial
+            endif
+          elsif handle != blank
+            assign initials = handle | remove_first: '@' | slice: 0
+          endif
+          assign initials = initials | upcase
+
+          # Dates typed as YYYY-MM-DD become a <time> element (snippets/anvil-typed-date, shared with Review wall).
+          capture date_html
+            render 'anvil-typed-date', date: b.date
+          endcapture
+          assign date_html = date_html | strip
+
+          assign handle_esc = handle | escape
+          assign platform_esc = platform | escape
+          capture meta_html
+            if handle != blank
+              echo '<span class="av-social-cards__handle">' | append: handle_esc | append: '</span>'
+            endif
+            if platform != blank
+              if handle != blank
+                echo sep
+              endif
+              echo '<span class="av-social-cards__platform">' | append: platform_esc | append: '</span>'
+            endif
+            if date_html != blank
+              if handle != blank or platform != blank
+                echo sep
+              endif
+              echo date_html
+            endif
+          endcapture
+
+          comment
+            The network icon shows only when the post links to the original, where a shopper can check it. It is
+            decorative when its name is written beside it; alone it speaks with the image's own alt text.
+          endcomment
+          assign show_icon = false
+          if b.platform_icon != blank and b.post_url != blank
+            assign show_icon = true
+          endif
+          assign icon_alt = ''
+          if platform == blank
+            assign icon_alt = b.platform_icon.alt | default: ''
+          endif
+
+          assign has_head = false
+          if b.avatar != blank or initials != blank or meta_html != blank or show_icon
+            assign has_head = true
+          endif
+
+          comment
+            Post text, escaped. With the accent option, words that start with # or @ are wrapped so they take the
+            accent colour, as on a social post; line breaks are kept.
+          endcomment
+          assign text_html = ''
+          if text != blank
+            if s.tag_accent
+              assign sc_lines = text | newline_to_br | split: '<br />'
+              capture text_html
+                for sc_line in sc_lines
+                  unless forloop.first
+                    echo '<br>'
+                  endunless
+                  assign sc_words = sc_line | strip | split: ' '
+                  for sc_word in sc_words
+                    unless forloop.first
+                      echo ' '
+                    endunless
+                    assign sc_esc = sc_word | escape
+                    assign sc_first = sc_word | slice: 0
+                    assign sc_tag = false
+                    if sc_first == '#' or sc_first == '@'
+                      if sc_word.size > 1
+                        assign sc_tag = true
+                      endif
+                    endif
+                    if sc_tag
+                      echo '<span class="av-social-cards__tag">' | append: sc_esc | append: '</span>'
+                    else
+                      echo sc_esc
+                    endif
+                  endfor
+                endfor
+              endcapture
+            else
+              assign text_html = text | escape | newline_to_br
+            endif
+          endif
+
+          comment
+            Counts are exactly what the merchant typed (docs/HONEST.md); blank or 0 hides one, and they show only
+            when the post links to the original so a shopper can check them (CONVENTIONS §10). Large numbers are
+            shortened the way posts show them and always rounded down (1,299 becomes 1.2K), so a count is never
+            overstated. The hidden word after each number names it for screen readers ("1.2K likes").
+          endcomment
+          assign counts_html = ''
+          if s.show_counts and b.post_url != blank
+            capture counts_html
+              for sc_key in count_keys
+                assign sc_n = b[sc_key] | default: 0 | floor
+                if sc_n < 1
+                  continue
+                endif
+                assign sc_shown = sc_n
+                if sc_n >= 1000
+                  if sc_n >= 1000000
+                    assign sc_tenths = sc_n | divided_by: 100000
+                  else
+                    assign sc_tenths = sc_n | divided_by: 100
+                  endif
+                  assign sc_whole = sc_tenths | divided_by: 10
+                  assign sc_dec = sc_tenths | modulo: 10
+                  assign sc_val = sc_whole
+                  if sc_dec > 0 and sc_whole < 100
+                    assign sc_val = sc_whole | append: '.' | append: sc_dec
+                  endif
+                  if sc_n >= 1000000
+                    assign sc_shown = 'anvil.social_cards.millions' | t: value: sc_val
+                  else
+                    assign sc_shown = 'anvil.social_cards.thousands' | t: value: sc_val
+                  endif
+                endif
+                case sc_key
+                  when 'likes'
+                    assign sc_icon = icon_likes
+                    assign sc_word_label = 'anvil.social_cards.likes' | t: count: sc_n
+                  when 'comments'
+                    assign sc_icon = icon_comments
+                    assign sc_word_label = 'anvil.social_cards.comments' | t: count: sc_n
+                  else
+                    assign sc_icon = icon_shares
+                    assign sc_word_label = 'anvil.social_cards.shares' | t: count: sc_n
+                endcase
+                echo '<li class="av-social-cards__count">' | append: sc_icon
+                echo '<span class="av-social-cards__num">' | append: sc_shown | append: '</span>'
+                echo '<span class="av-visually-hidden"> ' | append: sc_word_label | append: '</span></li>'
+              endfor
+            endcapture
+            assign counts_html = counts_html | strip
+          endif
+
+          comment
+            A post still showing the shipped example text and no photo draws a placeholder illustration, so an
+            unedited section shows the whole card; real text-only posts stay clean.
+          endcomment
+          assign media_html = ''
+          if b.image != blank
+            capture media_html
+              render 'anvil-media', image: b.image, ratio: img_ratio, widths: '300, 450, 600', sizes: img_sizes, loading: media_loading, class: 'av-social-cards__media'
+            endcapture
+          elsif text contains 'Example: '
+            assign ph_name = 'lifestyle-1'
+            assign ph_mod = card_n | modulo: 2
+            if ph_mod == 0
+              assign ph_name = 'lifestyle-2'
+            endif
+            capture media_html
+              render 'anvil-media', ratio: img_ratio, placeholder: ph_name, widths: '300, 450, 600', sizes: img_sizes, loading: media_loading, class: 'av-social-cards__media'
+            endcapture
+          endif
+        -%}
+        <{{ item_tag }} class="av-social-cards__item"{% if is_slider %} data-slider-slide{% endif %} {{ block.shopify_attributes }}>
+          <article class="av-social-cards__post {{ surface }}"{% if name != blank %} aria-labelledby="{{ uid }}-name"{% elsif handle != blank %} aria-labelledby="{{ uid }}-meta"{% endif %}>
+            {%- if has_head -%}
+              <header class="av-social-cards__head">
+                {%- if b.avatar != blank -%}
+                  <span class="av-social-cards__avatar">
+                    {{- b.avatar | image_url: width: 132 | image_tag: widths: '44, 88, 132', sizes: '44px', loading: media_loading, alt: '' -}}
+                  </span>
+                {%- elsif initials != blank -%}
+                  <span class="av-social-cards__avatar" aria-hidden="true">{{ initials | escape }}</span>
+                {%- endif -%}
+                {%- if name != blank or meta_html != blank -%}
+                  <span class="av-social-cards__who">
+                    {%- if name != blank -%}
+                      <span class="av-social-cards__name" id="{{ uid }}-name">{{ name | escape }}</span>
+                    {%- endif -%}
+                    {%- if meta_html != blank -%}
+                      <span class="av-social-cards__meta" id="{{ uid }}-meta">{{ meta_html }}</span>
+                    {%- endif -%}
+                  </span>
+                {%- endif -%}
+                {%- if show_icon -%}
+                  <span class="av-social-cards__network">
+                    {{- b.platform_icon | image_url: width: 120 | image_tag: widths: '40, 80, 120', sizes: '40px', loading: media_loading, alt: icon_alt -}}
+                  </span>
+                {%- endif -%}
+              </header>
+            {%- endif -%}
+            {%- if s.image_position == 'before_text' -%}{{ media_html }}{%- endif -%}
+            {%- if text_html != blank -%}
+              <p class="av-social-cards__text">{{ text_html }}</p>
+            {%- elsif b.image == blank -%}
+              <p class="av-social-cards__empty av-example-note">{{ 'anvil.editor.block_empty' | t }}</p>
+            {%- endif -%}
+            {%- if s.image_position != 'before_text' -%}{{ media_html }}{%- endif -%}
+            {%- if counts_html != blank or b.post_url != blank -%}
+              <footer class="av-social-cards__foot">
+                {%- if counts_html != blank -%}
+                  <ul class="av-social-cards__counts" role="list">{{ counts_html }}</ul>
+                {%- endif -%}
+                {%- if b.post_url != blank -%}
+                  <a class="av-social-cards__link" href="{{ b.post_url }}" target="_blank" rel="noopener">
+                    {{- label_view -}}
+                    <span class="av-visually-hidden"> {{ label_new_tab }}</span>
+                  </a>
+                {%- endif -%}
+              </footer>
+            {%- endif -%}
+          </article>
+        </{{ item_tag }}>
+      {%- endfor -%}
+      {%- if is_slider -%}
+        </div>
+        {%- if s.show_dots -%}
+          <div class="av-slider__dots" data-slider-dots></div>
+        {%- endif -%}
+        </anvil-slider>
+        <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+      {%- else -%}
+        </ul>
+      {%- endif -%}
+      {%- if s.show_disclosure or all_linked == false -%}
+        <p class="av-social-cards__note av-align--{{ s.head_align }}">{{ disclosure }}</p>
+      {%- endif -%}
+      {%- if show_link_note -%}
+        <p class="av-social-cards__note av-example-note av-align--{{ s.head_align }}">{{ 'anvil.editor.social_cards_no_counts' | t }}</p>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Grid columns and gap from the shared .av-grid (masonry reads the same column count); the slider from
+   <anvil-slider> (snippets/anvil-slider-attrs); card boxes from .av-surface. */
+.av-social-cards--grid,.av-social-cards--masonry{padding:0;list-style:none}
+.av-social-cards--masonry{display:block;columns:var(--av-grid-n);column-gap:var(--av-grid-gap)}
+.av-social-cards__item{display:flex;min-width:0;margin:0;container-type:inline-size}
+.av-social-cards--masonry .av-social-cards__item{break-inside:avoid;margin-bottom:var(--av-grid-gap)}
+.av-social-cards__post{display:flex;flex:1;flex-direction:column;gap:var(--av-space-3);min-width:0;padding:var(--av-space-5);border-radius:var(--av-radius-card);text-align:start}
+.av-social-cards--slider.av-social-cards--boxed > [data-slider-track]{padding:var(--av-space-2) var(--av-space-3) var(--av-space-5);scroll-padding-inline:var(--av-space-3)}
+.av-social-cards:not(.av-social-cards--boxed) .av-social-cards__post{padding:0;border-radius:0}
+.av-social-cards__head{display:flex;align-items:center;gap:var(--av-space-3);min-width:0}
+.av-social-cards__avatar{flex:none;display:grid;place-items:center;width:44px;height:44px;overflow:hidden;border-radius:50%;background:rgb(var(--av-fg-rgb) / 0.08);font-size:var(--av-text-sm);font-weight:600;line-height:1}
+.av-social-cards__avatar img{width:100%;height:100%;object-fit:cover}
+.av-social-cards__who{display:flex;flex:1;flex-direction:column;gap:2px;min-width:0}
+.av-social-cards__name{font-size:var(--av-text-sm);font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.av-social-cards__meta{font-size:var(--av-text-xs);line-height:1.4;color:var(--av-fg-muted);overflow-wrap:anywhere}
+.av-social-cards__network{flex:none;margin-inline-start:auto;line-height:0}
+.av-social-cards__network img{display:block;width:auto;height:20px;max-width:40px;object-fit:contain}
+.av-social-cards__text{margin:0;font-size:var(--av-text-sm);line-height:1.6;overflow-wrap:break-word}
+.av-social-cards--t-md .av-social-cards__text{font-size:var(--av-text-md)}
+.av-social-cards--t-lg .av-social-cards__text{font-size:var(--av-text-lg);line-height:1.5}
+.av-social-cards__tag{color:var(--av-accent)}
+.av-social-cards__media{flex:none;align-self:stretch}
+.av-social-cards__foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--av-space-2) var(--av-space-4);margin-top:auto}
+.av-social-cards__counts{display:flex;flex-wrap:wrap;gap:var(--av-space-2) var(--av-space-4);margin:0;padding:0;list-style:none}
+.av-social-cards__count{display:inline-flex;align-items:center;gap:var(--av-space-1);font-size:var(--av-text-xs);font-weight:600;line-height:1}
+.av-social-cards__count svg{flex:none;color:var(--av-fg-muted)}
+.av-social-cards__link{display:inline-flex;align-items:center;min-height:24px;margin-inline-start:auto;font-size:var(--av-text-xs);color:var(--av-fg-muted);text-decoration:underline;text-underline-offset:0.15em}
+.av-social-cards__link:hover{color:var(--av-fg)}
+.av-social-cards__empty{margin:0}
+.av-social-cards__note{margin:var(--av-space-4) 0 0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
+@media (min-width: 990px){
+.av-social-cards--boxed .av-social-cards__post{padding:var(--av-space-6)}
+}
+/* Narrow cards (two columns on a phone, four on a small desktop); after the media queries so it wins: less padding, the name gets the full width under the avatar. */
+@container (max-width: 239px){
+.av-social-cards__post{padding:var(--av-space-4)}
+.av-social-cards__head{flex-wrap:wrap;gap:var(--av-space-2)}
+.av-social-cards__avatar{width:36px;height:36px}
+.av-social-cards__who{flex-basis:100%;order:1}
+.av-social-cards__name{overflow-wrap:break-word}
+.av-social-cards__counts{gap:var(--av-space-2) var(--av-space-3)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Social cards",
+  "max_blocks": 24,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Social cards" },
+    { "type": "paragraph", "content": "Each card is a post you copy in by hand: its words, photo and counts. Nothing is fetched from a social network, so the counts never update by themselves. Counts and network icons show only on posts that link to the original, so shoppers can check them. Add only posts you have permission to show." },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "grid", "label": "Grid" },
+        { "value": "masonry", "label": "Masonry columns" },
+        { "value": "slider", "label": "Slider" }
+      ],
+      "default": "grid",
+      "info": "Masonry stacks cards of different heights in columns, read from top to bottom. The slider scrolls sideways, also without JavaScript."
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "3",
+      "info": "In a slider this is the number in view; phones then show one card with the next one peeking in. Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1",
+      "info": "Grid and masonry only.",
+      "visible_if": "{{ section.settings.layout != 'slider' }}"
+    },
+    {
+      "type": "range",
+      "id": "autoplay",
+      "label": "Auto-advance every",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 0,
+      "info": "0 turns it off. It pauses on hover and focus, starts paused when the shopper prefers reduced motion, and always shows a pause button.",
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true,
+      "info": "On tablets and desktops, beside the cards while they scroll. Phones swipe or use the dots.",
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "Show dots",
+      "default": true,
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    { "type": "header", "content": "Cards" },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "Card style",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "flat", "label": "No box" },
+        { "value": "outlined", "label": "Outlined" },
+        { "value": "tinted", "label": "Tinted" },
+        { "value": "raised", "label": "Shadow" }
+      ],
+      "default": "outlined",
+      "info": "\"Same as theme cards\" follows Theme settings > Cards."
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "Image position",
+      "options": [
+        { "value": "after_text", "label": "Under the text" },
+        { "value": "before_text", "label": "Above the text" }
+      ],
+      "default": "after_text"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" }
+      ],
+      "default": "1:1"
+    },
+    {
+      "type": "select",
+      "id": "text_size",
+      "label": "Post text size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" }
+      ],
+      "default": "sm"
+    },
+    {
+      "type": "checkbox",
+      "id": "tag_accent",
+      "label": "Colour #hashtags and @mentions",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_counts",
+      "label": "Show likes, comments and shares",
+      "default": true,
+      "info": "Shows the numbers typed on each post that links to the original, rounded down when long (1,299 shows as 1.2K). Copy them from that post; they do not update."
+    },
+    {
+      "type": "select",
+      "id": "like_icon",
+      "label": "Like icon",
+      "options": [
+        { "value": "heart", "label": "Heart" },
+        { "value": "thumbs-up", "label": "Thumbs up" }
+      ],
+      "default": "heart"
+    },
+    { "type": "header", "content": "Disclosure" },
+    {
+      "type": "checkbox",
+      "id": "show_disclosure",
+      "label": "Show a disclosure line",
+      "default": true,
+      "info": "Tells shoppers that the store copied these posts and that the counts are a snapshot. The line stays on while any card has no link to the original post."
+    },
+    {
+      "type": "text",
+      "id": "disclosure",
+      "label": "Disclosure text",
+      "info": "Leave empty for the default: “Posts entered by the store; counts as they were when each post was added.” Your text must still say that the store entered these posts and that the counts are a snapshot; do not call them verified, live or independent."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "post",
+      "name": "Post",
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "A post you copy in. Shoppers read it as something a real person posted, so add only real posts, with that person's permission, in their own words."
+        },
+        {
+          "type": "image_picker",
+          "id": "avatar",
+          "label": "Profile photo",
+          "info": "A photo the person agreed to share. Without one, their initials are shown."
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Name",
+          "default": "Example name",
+          "info": "The name shown on the post, or the one the person agreed to."
+        },
+        {
+          "type": "text",
+          "id": "handle",
+          "label": "Username",
+          "default": "@example_handle",
+          "info": "As written on the post, for example @name."
+        },
+        {
+          "type": "text",
+          "id": "platform",
+          "label": "Where it was posted",
+          "info": "Optional. Shown as plain text beside the username, for example the name of the site or app."
+        },
+        {
+          "type": "image_picker",
+          "id": "platform_icon",
+          "label": "Network icon",
+          "info": "Optional small logo in the card's corner, shown only when the link to the post is filled in. Anvil ships no network logos; upload only one you are entitled to use."
+        },
+        {
+          "type": "text",
+          "id": "date",
+          "label": "Date posted",
+          "placeholder": "2026-03-14",
+          "info": "The day it was posted, written as YYYY-MM-DD. Shown in your store's date format; anything else is ignored."
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Post text",
+          "default": "Example: replace with what a customer actually posted, copied as written. #example",
+          "info": "Copy the words as posted. You may shorten them, but never change what the person meant."
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Post image",
+          "info": "The photo from the post, used with the person's permission."
+        },
+        {
+          "type": "number",
+          "id": "likes",
+          "label": "Likes",
+          "info": "The number the post shows today; never round up. Shown only with a link to the post. Blank or 0 hides it."
+        },
+        {
+          "type": "number",
+          "id": "comments",
+          "label": "Comments",
+          "info": "The number the post shows today; never round up. Shown only with a link to the post. Blank or 0 hides it."
+        },
+        {
+          "type": "number",
+          "id": "shares",
+          "label": "Shares",
+          "info": "The number the post shows today; never round up. Shown only with a link to the post. Blank or 0 hides it."
+        },
+        {
+          "type": "url",
+          "id": "post_url",
+          "label": "Link to the post",
+          "info": "Where shoppers can see the original, so they can check it. Adds a “View post” link that opens in a new tab. Counts and the network icon show only when this is filled in."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Social cards",
+      "settings": {
+        "heading": "Posts from <strong>customers</strong>"
+      },
+      "blocks": [
+        {
+          "type": "post",
+          "settings": {
+            "name": "Example name",
+            "handle": "@example_handle",
+            "text": "Example: replace with what a customer actually posted, copied as written. #example"
+          }
+        },
+        {
+          "type": "post",
+          "settings": {
+            "name": "Example name",
+            "handle": "@example_handle",
+            "text": "Example: add the photo from the post, type its likes, comments and shares, and paste the link to the original. Counts show only once the link is in. #example"
+          }
+        },
+        {
+          "type": "post",
+          "settings": {
+            "name": "Example name",
+            "handle": "@example_handle",
+            "text": "Example: paste the link to the original so shoppers can check it, and ask the person before you show their post. #replace_me"
+          }
+        },
+        {
+          "type": "post",
+          "settings": {
+            "name": "Example name",
+            "handle": "@example_handle",
+            "text": "Example: keep the person's own words. Shorten it if you need to, but never change what they meant. #example"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

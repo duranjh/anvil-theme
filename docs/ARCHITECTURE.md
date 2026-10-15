@@ -15,7 +15,7 @@ anvil-theme/
   snippets/    anvil-*.liquid
   templates/   *.json  gift_card.liquid  customers/*.json
   docs/        SPEC.md  CLEANROOM.md  HONEST.md  ARCHITECTURE.md  DESIGN-money-path.md  DESIGN-sections.md  DECISIONS.md  SECTIONS.md  INSTALL.md  agent-prompts/
-  scripts/     cleanroom-lint.sh  check-limits.sh  a11y.sh  sync-block-schemas.py  package.sh
+  scripts/     cleanroom-lint.sh  check-limits.sh  a11y.sh  sync-block-schemas.py  sections-index.py  package.sh  (full list: HARNESS.md)
   .github/workflows/  ci.yml  release.yml  lighthouse.yml
   .theme-check.yml  shopify.theme.toml  .shopifyignore  LICENSE  NOTICE  README.md  CHANGELOG.md
 ```

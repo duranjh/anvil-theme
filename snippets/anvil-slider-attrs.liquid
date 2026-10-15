@@ -1,0 +1,68 @@
+{% doc %}
+  Attributes for an <anvil-slider> root (DECISIONS 89): class, the component attributes and the inline layout, so the
+  row is laid out at first paint and nothing moves when assets/anvil-slider.js runs (CONVENTIONS §6). From the slide
+  count and the slides in view per width it adds av-slider--fits-m|t|d, which hide the dots row and arrows and drop
+  the peek where every slide fits. Card carousels pass `arrows: 'desktop'` and `gutter: true` (arrows beside the
+  track from 750 px); media sliders pass `arrows: 'all'`. No role is written: the element adds region and carousel
+  roles only while its track scrolls, and keeps the aria-label as the name. The section still renders the track and,
+  when dots are on, the empty `<div class="av-slider__dots" data-slider-dots></div>` after it.
+
+  @param {number} count - Number of slides
+  @param {number} [per_view] - Slides in view on phones (default 1)
+  @param {number} [per_view_tablet] - Slides in view at 750–989 px (default per_view)
+  @param {number} [per_view_desktop] - Slides in view from 990 px (default per_view_tablet)
+  @param {string} [peek] - 'auto' for the theme's standard peek (phones 40 px, or 24 px with 2+ slides in view;
+    tablets 32 px; desktop none), or pixels of the next slide shown on phones while the row scrolls (default 0)
+  @param {number} [peek_tablet] - Peek at 750–989 px when peek is a number (default peek)
+  @param {number} [peek_desktop] - Peek from 990 px when peek is a number (default 0)
+  @param {string} [arrows] - all | desktop | none (default none)
+  @param {boolean} [gutter] - Arrows sit beside the track while it scrolls (from 750 px)
+  @param {boolean} [dots] - Dots row
+  @param {number} [autoplay] - Seconds per slide, 0 = off (default 0)
+  @param {boolean} [loop] - Wrap around at the ends
+  @param {string} [label] - Accessible name (escaped here with escape_once)
+  @param {string} [class] - Classes for the root
+  @param {string} [style] - Extra inline declarations
+
+  @example
+  <anvil-slider {% render 'anvil-slider-attrs', count: n, per_view: 2, per_view_desktop: 4, peek: 'auto', arrows: 'desktop', gutter: true, dots: true, label: heading %}>
+{% enddoc %}
+{%- liquid
+  assign sl_m = per_view | default: 1 | plus: 0
+  assign sl_t = per_view_tablet | default: sl_m | plus: 0
+  assign sl_d = per_view_desktop | default: sl_t | plus: 0
+  if peek == 'auto'
+    assign sl_pm = 40
+    if sl_m > 1
+      assign sl_pm = 24
+    endif
+    assign sl_pt = 32
+    assign sl_pd = 0
+  else
+    assign sl_pm = peek | default: 0 | plus: 0
+    assign sl_pt = peek_tablet | default: sl_pm | plus: 0
+    assign sl_pd = peek_desktop | default: 0 | plus: 0
+  endif
+  assign sl_auto = autoplay | default: 0 | plus: 0
+  assign sl_count = count | default: 0 | plus: 0
+
+  assign sl_class = class | default: ''
+  if sl_count <= sl_m
+    assign sl_class = sl_class | append: ' av-slider--fits-m'
+  endif
+  if sl_count <= sl_t
+    assign sl_class = sl_class | append: ' av-slider--fits-t'
+  endif
+  if sl_count <= sl_d
+    assign sl_class = sl_class | append: ' av-slider--fits-d'
+  endif
+  if gutter
+    assign sl_class = sl_class | append: ' av-slider--gutter'
+  endif
+  assign sl_class = sl_class | strip
+-%}
+class="{{ sl_class }}" per-view="{{ sl_m }}" per-view-desktop="{{ sl_d }}" peek="{{ sl_pm }}" autoplay="{{ sl_auto }}"
+{%- if loop %} loop{% endif -%}
+{%- if dots %} dots{% endif -%}
+{%- if arrows == 'all' %} arrows{% elsif arrows == 'desktop' %} arrows="desktop"{% endif -%}
+{%- if label != blank %} aria-label="{{ label | strip_html | strip | escape_once }}"{% endif %} style="--av-slider-per-view: {{ sl_m }}; --av-slider-per-view-tablet: {{ sl_t }}; --av-slider-per-view-desktop: {{ sl_d }}; --av-slider-peek: {{ sl_pm }}px; --av-slider-peek-tablet: {{ sl_pt }}px; --av-slider-peek-desktop: {{ sl_pd }}px;{% if style != blank %} {{ style }}{% endif %}"

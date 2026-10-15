@@ -45,6 +45,15 @@ jobs:
       - name: Platform limits (sizes, locale keys, JSON validity)
         run: bash scripts/check-limits.sh
 
+      - name: Range settings as Shopify's upload validates them
+        run: python3 scripts/check-schema-ranges.py
+
+      - name: Templates and section groups against the section schemas
+        run: python3 scripts/check-templates.py
+
+      - name: docs/SECTIONS.md in sync with the schemas
+        run: python3 scripts/sections-index.py --check
+
       - name: Product block schemas in sync with docs/product-blocks
         run: python3 scripts/sync-block-schemas.py --check --strict
 

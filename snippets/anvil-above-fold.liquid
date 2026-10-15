@@ -1,0 +1,28 @@
+{% doc %}
+  Where a section's media sits relative to the first screen (CONVENTIONS §11, DECISIONS 85). Prints one word:
+  `lcp` for the first section of a template (eager media, and the likely LCP image gets fetchpriority high),
+  `eager` for the second section or when Shopify gives no index (online store editor, Section Rendering API), and
+  `lazy` for everything else. Only template sections count: `section.index` restarts in every section group, so a
+  header, footer or overlay section is always `lazy`. `section.location` is `template` (or `content_for_index` on
+  a legacy homepage) for template sections and blank under the Section Rendering API.
+
+  @param {object} section - The section object
+
+  @example
+  {%- capture fold -%}{% render 'anvil-above-fold', section: section %}{%- endcapture -%}
+  {%- if fold != 'lazy' -%} … eager … {%- endif -%}
+{% enddoc %}
+{%- liquid
+  assign fold = 'lazy'
+  assign fold_loc = section.location | default: 'template'
+  if fold_loc == 'template' or fold_loc == 'content_for_index'
+    if section.index == nil
+      assign fold = 'eager'
+    elsif section.index == 1
+      assign fold = 'lcp'
+    elsif section.index == 2
+      assign fold = 'eager'
+    endif
+  endif
+  echo fold
+-%}

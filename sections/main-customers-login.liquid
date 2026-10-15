@@ -53,62 +53,19 @@
   </div>
 </div>
 {% stylesheet %}
-  .av-customers-login {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--av-space-6);
-    max-width: 960px;
-    margin: 0 auto;
-  }
-  .av-customers-login__panel {
-    padding: var(--av-space-5);
-    border: var(--av-border-w-card) solid var(--av-border);
-    border-radius: var(--av-radius-card);
-  }
-  .av-customers-login__title {
-    margin: 0 0 var(--av-space-4);
-    font-size: var(--av-text-2xl);
-  }
-  .av-customers-login__subtitle {
-    margin: 0 0 var(--av-space-3);
-    font-size: var(--av-text-lg);
-  }
-  .av-customers-login__form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--av-space-3);
-  }
-  
-  
-  
-  .av-customers-login__link {
-    color: inherit;
-    text-underline-offset: 0.2em;
-    font-size: var(--av-text-sm);
-  }
-  .av-customers-login__actions {
-    margin-top: var(--av-space-2);
-  }
-  .av-customers-login__alt {
-    margin: var(--av-space-4) 0 0;
-    font-size: var(--av-text-sm);
-  }
-  .av-customers-login__hint {
-    margin: 0;
-    font-size: var(--av-text-sm);
-    color: var(--av-fg-muted);
-  }
-  
-  .av-customers-login__panel--recover:target {
-    outline: 2px solid var(--av-accent);
-    outline-offset: 4px;
-  }
-  @media (min-width: 990px) {
-    .av-customers-login {
-      grid-template-columns: 1fr 1fr;
-      align-items: start;
-    }
-  }
+.av-customers-login{display:grid;grid-template-columns:1fr;gap:var(--av-space-6);max-width:960px;margin:0 auto}
+.av-customers-login__panel{padding:var(--av-space-5);border:var(--av-border-w-card) solid var(--av-border);border-radius:var(--av-radius-card)}
+.av-customers-login__title{margin:0 0 var(--av-space-4);font-size:var(--av-text-2xl)}
+.av-customers-login__subtitle{margin:0 0 var(--av-space-3);font-size:var(--av-text-lg)}
+.av-customers-login__form{display:flex;flex-direction:column;gap:var(--av-space-3)}
+.av-customers-login__link{color:inherit;text-underline-offset:0.2em;font-size:var(--av-text-sm)}
+.av-customers-login__actions{margin-top:var(--av-space-2)}
+.av-customers-login__alt{margin:var(--av-space-4) 0 0;font-size:var(--av-text-sm)}
+.av-customers-login__hint{margin:0;font-size:var(--av-text-sm);color:var(--av-fg-muted)}
+.av-customers-login__panel--recover:target{outline:2px solid var(--av-accent);outline-offset:4px}
+@media (min-width: 990px){
+.av-customers-login{grid-template-columns:1fr 1fr;align-items:start}
+}
 {% endstylesheet %}
 
 {% schema %}

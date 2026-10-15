@@ -1,0 +1,340 @@
+{%- liquid
+  assign s = section.settings
+
+  # Overlay section (overlay group, reduced chassis). The root stays in the page flow with no height: its padding
+  # settings pad the dialog's content instead (the custom properties inherit into the dialog) and its colour
+  # scheme colours the dialog. The native dialog stays closed in the markup; assets/anvil-popup.js decides when it
+  # opens and anvil-dialog (anvil-core.js) opens and closes it. The script is not loaded in the theme editor,
+  # where the dialog opens only while the merchant selects the section or one of its blocks (anvil-editor.js).
+
+  # Pages: off the cart page, or the home page only. The editor always renders the popup so it stays editable, and
+  # live_here keeps the shopper-facing answer for the editor note.
+  assign show_here = true
+  case s.pages
+    when 'home'
+      if template.name != 'index'
+        assign show_here = false
+      endif
+    when 'no_cart'
+      if template.name == 'cart'
+        assign show_here = false
+      endif
+  endcase
+  assign live_here = show_here
+  if request.design_mode
+    assign show_here = true
+  endif
+
+  assign uid = 'anvil-popup-' | append: section.id
+  assign form_id = uid | append: '-form'
+
+  # Storage key: the section id without the group file prefix, so a duplicated theme keeps counting the same
+  # popup. The campaign travels separately: a new name starts a fresh count, except for shoppers who signed up.
+  assign key = section.id | split: '__' | last
+  assign campaign = s.campaign | strip | handleize
+
+  assign trigger = s.trigger | default: 'delay'
+  assign delay = s.delay | default: 8 | at_least: 3
+  assign depth = s.scroll_depth | default: 50
+  assign days = s.frequency_days | default: 0
+
+  assign popup_w = s.popup_width | default: 720
+  assign gap = s.gap | default: 16
+
+  # Beside the content (desktop), the image covers its 45 % column, which is at least min(400px, 80dvh) tall, so a
+  # landscape image is drawn wider than the column: size it for a row about 600 px tall (capped at the 1100w file).
+  assign image_pos = s.image_position | default: 'left'
+  assign img_w = popup_w
+  if image_pos == 'left' or image_pos == 'right'
+    assign img_w = popup_w | times: 45 | divided_by: 100
+    if s.image != blank
+      assign cover_w = s.image.aspect_ratio | times: 600 | ceil | at_most: 1100
+      assign img_w = img_w | at_least: cover_w
+    endif
+  endif
+  assign img_sizes = '(min-width: 750px) ' | append: img_w | append: 'px, 100vw'
+
+  assign popup_class = 'av-popup av-popup--img-' | append: image_pos
+  if image_pos != 'none' and s.show_image_mobile
+    assign popup_class = popup_class | append: ' av-popup--img-m'
+  endif
+
+  assign dialog_class = 'av-dialog av-popup__dialog'
+  if s.mobile_style == 'sheet'
+    assign dialog_class = dialog_class | append: ' av-dialog--sheet'
+  endif
+
+  assign dismiss_label = s.dismiss_label | strip | escape
+-%}
+{%- if show_here -%}
+  {{ 'anvil-dialog.css' | asset_url | stylesheet_tag }}
+  {%- capture form_html -%}
+    {% content_for 'block', type: '_anvil-popup-newsletter', id: 'newsletter' %}
+  {%- endcapture -%}
+  <div {% render 'anvil-section-attrs', section: section, type: 'anvil-popup' %}>
+    <div class="av-section__inner">
+      <anvil-popup class="{{ popup_class }}" trigger="{{ trigger }}" delay="{{ delay }}" scroll="{{ depth }}" days="{{ days }}" key="{{ key | escape }}" campaign="{{ campaign | escape }}" form-id="{{ form_id }}" style="--av-popup-gap: {{ gap }}px;">
+        <anvil-dialog id="{{ uid }}" data-anvil-editor-open{% unless s.close_on_backdrop %} no-light-dismiss{% endunless %}>
+          <dialog class="{{ dialog_class }}" aria-label="{{ 'anvil.popup.label' | t | escape }}" style="--av-dialog-width: {{ popup_w }}px;">
+            <button type="button" class="av-popup__close" data-anvil-close aria-label="{{ 'anvil.a11y.close' | t | escape }}">
+              {%- render 'anvil-icon', name: 'x', size: 20 -%}
+            </button>
+            <div class="av-popup__layout">
+              {%- if image_pos != 'none' -%}
+                <div class="av-popup__media"{% if s.image != blank %} style="--av-popup-ratio: {{ s.image.aspect_ratio }};"{% endif %}>
+                  {%- if s.image != blank -%}
+                    {{ s.image | image_url: width: 1100 | image_tag: widths: '360, 540, 720, 900, 1100', sizes: img_sizes, loading: 'lazy', class: 'av-popup__img' }}
+                  {%- else -%}
+                    {{ 'lifestyle-1' | placeholder_svg_tag: 'av-popup__img av-popup__placeholder' }}
+                  {%- endif -%}
+                </div>
+              {%- endif -%}
+              <div class="av-popup__body">
+                {%- if request.design_mode -%}
+                  {%- unless live_here -%}
+                    <p class="av-example-note">{{ 'anvil.editor.popup_pages' | t }}</p>
+                  {%- endunless -%}
+                  {%- if s.show_on == 'desktop' -%}
+                    <p class="av-example-note av-popup__note-m">{{ 'anvil.editor.hidden_on_mobile' | t }}</p>
+                  {%- elsif s.show_on == 'mobile' -%}
+                    <p class="av-example-note av-popup__note-d">{{ 'anvil.editor.hidden_on_desktop' | t }}</p>
+                  {%- endif -%}
+                {%- endif -%}
+                {%- if s.form_first -%}{{ form_html }}{%- endif -%}
+                {% content_for 'blocks' %}
+                {%- unless s.form_first -%}{{ form_html }}{%- endunless -%}
+                {%- if dismiss_label != blank -%}
+                  {%- render 'anvil-button', label: dismiss_label, style: 'link', size: 'sm', attrs: 'data-anvil-close', class: 'av-popup__dismiss' -%}
+                {%- endif -%}
+              </div>
+            </div>
+          </dialog>
+        </anvil-dialog>
+      </anvil-popup>
+    </div>
+  </div>
+  {%- unless request.design_mode -%}
+    <script type="module" src="{{ 'anvil-popup.js' | asset_url }}"></script>
+  {%- endunless -%}
+{%- endif -%}
+{% stylesheet %}
+/* The root (.av-s-anvil-popup) holds only the closed dialog: no page padding, no band of colour. */
+.av-s-anvil-popup.av-section{padding:0;background:none}
+.av-popup{display:block}
+.av-popup .av-popup__dialog{padding:0;background-image:var(--av-bg-gradient)}
+.av-popup__close{position:sticky;top:var(--av-space-2);z-index:2;display:grid;place-items:center;width:44px;height:44px;margin-block:var(--av-space-2) calc(-44px - var(--av-space-2));margin-inline:auto var(--av-space-2);padding:0;border:0;border-radius:var(--av-radius-pill);background:rgb(var(--av-bg-rgb) / 0.85);color:var(--av-fg);cursor:pointer}
+.av-popup__close:hover{background:var(--av-bg)}
+.av-popup__layout{display:flex;flex-direction:column}
+.av-popup__media{position:relative;aspect-ratio:var(--av-popup-ratio,16 / 9);max-height:30dvh;overflow:hidden;background:rgb(var(--av-fg-rgb) / 0.06)}
+.av-popup__img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover}
+.av-popup__placeholder{box-sizing:border-box;padding:8%;color:rgb(var(--av-fg-rgb) / 0.4);fill:currentColor}
+.av-popup__body{display:flex;flex-direction:column;justify-content:center;gap:var(--av-popup-gap,16px);min-width:0;padding:max(calc(var(--av-pad-top) * var(--av-pad-mobile)), 52px) var(--av-space-5) calc(var(--av-pad-bottom) * var(--av-pad-mobile))}
+.av-popup__body > *{margin-block:0}
+.av-popup__dismiss{align-self:center}
+@media (max-width: 749px){
+.av-popup:not(.av-popup--img-m) .av-popup__media,.av-popup__note-d{display:none}
+.av-popup--img-m .av-popup__body{padding-top:calc(var(--av-pad-top) * var(--av-pad-mobile))}
+}
+@media (min-width: 750px){
+.av-popup__note-m{display:none}
+.av-popup__media{max-height:40dvh}
+.av-popup__body{padding:max(var(--av-pad-top), 52px) var(--av-space-7) var(--av-pad-bottom)}
+.av-popup--img-top .av-popup__body{padding-top:var(--av-pad-top)}
+.av-popup--img-left .av-popup__layout,.av-popup--img-right .av-popup__layout{display:grid;grid-template-columns:minmax(0,45fr) minmax(0,55fr);min-height:min(400px, 80dvh)}
+.av-popup--img-right .av-popup__media{order:2}
+.av-popup--img-left .av-popup__media,.av-popup--img-right .av-popup__media{aspect-ratio:auto;max-height:none}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Promo popup",
+  "enabled_on": { "groups": ["custom.overlay"] },
+  "max_blocks": 8,
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "header", "content": "Promo popup" },
+    { "type": "paragraph", "content": "The popup never opens while you edit the theme: select this section or one of its blocks to preview it. Shoppers never see it in their first 3 seconds on a page, and see it at most once per page view." },
+    {
+      "type": "select",
+      "id": "trigger",
+      "label": "Open the popup",
+      "options": [
+        { "value": "delay", "label": "After a delay" },
+        { "value": "scroll", "label": "After scrolling down the page" },
+        { "value": "exit", "label": "When the mouse leaves the window" }
+      ],
+      "default": "delay",
+      "info": "Leaving the window can only be detected with a mouse, so phones and tablets use the delay instead."
+    },
+    {
+      "type": "range",
+      "id": "delay",
+      "label": "Delay",
+      "min": 3,
+      "max": 60,
+      "step": 1,
+      "unit": "s",
+      "default": 8,
+      "info": "Counted from the moment the shopper opens the page.",
+      "visible_if": "{{ section.settings.trigger != 'scroll' }}"
+    },
+    {
+      "type": "range",
+      "id": "scroll_depth",
+      "label": "Scroll depth",
+      "min": 10,
+      "max": 90,
+      "step": 5,
+      "unit": "%",
+      "default": 50,
+      "info": "Share of the page scrolled before the popup opens. A page too short to scroll counts as read.",
+      "visible_if": "{{ section.settings.trigger == 'scroll' }}"
+    },
+    {
+      "type": "range",
+      "id": "frequency_days",
+      "label": "Show again after",
+      "min": 0,
+      "max": 60,
+      "step": 1,
+      "unit": "d",
+      "default": 7,
+      "info": "Days before the same browser sees the popup again. 0 shows it once per visit; a visit ends after 30 minutes without a page view. Shoppers who sign up through it are not asked again."
+    },
+    {
+      "type": "text",
+      "id": "campaign",
+      "label": "Campaign name",
+      "info": "Optional. Change it when you start a new offer, so shoppers who saw or closed the old popup see the new one. Shoppers who signed up through the popup are still not asked again."
+    },
+    {
+      "type": "select",
+      "id": "pages",
+      "label": "Pages",
+      "options": [
+        { "value": "all", "label": "All pages" },
+        { "value": "no_cart", "label": "All pages except the cart" },
+        { "value": "home", "label": "Home page only" }
+      ],
+      "default": "no_cart"
+    },
+    { "type": "header", "content": "Popup design" },
+    {
+      "type": "range",
+      "id": "popup_width",
+      "label": "Popup width",
+      "min": 360,
+      "max": 960,
+      "step": 20,
+      "unit": "px",
+      "default": 720
+    },
+    {
+      "type": "select",
+      "id": "mobile_style",
+      "label": "On phones",
+      "options": [
+        { "value": "sheet", "label": "Slide up from the bottom" },
+        { "value": "center", "label": "Centred box" }
+      ],
+      "default": "sheet"
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between blocks",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "checkbox",
+      "id": "form_first",
+      "label": "Show the signup form above the other blocks",
+      "default": false
+    },
+    { "type": "header", "content": "Image" },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "Image position",
+      "options": [
+        { "value": "none", "label": "No image" },
+        { "value": "left", "label": "Left" },
+        { "value": "right", "label": "Right" },
+        { "value": "top", "label": "Top" }
+      ],
+      "default": "left",
+      "info": "Phones always show the image above the content."
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image",
+      "info": "Screen readers read the image's alt text from your Files. Keep the offer itself in a heading or text block.",
+      "visible_if": "{{ section.settings.image_position != 'none' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_image_mobile",
+      "label": "Show the image on phones",
+      "default": true,
+      "visible_if": "{{ section.settings.image_position != 'none' }}"
+    },
+    { "type": "header", "content": "Closing" },
+    {
+      "type": "text",
+      "id": "dismiss_label",
+      "label": "Close link text",
+      "default": "No thanks",
+      "info": "A text link under the content that closes the popup; the close icon is always there. Use plain words, never guilt-trip wording such as \"No, I don't like saving\". Leave blank to hide it."
+    },
+    {
+      "type": "checkbox",
+      "id": "close_on_backdrop",
+      "label": "Close when shoppers click outside the popup",
+      "default": true
+    }
+  ],
+  "blocks": [
+    { "type": "@theme" },
+    { "type": "@app" }
+  ],
+  "presets": [
+    {
+      "name": "Promo popup",
+      "blocks": [
+        {
+          "type": "anvil-heading",
+          "settings": {
+            "heading": "Example: join the <strong>list</strong>",
+            "tag": "h2",
+            "size": "sm",
+            "align": "center"
+          }
+        },
+        {
+          "type": "anvil-text",
+          "settings": {
+            "text": "<p>Example: new arrivals and restock news, about twice a month. Replace with what you really send, and name a discount only if a real code reaches every subscriber.</p>",
+            "align": "center",
+            "muted": true
+          }
+        },
+        {
+          "type": "_anvil-popup-newsletter",
+          "static": true,
+          "id": "newsletter"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

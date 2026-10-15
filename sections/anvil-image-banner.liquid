@@ -1,0 +1,772 @@
+{%- liquid
+  assign s = section.settings
+
+  # Images. The desktop image serves every screen unless a different phone image is set; a phone image on its own
+  # serves every screen too. art is true only when two different images are picked (art direction with <picture>).
+  assign img_d = s.image
+  assign img_m = s.image_mobile
+  if img_d == blank
+    assign img_d = s.image_mobile
+  endif
+  assign art = false
+  if s.image != blank and s.image_mobile != blank and s.image.id != s.image_mobile.id
+    assign art = true
+  endif
+  if art == false
+    assign img_m = img_d
+  endif
+
+  # Focal points from the image picker. image_tag would write them as an inline object-position, which a stylesheet
+  # cannot override per breakpoint, so the tag gets object-position: inherit (shopify.dev, image_picker focal
+  # points) and the picture element takes the phone or desktop point from these custom properties.
+  assign fx_d = img_d.presentation.focal_point.x | default: 50
+  assign fy_d = img_d.presentation.focal_point.y | default: 50
+  assign fx_m = img_m.presentation.focal_point.x | default: 50
+  assign fy_m = img_m.presentation.focal_point.y | default: 50
+
+  # Heights. Adapt uses the shown image's own shape (an example shape while no image is picked); the fixed heights
+  # are minimums, so long content makes the banner taller instead of being cut off.
+  assign ratio_d = '16 / 9'
+  assign ratio_m = '4 / 5'
+  if img_d != blank
+    assign ratio_d = img_d.aspect_ratio
+    assign ratio_m = img_m.aspect_ratio
+  endif
+  assign ar_d = 'auto'
+  assign min_d = 'auto'
+  case s.height_desktop
+    when 'adapt'
+      assign ar_d = ratio_d
+    when 'sm'
+      assign min_d = '440px'
+    when 'lg'
+      assign min_d = '720px'
+    when 'full'
+      assign min_d = 'auto'
+    else
+      assign min_d = '560px'
+  endcase
+  assign ar_m = 'auto'
+  assign min_m = 'auto'
+  case s.height_mobile
+    when 'adapt'
+      assign ar_m = ratio_m
+    when 'sm'
+      assign min_m = '320px'
+    when 'lg'
+      assign min_m = '560px'
+    when 'full'
+      assign min_m = 'auto'
+    else
+      assign min_m = '440px'
+  endcase
+
+  # Content position: nine spots on desktop, top / middle / bottom on phones (full width there).
+  assign pos_parts = s.position_desktop | default: 'middle-center' | split: '-'
+  case pos_parts[0]
+    when 'top'
+      assign v_d = 'flex-start'
+    when 'bottom'
+      assign v_d = 'flex-end'
+    else
+      assign v_d = 'center'
+  endcase
+  case pos_parts[1]
+    when 'left'
+      assign h_d = 'flex-start'
+    when 'right'
+      assign h_d = 'flex-end'
+    else
+      assign h_d = 'center'
+  endcase
+  case s.position_mobile
+    when 'top'
+      assign v_m = 'flex-start'
+    when 'bottom'
+      assign v_m = 'flex-end'
+    else
+      assign v_m = 'center'
+  endcase
+
+  # Image loading (snippets/anvil-above-fold): media in the first two template sections is eager with high fetch
+  # priority (likely LCP), and the first one also sends a preload hint; a banner in a section group is always lazy.
+  # The hint carries no media query, so it is skipped when a separate phone image exists or the section shows on one
+  # kind of screen only: the other screens would download an image they never show.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign load = 'lazy'
+  assign fetch = 'auto'
+  if fold != 'lazy'
+    assign load = 'eager'
+    assign fetch = 'high'
+  endif
+  assign preload = false
+  if fold == 'lcp' and section.index == 1 and art == false
+    if s.show_on == blank or s.show_on == 'all'
+      assign preload = true
+    endif
+  endif
+
+  assign img_widths = '750, 1100, 1500, 1800, 2200'
+  case s.width
+    when 'full'
+      assign cap = 0
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 0
+    else
+      assign cap = settings.page_width | default: 0
+  endcase
+  assign sizes_d = '100vw'
+  if cap > 0
+    assign sizes_d = '(min-width: ' | append: cap | append: 'px) ' | append: cap | append: 'px, 100vw'
+  endif
+
+  # object-fit: cover draws the image wider than the banner when the banner's height times the image's shape beats
+  # its width (a 16:9 image in a 440 px tall phone banner is ~780 px wide). Fixed and full heights put that width
+  # first in sizes, so the browser picks a sharp enough file; adapt keeps the image's own shape. Phones: a fixed
+  # height adds "(max-width: Npx) Wpx", full adds the portrait-screen width calc(100vh * shape). Desktop: a fixed
+  # height adds the cover width from 750 px up to it (always, when it beats the page width), full adds portrait
+  # tablets. The phone entry goes on the phone source when a separate phone image exists, else in front of sizes_d.
+  assign sizes_m = '100vw'
+  assign m_entry = ''
+  assign d_entry = ''
+  if img_d != blank
+    if s.height_mobile == 'full'
+      if ratio_m >= 0.75
+        assign r = ratio_m | round: 3
+        assign sizes_m = '(orientation: portrait) calc(100vh * ' | append: r | append: '), 100vw'
+        assign m_entry = '(max-width: 749px) and (orientation: portrait) calc(100vh * ' | append: r | append: '), '
+      endif
+    elsif min_m != 'auto'
+      assign cover_m = min_m | remove: 'px' | plus: 0 | times: ratio_m | ceil
+      if cover_m > 360
+        assign to_m = cover_m
+        if to_m > 749
+          assign to_m = 749
+        endif
+        assign m_entry = '(max-width: ' | append: to_m | append: 'px) ' | append: cover_m | append: 'px, '
+        assign sizes_m = m_entry | append: '100vw'
+      endif
+    endif
+    if s.height_desktop == 'full'
+      if ratio_d >= 1
+        assign r = ratio_d | round: 3
+        assign d_entry = '(min-width: 750px) and (orientation: portrait) calc(100vh * ' | append: r | append: '), '
+      endif
+    elsif min_d != 'auto'
+      assign cover_d = min_d | remove: 'px' | plus: 0 | times: ratio_d | ceil
+      if cap > 0 and cover_d >= cap
+        assign d_entry = '(min-width: 750px) ' | append: cover_d | append: 'px, '
+      elsif cover_d > 750
+        assign d_entry = '(min-width: 750px) and (max-width: ' | append: cover_d | append: 'px) ' | append: cover_d | append: 'px, '
+      endif
+    endif
+    if art
+      assign m_entry = ''
+    endif
+    assign sizes_d = m_entry | append: d_entry | append: sizes_d
+  endif
+
+  if art
+    assign m_srcset = ''
+    assign m_list = '750,1100,1500' | split: ','
+    for w in m_list
+      assign wn = w | plus: 0
+      if wn <= img_m.width
+        assign m_url = img_m | image_url: width: wn
+        assign m_srcset = m_srcset | append: m_url | append: ' ' | append: wn | append: 'w, '
+      endif
+    endfor
+    if m_srcset == ''
+      assign m_url = img_m | image_url: width: img_m.width
+      assign m_srcset = m_url | append: ' ' | append: img_m.width | append: 'w'
+    else
+      assign m_srcset = m_srcset | remove_last: ', '
+    endif
+  endif
+
+  # Headings. The one H1 guard (snippets/anvil-main-heading-tag): H1 only for the first section of a template whose
+  # main section prints no H1 of its own. The first heading on the banner (the section heading, else the first
+  # heading block with text) takes the main level; later heading blocks sit one level below. That is why the banner
+  # keeps its own heading block: a theme Heading block picks its level by itself (DECISIONS 99).
+  capture main_tag
+    render 'anvil-main-heading-tag', section: section, tag: s.heading_tag
+  endcapture
+  assign main_tag = main_tag | strip
+  assign sub_tag = 'h3'
+  if main_tag == 'h1'
+    assign sub_tag = 'h2'
+  endif
+  assign main_used = false
+  if s.heading != blank
+    assign main_used = true
+  endif
+  assign accent_open = '<span class="av-accent av-accent--' | append: s.accent_style | append: '">'
+
+  capture head_html
+    render 'anvil-section-head', section: section, tag: main_tag
+  endcapture
+  assign head_html = head_html | strip
+  assign head_done = false
+  if head_html == blank
+    assign head_done = true
+  endif
+  assign has_content = false
+  if head_html != blank or section.blocks.size > 0
+    assign has_content = true
+  endif
+
+  # Whole-banner link: a stretched link under the content, named by the link-name setting, else the main heading.
+  assign link_name = s.link_name | strip
+  if link_name == blank
+    assign link_name = s.heading | strip_html | strip
+  endif
+  if link_name == blank
+    assign first_heading = section.blocks | where: 'type', 'heading' | first
+    assign link_name = first_heading.settings.heading | strip_html | strip
+  endif
+  if link_name == blank
+    assign link_name = 'anvil.a11y.learn_more' | t
+  endif
+
+  assign root_class = 'av-image-banner'
+  if s.width != 'full'
+    assign root_class = root_class | append: ' av-image-banner--framed'
+  endif
+  if s.height_mobile == 'full'
+    assign root_class = root_class | append: ' av-image-banner--hm-full'
+  endif
+  if s.height_desktop == 'full'
+    assign root_class = root_class | append: ' av-image-banner--hd-full'
+  endif
+  if s.link != blank
+    # Clicks on the content fall through to the banner link for shoppers only; in the editor the blocks stay
+    # clickable, so they can be selected on the preview.
+    unless request.design_mode
+      assign root_class = root_class | append: ' av-image-banner--linked'
+    endunless
+    # A linked banner zooms its image on hover (shared .av-hover-zoom: motion allowed and animations on).
+    assign root_class = root_class | append: ' av-hover-zoom'
+  endif
+
+  assign box_class = 'av-image-banner__box av-image-banner__box--' | append: s.text_align
+  if s.box
+    assign box_scheme = s.box_scheme.id | default: 'scheme-1'
+    assign box_class = box_class | append: ' av-box av-scheme av-scheme--' | append: box_scheme
+  endif
+  assign box_w = s.content_width | default: 560
+
+  assign overlay_a = s.overlay | default: 0 | divided_by: 100.0
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-image-banner' %}>
+  <div class="av-section__inner{% if s.width == 'full' %} av-section__inner--bleed{% endif %}">
+    <div class="{{ root_class }}" style="--av-image-banner-ar-m: {{ ar_m }}; --av-image-banner-ar-d: {{ ar_d }}; --av-image-banner-min-m: {{ min_m }}; --av-image-banner-min-d: {{ min_d }}; --av-image-banner-pos-m: {{ fx_m }}% {{ fy_m }}%; --av-image-banner-pos-d: {{ fx_d }}% {{ fy_d }}%; --av-image-banner-v-m: {{ v_m }}; --av-image-banner-v-d: {{ v_d }}; --av-image-banner-h-d: {{ h_d }}; --av-image-banner-box-w: {{ box_w }}px;">
+      <div class="av-image-banner__media">
+        {%- if img_d != blank -%}
+          <picture class="av-image-banner__picture">
+            {%- if art -%}
+              <source media="(max-width: 749px)" srcset="{{ m_srcset | escape }}" sizes="{{ sizes_m }}" width="{{ img_m.width }}" height="{{ img_m.height }}">
+            {%- endif -%}
+            {{ img_d | image_url: width: 2200 | image_tag: widths: img_widths, sizes: sizes_d, loading: load, fetchpriority: fetch, preload: preload, class: 'av-image-banner__img av-hover-zoom__img', style: 'object-position: inherit;' }}
+          </picture>
+        {%- else -%}
+          {{ 'lifestyle-1' | placeholder_svg_tag: 'av-image-banner__placeholder' }}
+        {%- endif -%}
+      </div>
+      {%- if overlay_a > 0 -%}
+        <div class="av-overlay av-image-banner__overlay" style="--av-overlay-strength: {{ overlay_a }};{% if s.overlay_color == 'scheme' %} --av-overlay-rgb: var(--av-bg-rgb);{% endif %}"></div>
+      {%- endif -%}
+      {%- if s.link != blank -%}
+        <a class="av-image-banner__link" href="{{ s.link | escape }}"><span class="av-visually-hidden">{{ link_name | escape_once }}</span></a>
+      {%- endif -%}
+      {%- if has_content -%}
+        <div class="av-image-banner__content">
+          <div class="{{ box_class }}">
+            {%- assign in_row = false -%}
+            {%- for block in section.blocks -%}
+              {%- liquid
+                # The section heading follows any eyebrow blocks at the top and comes before every other block.
+                # Consecutive button blocks share one row.
+                if block.type != 'button' and in_row
+                  echo '</div>'
+                  assign in_row = false
+                endif
+                if head_done == false and block.type != 'eyebrow'
+                  echo head_html
+                  assign head_done = true
+                endif
+                if block.type == 'button' and in_row == false
+                  echo '<div class="av-image-banner__buttons">'
+                  assign in_row = true
+                endif
+                assign b = block.settings
+              -%}
+              {%- case block.type -%}
+                {%- when 'eyebrow' -%}
+                  {%- assign eyebrow = b.text | strip -%}
+                  {%- if eyebrow != blank -%}
+                    <p class="av-image-banner__eyebrow av-image-banner__eyebrow--{{ b.style }}" {{ block.shopify_attributes }}>{{ eyebrow | escape }}</p>
+                  {%- elsif request.design_mode -%}
+                    <p class="av-image-banner__empty av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+                  {%- endif -%}
+                {%- when 'heading' -%}
+                  {%- if b.heading != blank -%}
+                    {%- liquid
+                      if main_used
+                        assign h_tag = sub_tag
+                      else
+                        assign h_tag = main_tag
+                        assign main_used = true
+                      endif
+                    -%}
+                    {%- liquid
+                      # The theme Heading block's size scale (blocks/anvil-heading.liquid).
+                      case b.size
+                        when 'xs'
+                          assign size_class = 'av-text--lg'
+                        when 'sm'
+                          assign size_class = 'av-text--xl'
+                        when 'lg'
+                          assign size_class = 'av-text--3xl'
+                        when 'xl'
+                          assign size_class = 'av-text--4xl'
+                        else
+                          assign size_class = 'av-text--2xl'
+                      endcase
+                    -%}
+                    <{{ h_tag }} class="av-image-banner__heading {{ size_class }}" {{ block.shopify_attributes }}>{{ b.heading | replace: '<strong>', accent_open | replace: '</strong>', '</span>' }}</{{ h_tag }}>
+                  {%- elsif request.design_mode -%}
+                    <p class="av-image-banner__empty av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+                  {%- endif -%}
+                {%- when 'text' -%}
+                  {%- if b.text != blank -%}
+                    <div class="av-image-banner__text av-image-banner__text--{{ b.size }} av-rte" {{ block.shopify_attributes }}>{{ b.text }}</div>
+                  {%- elsif request.design_mode -%}
+                    <p class="av-image-banner__empty av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+                  {%- endif -%}
+                {%- when 'button' -%}
+                  {%- liquid
+                    # A button without a link would do nothing, so it is left out for shoppers and shown disabled in
+                    # the editor as a reminder. Consecutive button blocks share one row.
+                    assign label = b.label | strip
+                    assign show_btn = false
+                    if label != blank
+                      if b.url != blank or request.design_mode
+                        assign show_btn = true
+                      endif
+                    endif
+                    assign btn_off = false
+                    if b.url == blank
+                      assign btn_off = true
+                    endif
+                    assign btn_style = b.style | default: 'primary'
+                    assign btn_icon = ''
+                    if btn_style == 'link_arrow'
+                      assign btn_style = 'link'
+                      assign btn_icon = 'arrow-right'
+                    endif
+                  -%}
+                  {%- if show_btn -%}
+                    <span class="av-image-banner__button" {{ block.shopify_attributes }}>
+                      {%- render 'anvil-button', label: label, url: b.url, style: btn_style, size: b.size, icon: btn_icon, disabled: btn_off -%}
+                    </span>
+                  {%- elsif request.design_mode -%}
+                    <p class="av-image-banner__empty av-example-note" {{ block.shopify_attributes }}>{{ 'anvil.editor.block_empty' | t }}</p>
+                  {%- endif -%}
+              {%- endcase -%}
+            {%- endfor -%}
+            {%- if in_row -%}{{ '</div>' }}{%- endif -%}
+            {%- if head_done == false -%}
+              {{ head_html }}
+            {%- endif -%}
+          </div>
+        </div>
+      {%- elsif request.design_mode -%}
+        <div class="av-image-banner__content">
+          <div class="{{ box_class }}">
+            {% render 'anvil-editor-empty' %}
+          </div>
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+/* Adapt height: aspect-ratio with min-height auto and no overflow clipping on the root, so long content makes the banner taller. */
+.av-image-banner{position:relative;display:grid;grid-template-columns:minmax(0,1fr);isolation:isolate;aspect-ratio:var(--av-image-banner-ar-m,auto);min-height:var(--av-image-banner-min-m,auto);background:rgb(var(--av-fg-rgb) / 0.06)}
+.av-image-banner--hm-full{min-height:100vh;min-height:100svh}
+.av-image-banner--framed{border-radius:var(--av-radius-media)}
+.av-image-banner__media,.av-image-banner__picture,.av-image-banner__img,.av-image-banner__placeholder{position:absolute;inset:0;display:block;width:100%;height:100%}
+.av-image-banner__media,.av-image-banner__overlay{overflow:hidden;border-radius:inherit}
+.av-image-banner__picture{object-position:var(--av-image-banner-pos-m,50% 50%)}
+.av-image-banner__img{object-fit:cover}
+.av-image-banner__placeholder{box-sizing:border-box;padding:8%;color:rgb(var(--av-fg-rgb) / 0.35);fill:currentColor}
+/* Stretched link under the content: the whole banner follows it, while buttons and text links keep their own. */
+.av-image-banner__link{position:absolute;inset:0;z-index:1;border-radius:inherit}
+.av-image-banner__link:focus-visible{outline:2px solid var(--av-accent);outline-offset:-6px;box-shadow:inset 0 0 0 4px var(--av-bg)}
+.av-image-banner__content{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:var(--av-image-banner-v-m,center);align-items:stretch;width:100%;max-width:var(--av-page-width);margin-inline:auto;padding:calc(var(--av-space-6) + var(--av-overlap-pad,0px)) var(--av-gutter) var(--av-space-6)}
+.av-image-banner--linked .av-image-banner__content{pointer-events:none}
+.av-image-banner--linked .av-image-banner__content a,.av-image-banner--linked .av-image-banner__content button{pointer-events:auto}
+.av-image-banner__box{display:flex;flex-direction:column;align-items:center;gap:var(--av-space-4);width:100%;text-align:center}
+.av-image-banner__box--left{align-items:flex-start;text-align:left}
+.av-image-banner__box--right{align-items:flex-end;text-align:right}
+.av-image-banner__box > *{max-width:100%;margin:0}
+.av-image-banner__box .av-section-head{align-self:stretch;gap:var(--av-space-3);margin:0}
+.av-image-banner__box .av-section-head__sub{color:inherit}
+.av-image-banner__eyebrow{font-size:var(--av-text-sm);font-weight:600;line-height:1.3;letter-spacing:0.08em;text-transform:uppercase}
+.av-image-banner__eyebrow--accent{color:var(--av-accent)}
+.av-image-banner__eyebrow--pill{padding:var(--av-space-1) var(--av-space-3);border-radius:var(--av-radius-pill);background:var(--av-accent);color:var(--av-on-accent)}
+.av-image-banner__heading.av-text--4xl{line-height:1.05}
+.av-image-banner__text{max-width:65ch}
+.av-image-banner__text--sm{font-size:var(--av-text-sm)}
+.av-image-banner__text--lg{font-size:var(--av-text-lg)}
+/* Consecutive button blocks share one row. */
+.av-image-banner__buttons{display:flex;flex-wrap:wrap;gap:var(--av-space-3)}
+.av-image-banner__buttons:empty{display:none}
+.av-image-banner__button{display:inline-flex}
+.av-image-banner__box--center .av-image-banner__buttons{justify-content:center}
+.av-image-banner__box--right .av-image-banner__buttons{justify-content:flex-end}
+@media (min-width: 750px){
+.av-image-banner{aspect-ratio:var(--av-image-banner-ar-d,auto);min-height:var(--av-image-banner-min-d,auto)}
+.av-image-banner--hd-full{min-height:100vh;min-height:100svh}
+.av-image-banner__picture{object-position:var(--av-image-banner-pos-d,50% 50%)}
+.av-image-banner__content{justify-content:var(--av-image-banner-v-d,center);align-items:var(--av-image-banner-h-d,center);padding-block:calc(var(--av-space-8) + var(--av-overlap-pad,0px)) var(--av-space-8)}
+.av-image-banner__box{max-width:var(--av-image-banner-box-w,560px)}
+.av-image-banner__box.av-box{padding:var(--av-space-7)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Image banner",
+  "max_blocks": 6,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Image banner" },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Desktop image",
+      "info": "Set a focal point in the picker to keep the subject in view when the banner crops. Keep words out of the image and write them in blocks, so phones and screen readers can read them."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "Phone image",
+      "info": "Optional. Shown below 750 px wide; the desktop image is used when this is empty."
+    },
+    {
+      "type": "select",
+      "id": "height_desktop",
+      "label": "Height on desktop",
+      "options": [
+        { "value": "adapt", "label": "Adapt to image" },
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "full", "label": "Full screen" }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "select",
+      "id": "height_mobile",
+      "label": "Height on phones",
+      "options": [
+        { "value": "adapt", "label": "Adapt to image" },
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" },
+        { "value": "full", "label": "Full screen" }
+      ],
+      "default": "md",
+      "info": "Long content makes the banner taller rather than cutting text off."
+    },
+    {
+      "type": "range",
+      "id": "overlay",
+      "label": "Overlay opacity",
+      "min": 0,
+      "max": 90,
+      "step": 5,
+      "unit": "%",
+      "default": 30,
+      "info": "Raise it until the text reads clearly over the busiest part of the image, on phones too."
+    },
+    {
+      "type": "select",
+      "id": "overlay_color",
+      "label": "Overlay colour",
+      "options": [
+        { "value": "shadow", "label": "Theme shadow colour" },
+        { "value": "scheme", "label": "Colour scheme background" }
+      ],
+      "default": "shadow",
+      "info": "The scheme background suits text in that scheme's text colour."
+    },
+    { "type": "header", "content": "Content" },
+    {
+      "type": "select",
+      "id": "position_desktop",
+      "label": "Content position on desktop",
+      "options": [
+        { "value": "top-left", "label": "Top left" },
+        { "value": "top-center", "label": "Top centre" },
+        { "value": "top-right", "label": "Top right" },
+        { "value": "middle-left", "label": "Middle left" },
+        { "value": "middle-center", "label": "Middle centre" },
+        { "value": "middle-right", "label": "Middle right" },
+        { "value": "bottom-left", "label": "Bottom left" },
+        { "value": "bottom-center", "label": "Bottom centre" },
+        { "value": "bottom-right", "label": "Bottom right" }
+      ],
+      "default": "middle-center"
+    },
+    {
+      "type": "select",
+      "id": "position_mobile",
+      "label": "Content position on phones",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "middle", "label": "Middle" },
+        { "value": "bottom", "label": "Bottom" }
+      ],
+      "default": "middle"
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Text alignment",
+      "default": "center"
+    },
+    {
+      "type": "range",
+      "id": "content_width",
+      "label": "Content width on desktop",
+      "min": 320,
+      "max": 800,
+      "step": 20,
+      "unit": "px",
+      "default": 560
+    },
+    {
+      "type": "checkbox",
+      "id": "box",
+      "label": "Show content box",
+      "default": false,
+      "info": "Puts the content on a solid panel in its own colour scheme, so it stays readable over any image."
+    },
+    {
+      "type": "color_scheme",
+      "id": "box_scheme",
+      "label": "Content box colour scheme",
+      "default": "scheme-1",
+      "visible_if": "{{ section.settings.box }}"
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading level",
+      "options": [
+        { "value": "h2", "label": "H2" },
+        { "value": "h1", "label": "H1 (main page heading)" }
+      ],
+      "default": "h2",
+      "info": "H1 only when this banner is the first section of a template whose page has no title of its own (not on product, collection, page, blog or article templates). Otherwise it stays H2."
+    },
+    { "type": "header", "content": "Link" },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "Banner link",
+      "info": "Makes the whole banner clickable. Buttons keep their own links."
+    },
+    {
+      "type": "text",
+      "id": "link_name",
+      "label": "Link description",
+      "info": "Read by screen readers, for example \"Shop the new collection\". Leave blank to use the main heading."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "eyebrow",
+      "name": "Eyebrow",
+      "limit": 2,
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Example: a short label",
+          "info": "A short label above the heading. Announce a sale or deadline only when a real Shopify discount or end date backs it."
+        },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Style",
+          "options": [
+            { "value": "plain", "label": "Plain" },
+            { "value": "accent", "label": "Accent colour" },
+            { "value": "pill", "label": "Pill" }
+          ],
+          "default": "plain"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "name": "Heading",
+      "limit": 2,
+      "settings": [
+        {
+          "type": "inline_richtext",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Example: say what you sell",
+          "info": "Bold a word to colour it with the section's accent style. The first heading on the banner takes the main heading level. Promise a discount, saving or deadline only when a real Shopify discount or end date backs it."
+        },
+        {
+          "type": "select",
+          "id": "size",
+          "label": "Size",
+          "options": [
+            { "value": "xs", "label": "Extra small" },
+            { "value": "sm", "label": "Small" },
+            { "value": "md", "label": "Medium" },
+            { "value": "lg", "label": "Large" },
+            { "value": "xl", "label": "Extra large" }
+          ],
+          "default": "lg"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "Text",
+      "limit": 3,
+      "settings": [
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Text",
+          "default": "<p>Example: say what shoppers get, in your own words. Replace it before publishing.</p>",
+          "info": "State only what is true for your store. Prices and savings come from your products and discounts, not typed text."
+        },
+        {
+          "type": "select",
+          "id": "size",
+          "label": "Size",
+          "options": [
+            { "value": "sm", "label": "Small" },
+            { "value": "md", "label": "Medium" },
+            { "value": "lg", "label": "Large" }
+          ],
+          "default": "md"
+        }
+      ]
+    },
+    {
+      "type": "button",
+      "name": "Button",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Shop now"
+        },
+        {
+          "type": "url",
+          "id": "url",
+          "label": "Link",
+          "info": "A button without a link is hidden from shoppers.",
+          "default": "/collections/all"
+        },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Style",
+          "options": [
+            { "value": "primary", "label": "Solid button" },
+            { "value": "secondary", "label": "Outline button" },
+            { "value": "link", "label": "Text link" },
+            { "value": "link_arrow", "label": "Text link with arrow" }
+          ],
+          "default": "primary"
+        },
+        {
+          "type": "select",
+          "id": "size",
+          "label": "Size",
+          "options": [
+            { "value": "sm", "label": "Small" },
+            { "value": "md", "label": "Medium" },
+            { "value": "lg", "label": "Large" }
+          ],
+          "default": "lg"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Image banner",
+      "settings": {
+        "color_scheme": "scheme-4",
+        "width": "full",
+        "pad_top": 0,
+        "pad_bottom": 0,
+        "height_desktop": "lg",
+        "height_mobile": "md",
+        "overlay": 30
+      },
+      "blocks": [
+        {
+          "type": "eyebrow",
+          "settings": {
+            "text": "Example: a short label"
+          }
+        },
+        {
+          "type": "heading",
+          "settings": {
+            "heading": "Example: say what you <strong>sell</strong>",
+            "size": "xl"
+          }
+        },
+        {
+          "type": "text",
+          "settings": {
+            "text": "<p>Example: one or two sentences on what shoppers get. Replace it with words that are true for your store.</p>"
+          }
+        },
+        {
+          "type": "button",
+          "settings": {
+            "label": "Shop now",
+            "style": "primary"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -4,28 +4,86 @@
       "type": "main-page",
       "settings": {}
     },
+    "track": {
+      "type": "anvil-track-order",
+      "settings": {
+        "heading": "Track your <strong>order</strong>",
+        "width": "narrow",
+        "mode": "account"
+      }
+    },
+    "timeline": {
+      "type": "anvil-timeline",
+      "blocks": {
+        "timeline_step_1": {
+          "type": "step",
+          "settings": {
+            "icon": "shopping-bag",
+            "label": "Example: day 1",
+            "text": "<p>Example: replace with what happens right after checkout, such as the confirmation email shoppers receive.</p>",
+            "heading": "Example: order placed"
+          }
+        },
+        "timeline_step_2": {
+          "type": "step",
+          "settings": {
+            "icon": "package",
+            "label": "Example: days 1–2",
+            "text": "<p>Example: replace with the processing time stated in your shipping policy.</p>",
+            "heading": "Example: packed"
+          }
+        },
+        "timeline_step_3": {
+          "type": "step",
+          "settings": {
+            "icon": "truck",
+            "label": "Example: days 3–7",
+            "text": "<p>Example: replace with how the tracking link reaches shoppers and your carrier's usual transit time.</p>",
+            "heading": "Example: shipped"
+          }
+        },
+        "timeline_step_4": {
+          "type": "step",
+          "settings": {
+            "icon": "home",
+            "label": "Example: delivered",
+            "text": "<p>Example: replace with what shoppers should do if a parcel is late or damaged, and link your shipping policy.</p>",
+            "heading": "Example: at the door"
+          }
+        }
+      },
+      "block_order": [
+        "timeline_step_1",
+        "timeline_step_2",
+        "timeline_step_3",
+        "timeline_step_4"
+      ],
+      "settings": {
+        "heading": "What happens <strong>after you order</strong>"
+      }
+    },
     "faq": {
       "type": "anvil-faq",
       "blocks": {
         "delivery_1": {
           "type": "item",
           "settings": {
-            "question": "Example question — How long does delivery take?",
-            "answer": "<p>Example answer — replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
+            "question": "Example: How long does delivery take?",
+            "answer": "<p>Example: replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
           }
         },
         "delivery_2": {
           "type": "item",
           "settings": {
-            "question": "Example question — How much does shipping cost?",
-            "answer": "<p>Example answer — list your actual shipping rates and any free-shipping threshold exactly as they are set in your admin.</p>"
+            "question": "Example: How much does shipping cost?",
+            "answer": "<p>Example: list your actual shipping rates and any free-shipping threshold exactly as they are set in your admin.</p>"
           }
         },
         "delivery_3": {
           "type": "item",
           "settings": {
-            "question": "Example question — How do I track my order?",
-            "answer": "<p>Example answer — explain where the tracking link arrives (for example in the shipping confirmation email) and how long carriers take to show updates.</p>"
+            "question": "Example: How do I track my order?",
+            "answer": "<p>Example: explain where the tracking link arrives (for example in the shipping confirmation email) and how long carriers take to show updates.</p>"
           }
         }
       },
@@ -45,6 +103,8 @@
   },
   "order": [
     "main",
+    "track",
+    "timeline",
     "faq"
   ]
 }

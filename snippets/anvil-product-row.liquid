@@ -1,0 +1,167 @@
+{% doc %}
+  A row of product cards as a grid or an <anvil-slider> (DECISIONS 93), shared by Featured collection and Related
+  products. Columns follow the shared grid rule (phones 1-2, tablets up to 3 with 4 becoming 2, desktop the setting);
+  the slider shows the same counts in view with the theme's standard peek and decides dots, arrows and peek per width
+  at first paint (snippets/anvil-slider-attrs). With dots off the arrows stay on, so mouse users always have a way
+  past the first view (the track hides its scrollbar). Card image sizes come from the column counts, capped by the
+  page or narrow width. Load assets/anvil-card.css (and anvil-slider.css for a slider) before rendering; the slider
+  module is loaded here. Styles: .av-product-row* in assets/anvil-card.css.
+
+  @param {product[]} [products] - Products to show; blank renders `placeholders` example cards
+  @param {number} [limit] - Most cards shown (default 8)
+  @param {number} [placeholders] - Example cards when `products` is blank (default 0)
+  @param {string} [layout] - grid | slider (default grid)
+  @param {number} [cols_desktop] - Columns from 990 px (default 4)
+  @param {number} [cols_mobile] - Columns below 750 px (default 2)
+  @param {boolean} [show_arrows] - Slider arrows (tablets and desktop, beside the track)
+  @param {boolean} [show_dots] - Slider dots
+  @param {string} [label] - Name of the slider region (escaped here)
+  @param {string} [fold] - lcp | eager | lazy from snippets/anvil-above-fold (default lazy)
+  @param {string} [width] - The section's width setting: page | narrow | full (caps the image sizes)
+  @param {boolean} [show_vendor] - Card vendor
+  @param {boolean} [show_rating] - Card stars from the rating metafield
+  @param {boolean} [quick_add] - Card quick add
+  @param {string} [image_ratio] - Card image shape; blank or theme follows Theme settings > Product cards
+  @param {boolean} [hover_image] - Show the card's second image on hover (default true)
+  @param {string} [uid] - Keeps quick-add form ids unique (pass section.id)
+
+  @example
+  {% render 'anvil-product-row', products: collection.products, limit: 8, layout: s.layout, cols_desktop: 4, cols_mobile: 2, fold: fold, width: s.width, uid: section.id %}
+{% enddoc %}
+{%- liquid
+  assign pr_limit = limit | default: 8 | plus: 0
+  assign pr_layout = layout | default: 'grid'
+  assign pr_d = cols_desktop | default: 4 | plus: 0 | at_least: 1 | at_most: 6
+  assign pr_m = cols_mobile | default: 2 | plus: 0 | at_least: 1 | at_most: 2
+  assign pr_t = pr_d | at_most: 3
+  if pr_d == 4
+    assign pr_t = 2
+  endif
+
+  assign pr_has = false
+  assign pr_count = placeholders | default: 0 | plus: 0
+  if products != blank
+    assign pr_has = true
+    assign pr_count = products.size | at_most: pr_limit
+  endif
+
+  assign pr_ratio = image_ratio
+  if pr_ratio == blank or pr_ratio == 'theme'
+    assign pr_ratio = settings.card_image_ratio
+  endif
+  assign pr_fold = fold | default: 'lazy'
+  assign pr_slider = false
+  if pr_layout == 'slider'
+    assign pr_slider = true
+  endif
+
+  # Image sizes from the column counts; the page and narrow widths cap the card width on wide screens.
+  assign vw_d = 100 | divided_by: pr_d
+  assign vw_t = 100 | divided_by: pr_t
+  assign vw_m = 100 | divided_by: pr_m
+  if pr_slider and pr_count > pr_m
+    assign vw_m = 88 | divided_by: pr_m
+  endif
+  assign cap_w = 0
+  if width == 'page' or width == blank
+    assign cap_w = settings.page_width | default: 1400
+  elsif width == 'narrow'
+    assign cap_w = settings.narrow_width | default: 800
+  endif
+  assign tail_sizes = '(min-width: 750px) ' | append: vw_t | append: 'vw, ' | append: vw_m | append: 'vw'
+  if cap_w == 0
+    assign pr_sizes = '(min-width: 990px) ' | append: vw_d | append: 'vw, ' | append: tail_sizes
+  else
+    assign cap_px = cap_w | divided_by: pr_d
+    if cap_w >= 990
+      assign pr_sizes = '(min-width: ' | append: cap_w | append: 'px) ' | append: cap_px | append: 'px, (min-width: 990px) ' | append: vw_d | append: 'vw, ' | append: tail_sizes
+    else
+      assign pr_sizes = '(min-width: 990px) ' | append: cap_px | append: 'px, ' | append: tail_sizes
+    endif
+  endif
+
+  assign pr_class = 'av-product-row'
+  if hover_image == false
+    assign pr_class = pr_class | append: ' av-product-row--no-hover'
+  endif
+
+  if pr_slider
+    assign pr_arrows = 'none'
+    if show_arrows or show_dots != true
+      assign pr_arrows = 'desktop'
+    endif
+    assign list_tag = 'div'
+    assign list_attrs = 'class="av-product-row__track" data-slider-track'
+    assign item_tag = 'div'
+    assign item_attrs = 'class="av-product-row__slide" data-slider-slide'
+  else
+    assign list_tag = 'ul'
+    assign list_attrs = 'class="av-product-row__grid av-grid av-grid--c' | append: pr_d | append: ' av-grid--m' | append: pr_m | append: '" role="list"'
+    assign item_tag = 'li'
+    assign item_attrs = 'class="av-product-row__cell"'
+  endif
+
+  # Example cards pass an explicit nil product: render still sees a page's global product, which an omitted
+  # argument would repeat.
+  assign no_product = nil
+-%}
+{%- if pr_count > 0 -%}
+  {%- if pr_slider -%}
+    <anvil-slider {% render 'anvil-slider-attrs', count: pr_count, per_view: pr_m, per_view_tablet: pr_t, per_view_desktop: pr_d, peek: 'auto', arrows: pr_arrows, gutter: true, dots: show_dots, label: label, class: pr_class %}>
+  {%- else -%}
+    <div class="{{ pr_class }}">
+  {%- endif -%}
+  <{{ list_tag }} {{ list_attrs }}>
+    {%- if pr_has -%}
+      {%- for item in products limit: pr_limit -%}
+        {%- liquid
+          assign card_loading = 'lazy'
+          assign card_priority = false
+          if pr_fold != 'lazy' and forloop.index <= pr_d
+            assign card_loading = 'eager'
+            if pr_fold == 'lcp' and forloop.first
+              assign card_priority = true
+            endif
+          endif
+        -%}
+        <{{ item_tag }} {{ item_attrs }}>
+          {%- render 'anvil-product-card',
+            product: item,
+            show_vendor: show_vendor,
+            show_rating: show_rating,
+            quick_add: quick_add,
+            image_ratio: pr_ratio,
+            sizes: pr_sizes,
+            loading: card_loading,
+            priority: card_priority,
+            heading_tag: 'h3',
+            uid: uid
+          -%}
+        </{{ item_tag }}>
+      {%- endfor -%}
+    {%- else -%}
+      {%- for i in (1..pr_count) -%}
+        {%- assign ph_index = i | minus: 1 | modulo: 6 | plus: 1 -%}
+        <{{ item_tag }} {{ item_attrs }}>
+          {%- render 'anvil-product-card',
+            product: no_product,
+            show_vendor: show_vendor,
+            quick_add: quick_add,
+            image_ratio: pr_ratio,
+            heading_tag: 'h3',
+            placeholder_index: ph_index
+          -%}
+        </{{ item_tag }}>
+      {%- endfor -%}
+    {%- endif -%}
+  </{{ list_tag }}>
+  {%- if pr_slider -%}
+    {%- if show_dots -%}
+      <div class="av-slider__dots" data-slider-dots></div>
+    {%- endif -%}
+    </anvil-slider>
+    <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+  {%- else -%}
+    </div>
+  {%- endif -%}
+{%- endif -%}

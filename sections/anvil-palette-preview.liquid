@@ -1,0 +1,357 @@
+{%- liquid
+  assign s = section.settings
+
+  # Editor-only by design (SPEC §4.2 "Theme colours preview"). The theme editor and its section preview get the
+  # page; the storefront gets nothing inside Shopify's section wrapper: no markup, no stylesheet, no script.
+  assign show_preview = false
+  if request.design_mode or request.visual_preview_mode
+    assign show_preview = true
+  endif
+-%}
+{%- if show_preview -%}
+  {%- liquid
+    assign page_scheme_id = settings.body_color_scheme.id
+    assign card_scheme_id = settings.card_color_scheme.id
+    # Theme settings > Buttons > hover "outline" paints the button colour as text on the scheme background
+    # (anvil-base.css, .av-btn-hover--outline), so that pair is checked only when the theme draws it.
+    assign scheme_pair_list = 'text,muted,accent,on_accent,button'
+    if settings.button_hover == 'outline'
+      assign scheme_pair_list = scheme_pair_list | append: ',button_hover'
+    endif
+    assign scheme_pairs = scheme_pair_list | append: ',field,error,success,rating' | split: ','
+    assign badge_pairs = 'badge_sale,badge_soldout,badge_custom' | split: ','
+    assign swatch_keys = 'background,text,text_muted,border,accent,on_accent,button,button_text,button_border' | split: ','
+
+    # Icons are captured once and printed per row (9 or 10 rows per scheme).
+    capture icon_check
+      render 'anvil-icon', name: 'check', size: 14
+    endcapture
+    capture icon_warn
+      render 'anvil-icon', name: 'alert-triangle', size: 14
+    endcapture
+    capture icon_x
+      render 'anvil-icon', name: 'x', size: 14
+    endcapture
+    capture icon_star
+      render 'anvil-icon', name: 'star', size: 14
+    endcapture
+  -%}
+  {%- capture verdict_aaa -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--pass">{{ icon_check }}{{ 'anvil.palette_preview.level_aaa' | t }}</span>{%- endcapture -%}
+  {%- capture verdict_aa -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--pass">{{ icon_check }}{{ 'anvil.palette_preview.level_aa' | t }}</span>{%- endcapture -%}
+  {%- capture verdict_large -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--warn">{{ icon_warn }}{{ 'anvil.palette_preview.level_large' | t }}</span>{%- endcapture -%}
+  {%- capture verdict_fail -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--fail">{{ icon_x }}{{ 'anvil.palette_preview.level_fail' | t }}</span>{%- endcapture -%}
+  {%- capture verdict_ui -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--pass">{{ icon_check }}{{ 'anvil.palette_preview.level_ui' | t }}</span>{%- endcapture -%}
+  {%- capture verdict_ui_fail -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--fail">{{ icon_x }}{{ 'anvil.palette_preview.level_ui_fail' | t }}</span>{%- endcapture -%}
+  {%- capture verdict_check -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--warn">{{ icon_warn }}{{ 'anvil.palette_preview.level_check' | t }}</span>{%- endcapture -%}
+  {{ 'anvil-palette-preview.css' | asset_url | stylesheet_tag }}
+  <div {% render 'anvil-section-attrs', section: section, type: 'anvil-palette-preview' %}>
+    <div class="av-section__inner">
+      {%- comment -%} The hidden heading comes first so a subheading never precedes it in reading order. {%- endcomment -%}
+      {%- if s.heading == blank -%}
+        <h2 class="av-visually-hidden">{{ 'anvil.palette_preview.title' | t }}</h2>
+      {%- endif -%}
+      {% render 'anvil-section-head', section: section %}
+      <anvil-palette-preview class="av-palette-preview">
+        <p class="av-palette-preview__intro">{{ 'anvil.palette_preview.intro' | t }}</p>
+        <ul class="av-palette-preview__grid" role="list">
+          {%- for scheme in settings.color_schemes -%}
+            {%- liquid
+              assign ss = scheme.settings
+              assign scheme_name = 'anvil.palette_preview.scheme_name' | t: number: forloop.index
+
+              # The badge card rides on the last scheme's iteration, so one row template serves every table.
+              assign cards = 'scheme'
+              if forloop.last
+                assign cards = 'scheme,badges'
+              endif
+              assign cards = cards | split: ','
+
+              # Inputs, selects and quantity boxes draw --av-input-border, rgb(text.rgb / 0.5), over the field's own
+              # rgb(--av-bg-rgb) fill. Both drop any alpha the colours carry, so the painted edge is the 50 % mix of
+              # the solid colours (color_mix would also average the alpha channel).
+              assign field_edge = nil
+              if ss.text != blank and ss.background != blank
+                assign field_text = ss.text
+                assign field_fill = ss.background
+                assign alpha_check = ss.text | color_extract: 'alpha'
+                if alpha_check < 1
+                  assign field_text = ss.text | color_modify: 'alpha', 1
+                endif
+                assign alpha_check = ss.background | color_extract: 'alpha'
+                if alpha_check < 1
+                  assign field_fill = ss.background | color_modify: 'alpha', 1
+                endif
+                assign field_edge = field_text | color_mix: field_fill, 50
+              endif
+            -%}
+            {%- for card in cards -%}
+              {%- liquid
+                if card == 'badges'
+                  assign pairs = badge_pairs
+                  assign card_title = 'anvil.palette_preview.badges_title' | t
+                else
+                  assign pairs = scheme_pairs
+                  assign card_title = scheme_name
+                endif
+              -%}
+              <li class="av-palette-preview__card">
+                <div class="av-palette-preview__head">
+                  <h3 class="av-palette-preview__name">{{ card_title }}</h3>
+                  {%- if card == 'scheme' -%}
+                    <code class="av-palette-preview__id">{{ scheme.id }}</code>
+                    {%- if scheme.id == page_scheme_id -%}
+                      <span class="av-palette-preview__tag">{{ 'anvil.palette_preview.used_page' | t }}</span>
+                    {%- endif -%}
+                    {%- if scheme.id == card_scheme_id -%}
+                      <span class="av-palette-preview__tag">{{ 'anvil.palette_preview.used_cards' | t }}</span>
+                    {%- endif -%}
+                  {%- endif -%}
+                </div>
+                {%- if card == 'scheme' -%}
+                  <div class="av-palette-preview__panel av-scheme av-scheme--{{ scheme.id }}" aria-hidden="true">
+                    <p class="av-palette-preview__aa">Aa</p>
+                    <p class="av-palette-preview__copy">
+                      <span>{{ 'anvil.palette_preview.sample_text' | t }}</span>
+                      <span class="av-palette-preview__muted">{{ 'anvil.palette_preview.color_text_muted' | t }}</span>
+                      <span class="av-palette-preview__link">{{ 'anvil.palette_preview.sample_link' | t }}</span>
+                    </p>
+                    <p class="av-palette-preview__actions">
+                      <span class="av-btn av-btn--primary av-btn--sm">{{ 'anvil.palette_preview.sample_button' | t }}</span>
+                      <span class="av-btn av-btn--secondary av-btn--sm">{{ 'anvil.palette_preview.sample_button' | t }}</span>
+                      <span class="av-badge av-badge--accent">{{ 'anvil.palette_preview.color_accent' | t }}</span>
+                    </p>
+                    <div class="av-field__input"></div>
+                  </div>
+                  <dl class="av-palette-preview__swatches">
+                    {%- for key in swatch_keys -%}
+                      {%- liquid
+                        case key
+                          when 'background'
+                            assign swatch_label = 'anvil.palette_preview.color_background' | t
+                            assign swatch_value = ss.background
+                          when 'text'
+                            assign swatch_label = 'anvil.palette_preview.color_text' | t
+                            assign swatch_value = ss.text
+                          when 'text_muted'
+                            assign swatch_label = 'anvil.palette_preview.color_text_muted' | t
+                            assign swatch_value = ss.text_muted
+                          when 'border'
+                            assign swatch_label = 'anvil.palette_preview.color_border' | t
+                            assign swatch_value = ss.border
+                          when 'accent'
+                            assign swatch_label = 'anvil.palette_preview.color_accent' | t
+                            assign swatch_value = ss.accent
+                          when 'on_accent'
+                            assign swatch_label = 'anvil.palette_preview.color_on_accent' | t
+                            assign swatch_value = ss.on_accent
+                          when 'button'
+                            assign swatch_label = 'anvil.palette_preview.color_button' | t
+                            assign swatch_value = ss.button
+                          when 'button_text'
+                            assign swatch_label = 'anvil.palette_preview.color_button_text' | t
+                            assign swatch_value = ss.button_text
+                          else
+                            assign swatch_label = 'anvil.palette_preview.color_button_border' | t
+                            assign swatch_value = ss.button_border
+                        endcase
+                      -%}
+                      <div class="av-palette-preview__swatch">
+                        <dt>{{ swatch_label }}</dt>
+                        <dd>
+                          {%- if swatch_value != blank -%}
+                            <span class="av-palette-preview__chip" style="--av-palette-preview-c: {{ swatch_value }};"></span>
+                            <code>{{ swatch_value }}</code>
+                          {%- else -%}
+                            {{ 'anvil.palette_preview.level_unset' | t }}
+                          {%- endif -%}
+                        </dd>
+                      </div>
+                    {%- endfor -%}
+                  </dl>
+                  {%- if ss.background_gradient != blank -%}
+                    <p class="av-palette-preview__note">{{ 'anvil.palette_preview.gradient_note' | t }}</p>
+                  {%- endif -%}
+                {%- else -%}
+                  <p class="av-palette-preview__note">{{ 'anvil.palette_preview.badges_note' | t }}</p>
+                {%- endif -%}
+                <table class="av-palette-preview__table">
+                  <caption class="av-visually-hidden">{{ 'anvil.palette_preview.checks_caption' | t: name: card_title }}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">{{ 'anvil.palette_preview.col_pair' | t }}</th>
+                      <th scope="col" class="av-palette-preview__ratio">{{ 'anvil.palette_preview.col_ratio' | t }}</th>
+                      <th scope="col">{{ 'anvil.palette_preview.col_result' | t }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {%- for pair in pairs -%}
+                      {%- liquid
+                        # kind: text pairs follow the text thresholds (4.5 / 7, large text 3);
+                        # edge and icon pairs follow WCAG 1.4.11 (3:1 for non-text contrast).
+                        assign kind = 'text'
+                        assign bg = ss.background
+                        case pair
+                          when 'text'
+                            assign fg = ss.text
+                            assign label = 'anvil.palette_preview.pair_text' | t
+                          when 'muted'
+                            assign fg = ss.text_muted
+                            assign label = 'anvil.palette_preview.pair_muted' | t
+                          when 'accent'
+                            assign fg = ss.accent
+                            assign label = 'anvil.palette_preview.pair_accent' | t
+                          when 'on_accent'
+                            assign fg = ss.on_accent
+                            assign bg = ss.accent
+                            assign label = 'anvil.palette_preview.pair_on_accent' | t
+                          when 'button'
+                            assign fg = ss.button_text
+                            assign bg = ss.button
+                            assign label = 'anvil.palette_preview.pair_button' | t
+                          when 'button_hover'
+                            assign fg = ss.button
+                            assign label = 'anvil.palette_preview.pair_button_hover' | t
+                          when 'field'
+                            assign fg = field_edge
+                            assign kind = 'edge'
+                            assign label = 'anvil.palette_preview.pair_field' | t
+                          when 'error'
+                            assign fg = settings.color_error
+                            assign label = 'anvil.palette_preview.pair_error' | t
+                          when 'success'
+                            assign fg = settings.color_success
+                            assign label = 'anvil.palette_preview.pair_success' | t
+                          when 'rating'
+                            assign fg = settings.color_rating
+                            assign kind = 'icon'
+                            assign label = 'anvil.palette_preview.pair_rating' | t
+                          when 'badge_sale'
+                            assign fg = settings.badge_sale_text
+                            assign bg = settings.badge_sale_bg
+                            assign label = 'anvil.palette_preview.pair_badge_sale' | t
+                          when 'badge_soldout'
+                            assign fg = settings.badge_soldout_text
+                            assign bg = settings.badge_soldout_bg
+                            assign label = 'anvil.palette_preview.pair_badge_soldout' | t
+                          else
+                            assign fg = settings.badge_custom_text
+                            assign bg = settings.badge_custom_bg
+                            assign label = 'anvil.palette_preview.pair_badge_custom' | t
+                        endcase
+
+                        # color_contrast prints one decimal, so a value equal to a threshold may sit just below it.
+                        # Only a value strictly above the threshold passes here (never overstated); the module
+                        # recomputes the exact ratio and verdict in the editor.
+                        # A colour with alpha (a colour setting can hold transparent #00000000) is painted over
+                        # whatever lies beneath it, which color_contrast does not know: such a row gets "check by
+                        # eye" and no server ratio. The module composites it over the scheme background when that
+                        # background is solid; badge rows have no known surface, so a see-through badge stays "check".
+                        assign ratio = nil
+                        assign level = 'unset'
+                        if fg != blank and bg != blank
+                          assign fg_alpha = fg | color_extract: 'alpha'
+                          assign bg_alpha = bg | color_extract: 'alpha'
+                          if fg_alpha < 1 or bg_alpha < 1
+                            assign level = 'check'
+                          else
+                            assign ratio = fg | color_contrast: bg
+                            if kind == 'text'
+                              if ratio > 7
+                                assign level = 'aaa'
+                              elsif ratio > 4.5
+                                assign level = 'aa'
+                              elsif ratio > 3
+                                assign level = 'large'
+                              else
+                                assign level = 'fail'
+                              endif
+                            elsif ratio > 3
+                              assign level = 'ui'
+                            else
+                              assign level = 'ui_fail'
+                            endif
+                          endif
+                        endif
+                      -%}
+                      <tr{% if level != 'unset' %} data-anvil-pair="{{ kind }}" data-anvil-fg="{{ fg | color_to_rgb }}" data-anvil-bg="{{ bg | color_to_rgb }}"{% if card == 'scheme' %} data-anvil-base="{{ ss.background | color_to_rgb }}"{% endif %}{% endif %}>
+                        <th scope="row">
+                          <span class="av-palette-preview__pair">
+                            <span class="av-palette-preview__sample av-palette-preview__sample--{{ kind }}"{% if level != 'unset' %} style="--av-palette-preview-fg: {{ fg }}; --av-palette-preview-bg: {{ bg }};"{% endif %} aria-hidden="true">
+                              {%- if kind == 'text' -%}Aa{%- elsif kind == 'icon' -%}{{ icon_star }}{%- endif -%}
+                            </span>
+                            {{- label -}}
+                          </span>
+                        </th>
+                        <td class="av-palette-preview__ratio" data-anvil-ratio>
+                          {%- if ratio != nil -%}≈{{ ratio }}:1{%- else -%}–{%- endif -%}
+                        </td>
+                        <td data-anvil-verdict>
+                          {%- case level -%}
+                            {%- when 'aaa' -%}{{ verdict_aaa }}
+                            {%- when 'aa' -%}{{ verdict_aa }}
+                            {%- when 'large' -%}{{ verdict_large }}
+                            {%- when 'fail' -%}{{ verdict_fail }}
+                            {%- when 'ui' -%}{{ verdict_ui }}
+                            {%- when 'ui_fail' -%}{{ verdict_ui_fail }}
+                            {%- when 'check' -%}{{ verdict_check }}
+                            {%- else -%}<span class="av-palette-preview__verdict av-palette-preview__verdict--unset">{{ 'anvil.palette_preview.level_unset' | t }}</span>
+                          {%- endcase -%}
+                        </td>
+                      </tr>
+                    {%- endfor -%}
+                  </tbody>
+                </table>
+              </li>
+            {%- endfor -%}
+          {%- endfor -%}
+        </ul>
+        <p class="av-palette-preview__legend">{{ 'anvil.palette_preview.legend' | t }}</p>
+        <p class="av-palette-preview__legend">{{ 'anvil.palette_preview.restyle' | t }}</p>
+        <template data-anvil-level="aaa">{{ verdict_aaa }}</template>
+        <template data-anvil-level="aa">{{ verdict_aa }}</template>
+        <template data-anvil-level="large">{{ verdict_large }}</template>
+        <template data-anvil-level="fail">{{ verdict_fail }}</template>
+        <template data-anvil-level="ui">{{ verdict_ui }}</template>
+        <template data-anvil-level="ui_fail">{{ verdict_ui_fail }}</template>
+      </anvil-palette-preview>
+    </div>
+  </div>
+  <script type="module" src="{{ 'anvil-palette-preview.js' | asset_url }}"></script>
+{%- endif -%}
+{% schema %}
+{
+  "name": "Theme colours preview",
+  "limit": 1,
+  "disabled_on": { "groups": ["*"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Theme colours preview" },
+    {
+      "type": "paragraph",
+      "content": "Only you see this section, in the theme editor; shoppers never see its content. It lists every colour scheme from Theme settings > Colors with its WCAG contrast ratios; to change the colours, edit those schemes or switch the theme style. Shopify still adds an empty section wrapper on the live store, which shifts the sections after it, so keep it at the bottom of the template, or remove it before publishing."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Theme colours preview",
+      "settings": {
+        "heading": "Colour schemes"
+      }
+    }
+  ]
+}
+{% endschema %}

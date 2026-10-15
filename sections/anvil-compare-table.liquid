@@ -1,0 +1,588 @@
+{%- liquid
+  assign s = section.settings
+
+  # Column names. Your column falls back to the store name, the other column to a generic word, so the
+  # table always has column headers (and an accessible caption) even when the merchant clears them.
+  assign ours_name = s.our_heading | strip
+  if ours_name == blank
+    assign ours_name = shop.name
+  endif
+  assign theirs_name = s.their_heading | strip
+  if theirs_name == blank
+    assign theirs_name = 'anvil.compare_table.others' | t
+  endif
+  assign label_head = s.label_heading | strip
+
+  assign highlight = s.highlight | default: 'tint'
+  assign icon_style = s.icon_style | default: 'soft'
+  assign icon_color = s.icon_color | default: 'accent'
+  assign row_style = s.row_style | default: 'lines'
+  assign value_align = s.text_align | default: 'center'
+  assign col_min = s.col_min | default: 104
+
+  assign caption_id = 'anvil-ct-caption-' | append: section.id
+  assign note_id = 'anvil-ct-note-' | append: section.id
+  assign has_note = false
+  if s.footnote != blank
+    assign has_note = true
+  endif
+
+  # Logo in your column header: the heading text stays as its alt text, so the column keeps its name.
+  assign logo = s.our_logo
+  assign logo_w = s.logo_width | default: 96
+  if logo != blank
+    assign logo_w2 = logo_w | times: 2
+    assign logo_ratio = logo.aspect_ratio | default: 1
+    assign logo_h = logo_w | divided_by: logo_ratio | round
+    assign logo_widths = logo_w | append: ', ' | append: logo_w2
+    assign logo_sizes = logo_w | append: 'px'
+    capture fold
+      render 'anvil-above-fold', section: section
+    endcapture
+    assign logo_loading = 'eager'
+    if fold contains 'lazy'
+      assign logo_loading = 'lazy'
+    endif
+  endif
+
+  # "Product review rating" rows read the reviews.rating metafield a review app writes (docs/HONEST.md):
+  # the product picked here, else the product of the template (closest.product on a product page).
+  assign rating_product = s.rating_product | default: closest.product
+  assign pr_value = ''
+  assign pr_max = 5
+  assign pr_count = ''
+  if rating_product.metafields.reviews.rating.value != blank
+    assign pr_value = rating_product.metafields.reviews.rating.value.rating
+    assign pr_max = rating_product.metafields.reviews.rating.value.scale_max | default: 5
+    assign pr_count = rating_product.metafields.reviews.rating_count.value
+  endif
+
+  assign yes_label = 'anvil.compare_table.yes' | t
+  assign no_label = 'anvil.compare_table.no' | t
+  assign none_label = 'anvil.compare_table.not_stated' | t
+  assign source_label = 'anvil.compare_table.source' | t
+  assign new_tab = 'anvil.a11y.new_window' | t
+  assign hint_stars = 'anvil.editor.compare_stars_no_source' | t
+  assign hint_rating = 'anvil.editor.compare_rating_missing' | t
+  assign untitled_label = 'anvil.editor.untitled_row' | t
+  assign sides = 'ours,theirs' | split: ','
+
+  # Icons are rendered once and printed per cell instead of up to 40 snippet renders.
+  capture icon_yes
+    render 'anvil-icon', name: 'check', size: 20
+  endcapture
+  capture icon_no
+    render 'anvil-icon', name: 'x', size: 20
+  endcapture
+
+  # Rows shoppers will see. A row without a label has no row header, so the storefront skips it; the
+  # editor keeps it with a placeholder so the merchant can still select it. Counted here, inside the
+  # liquid tag, so the only for-loop tag over section.blocks is the rendering loop (chassis lint).
+  assign rows_shown = 0
+  for row in section.blocks
+    assign row_label = row.settings.label | strip
+    if request.design_mode or row_label != blank
+      assign rows_shown = rows_shown | plus: 1
+    endif
+  endfor
+
+  assign table_class = 'av-compare-table av-compare-table--hl-' | append: highlight
+  assign table_class = table_class | append: ' av-compare-table--icon-' | append: icon_style
+  assign table_class = table_class | append: ' av-compare-table--color-' | append: icon_color
+  assign table_class = table_class | append: ' av-compare-table--rows-' | append: row_style
+  assign table_class = table_class | append: ' av-compare-table--align-' | append: value_align
+
+  # On a scheme with a background gradient the opaque label column would paint a solid band over it.
+  # The class lets the desktop layout (where nothing scrolls) drop the fill and the sticky position.
+  if s.color_scheme.settings.background_gradient != blank
+    assign table_class = table_class | append: ' av-compare-table--gradient'
+  endif
+-%}
+{%- comment -%} An empty table renders nothing on the storefront; the editor keeps the heading beside the empty note. {%- endcomment -%}
+{%- if rows_shown > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-compare-table' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if rows_shown > 0 -%}
+      <div class="{{ table_class }}" style="--av-compare-table-col: {{ col_min }}px; --av-compare-table-logo: {{ logo_w }}px;">
+        <div class="av-compare-table__scroll" role="region" tabindex="0" aria-labelledby="{{ caption_id }}">
+          <table class="av-compare-table__table"{% if has_note %} aria-describedby="{{ note_id }}"{% endif %}>
+            <caption id="{{ caption_id }}" class="av-visually-hidden">
+              {{- 'anvil.compare_table.caption' | t: ours: ours_name, theirs: theirs_name -}}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col" class="av-compare-table__corner">
+                  {%- if label_head != blank -%}
+                    {{ label_head | escape }}
+                  {%- else -%}
+                    <span class="av-visually-hidden">{{ 'anvil.compare_table.feature' | t }}</span>
+                  {%- endif -%}
+                </th>
+                <th scope="col" class="av-compare-table__head av-compare-table__ours">
+                  {%- if logo != blank -%}
+                    {{ logo | image_url: width: logo_w2 | image_tag: widths: logo_widths, sizes: logo_sizes, width: logo_w, height: logo_h, loading: logo_loading, alt: ours_name, class: 'av-compare-table__logo' }}
+                  {%- else -%}
+                    {{ ours_name | escape }}
+                  {%- endif -%}
+                </th>
+                <th scope="col" class="av-compare-table__head av-compare-table__theirs">{{ theirs_name | escape }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {%- for block in section.blocks -%}
+                {%- liquid
+                  assign b = block.settings
+                  assign label = b.label | strip
+                  if label == blank
+                    if request.design_mode
+                      assign label = untitled_label
+                    else
+                      continue
+                    endif
+                  endif
+                  assign row_note = b.note | strip
+                -%}
+                <tr class="av-compare-table__row" {{ block.shopify_attributes }}>
+                  <th scope="row" class="av-compare-table__label">
+                    {{- label | escape -}}
+                    {%- if row_note != blank -%}
+                      <span class="av-compare-table__label-note">{{ row_note | escape }}</span>
+                    {%- endif -%}
+                  </th>
+                  {%- for side in sides -%}
+                    {%- liquid
+                      assign key = side | append: '_type'
+                      assign v_type = b[key]
+                      assign key = side | append: '_text'
+                      assign v_text = b[key] | strip
+                      assign key = side | append: '_rating'
+                      assign v_rating = b[key]
+                      assign key = side | append: '_source'
+                      assign v_source = b[key]
+
+                      # Stars render only from a review-app metafield or with a source link shoppers can follow.
+                      assign stars_value = ''
+                      assign stars_max = 5
+                      assign stars_url = ''
+                      assign editor_hint = ''
+                      if v_type == 'stars'
+                        if v_source != blank
+                          assign stars_value = v_rating
+                          assign stars_url = v_source
+                        elsif request.design_mode
+                          assign editor_hint = hint_stars
+                        endif
+                      elsif v_type == 'rating'
+                        if pr_value != blank
+                          assign stars_value = pr_value
+                          assign stars_max = pr_max
+                        elsif request.design_mode
+                          assign editor_hint = hint_rating
+                        endif
+                      endif
+
+                      assign has_value = false
+                      if v_type == 'check' or v_type == 'cross'
+                        assign has_value = true
+                      elsif stars_value != blank or v_text != blank
+                        assign has_value = true
+                      endif
+                    -%}
+                    <td class="av-compare-table__cell av-compare-table__{{ side }}">
+                      {%- if has_value -%}
+                        <span class="av-compare-table__value">
+                          {%- if v_type == 'check' -%}
+                            <span class="av-compare-table__icon">{{ icon_yes }}</span><span class="av-visually-hidden">{{ yes_label }}</span>
+                          {%- elsif v_type == 'cross' -%}
+                            <span class="av-compare-table__icon av-compare-table__icon--no">{{ icon_no }}</span><span class="av-visually-hidden">{{ no_label }}</span>
+                          {%- elsif stars_value != blank -%}
+                            {%- capture stars_html -%}
+                              {%- render 'anvil-stars', rating: stars_value, max: stars_max, size: 16 -%}
+                              <span class="av-compare-table__num" aria-hidden="true">{{ stars_value | round: 1 }}</span>
+                            {%- endcapture -%}
+                            {%- if stars_url != blank -%}
+                              <a class="av-compare-table__rating" href="{{ stars_url }}" target="_blank" rel="noopener">
+                                {{- stars_html -}}
+                                <span class="av-compare-table__src">{{ source_label }}</span>
+                                <span class="av-visually-hidden"> {{ new_tab }}</span>
+                              </a>
+                            {%- else -%}
+                              <span class="av-compare-table__rating">
+                                {{- stars_html -}}
+                                {%- if pr_count != blank -%}
+                                  <span aria-hidden="true">({{ pr_count }})</span><span class="av-visually-hidden">{{ 'anvil.stars.count' | t: count: pr_count }}</span>
+                                {%- endif -%}
+                              </span>
+                            {%- endif -%}
+                          {%- endif -%}
+                          {%- if v_text != blank -%}
+                            <span class="av-compare-table__text">{{ v_text | escape }}</span>
+                          {%- endif -%}
+                        </span>
+                      {%- else -%}
+                        <span class="av-compare-table__none" aria-hidden="true">&mdash;</span><span class="av-visually-hidden">{{ none_label }}</span>
+                      {%- endif -%}
+                      {%- if editor_hint != blank -%}
+                        <span class="av-compare-table__hint av-example-note">{{ editor_hint }}</span>
+                      {%- endif -%}
+                    </td>
+                  {%- endfor -%}
+                </tr>
+              {%- endfor -%}
+            </tbody>
+          </table>
+        </div>
+        {%- if has_note -%}
+          <p class="av-compare-table__footnote" id="{{ note_id }}">{{ s.footnote }}</p>
+        {%- endif -%}
+      </div>
+    {%- else -%}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+.av-compare-table{--av-compare-table-yes:var(--av-accent);--av-compare-table-no:var(--av-fg-muted)}
+.av-compare-table--color-status{--av-compare-table-yes:var(--av-success);--av-compare-table-no:var(--av-error)}
+.av-compare-table--color-text{--av-compare-table-yes:var(--av-fg);--av-compare-table-no:var(--av-fg)}
+.av-compare-table__scroll{position:relative;overflow-x:auto;overscroll-behavior-x:contain;scroll-padding-inline-start:8rem;scrollbar-width:thin;scrollbar-color:var(--av-scrollbar-color) transparent}
+.av-compare-table__table{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--av-text-sm);line-height:1.4}
+.av-compare-table__table th,.av-compare-table__table td{padding:var(--av-space-3) var(--av-space-2);text-align:center;vertical-align:middle;border-bottom:1px solid var(--av-border)}
+.av-compare-table--align-left th,.av-compare-table--align-left td{text-align:start}
+.av-compare-table__table thead th{vertical-align:bottom;font-family:var(--av-font-heading);font-weight:var(--av-heading-weight);font-size:var(--av-text-md);text-transform:var(--av-heading-case);letter-spacing:var(--av-heading-spacing);line-height:1.2}
+.av-compare-table__table :is(.av-compare-table__corner,.av-compare-table__label){position:sticky;inset-inline-start:0;z-index:1;min-width:8rem;text-align:start;background-color:var(--av-bg);border-inline-end:1px solid var(--av-border)}
+.av-compare-table__table .av-compare-table__label{font-family:var(--av-font-body);font-weight:600;overflow-wrap:anywhere}
+.av-compare-table__label-note{display:block;margin-top:var(--av-space-1);font-size:var(--av-text-xs);font-weight:400;color:var(--av-fg-muted)}
+.av-compare-table__head,.av-compare-table__cell{min-width:var(--av-compare-table-col)}
+.av-compare-table--rows-striped tbody tr>*{border-bottom-color:transparent}
+.av-compare-table--rows-striped tbody tr:nth-child(odd)>*{background-image:linear-gradient(rgb(var(--av-fg-rgb) / .05),rgb(var(--av-fg-rgb) / .05))}
+.av-compare-table:not(.av-compare-table--hl-none) thead .av-compare-table__ours{border-radius:var(--av-radius-card) var(--av-radius-card) 0 0}
+.av-compare-table:not(.av-compare-table--hl-none) tbody tr:last-child .av-compare-table__ours{border-radius:0 0 var(--av-radius-card) var(--av-radius-card)}
+.av-compare-table--hl-tint .av-compare-table__ours{background-color:rgb(var(--av-accent-rgb) / .1)}
+.av-compare-table--hl-accent .av-compare-table__ours{--av-compare-table-yes:var(--av-on-accent);--av-compare-table-no:var(--av-on-accent);--av-rating:var(--av-on-accent);background-color:var(--av-accent);color:var(--av-on-accent);border-bottom-color:transparent}
+.av-compare-table--hl-accent .av-compare-table__ours .av-compare-table__none{color:inherit}
+.av-compare-table--hl-outline .av-compare-table__ours{border-inline:2px solid var(--av-accent)}
+.av-compare-table--hl-outline thead .av-compare-table__ours{border-top:2px solid var(--av-accent)}
+.av-compare-table--hl-outline tbody tr:last-child .av-compare-table__ours{border-bottom:2px solid var(--av-accent)}
+.av-compare-table__logo{display:block;width:var(--av-compare-table-logo);max-width:100%;height:auto;margin-inline:auto}
+.av-compare-table--align-left .av-compare-table__logo{margin-inline:0}
+.av-compare-table__value{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--av-space-1) var(--av-space-2);vertical-align:middle}
+.av-compare-table--align-left .av-compare-table__value{justify-content:flex-start}
+.av-compare-table__icon{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;color:var(--av-compare-table-yes)}
+.av-compare-table__icon--no{color:var(--av-compare-table-no)}
+.av-compare-table__icon svg{position:relative;width:20px;height:20px}
+.av-compare-table--icon-soft .av-compare-table__icon::before{content:"";position:absolute;inset:0;border-radius:inherit;background:currentColor;opacity:.14}
+.av-compare-table--icon-circle .av-compare-table__icon{background:var(--av-compare-table-yes);color:var(--av-bg)}
+.av-compare-table--icon-circle .av-compare-table__icon--no{background:var(--av-compare-table-no)}
+.av-compare-table--icon-circle.av-compare-table--color-accent .av-compare-table__icon:not(.av-compare-table__icon--no){color:var(--av-on-accent)}
+.av-compare-table--icon-circle.av-compare-table--hl-accent .av-compare-table__ours .av-compare-table__icon{color:var(--av-accent)}
+.av-compare-table--icon-circle .av-compare-table__icon svg{width:16px;height:16px}
+.av-compare-table__rating{display:inline-flex;flex-wrap:wrap;justify-content:inherit;align-items:center;gap:var(--av-space-2);color:inherit;text-decoration:none}
+.av-compare-table__num{font-weight:600}
+.av-compare-table__src{font-size:var(--av-text-xs);text-decoration:underline;text-underline-offset:.15em}
+.av-compare-table__none{color:var(--av-fg-muted)}
+.av-compare-table__hint{display:block;margin-top:var(--av-space-1);white-space:normal}
+.av-compare-table__footnote{margin:var(--av-space-4) 0 0;font-size:var(--av-text-xs);line-height:1.5;color:var(--av-fg-muted)}
+.av-compare-table--align-center .av-compare-table__footnote{text-align:center}
+.av-compare-table__footnote a{color:inherit;text-decoration:underline;text-underline-offset:.15em}
+@media (min-width: 750px){
+.av-compare-table__table{font-size:var(--av-text-md)}
+.av-compare-table__table th,.av-compare-table__table td{padding:var(--av-space-4) var(--av-space-5)}
+.av-compare-table__table thead th{font-size:var(--av-text-lg)}
+.av-compare-table__scroll{scroll-padding-inline-start:40%}
+.av-compare-table__table :is(.av-compare-table__corner,.av-compare-table__label){width:40%;border-inline-end-color:transparent}
+.av-compare-table--gradient :is(.av-compare-table__corner,.av-compare-table__label){position:static;background-color:transparent}
+.av-compare-table__label-note{font-size:var(--av-text-sm)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Comparison table",
+  "max_blocks": 20,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Comparison table" },
+    {
+      "type": "text",
+      "id": "our_heading",
+      "label": "Your column heading",
+      "info": "Leave empty to use your store name. With a logo, this text becomes the logo's alt text."
+    },
+    {
+      "type": "image_picker",
+      "id": "our_logo",
+      "label": "Your logo",
+      "info": "Optional. Shown instead of the heading. Upload only a logo you own."
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "label": "Logo width",
+      "min": 40,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 96
+    },
+    {
+      "type": "text",
+      "id": "their_heading",
+      "label": "Other column heading",
+      "default": "Other brands",
+      "info": "Prefer a generic name. Name a specific competitor only if you can prove every row for that product. Competitor logos are not supported."
+    },
+    {
+      "type": "text",
+      "id": "label_heading",
+      "label": "First column heading",
+      "info": "Optional, for example \"Feature\". When empty, only screen readers hear a heading here."
+    },
+    {
+      "type": "select",
+      "id": "highlight",
+      "label": "Highlight your column",
+      "options": [
+        { "value": "none", "label": "Off" },
+        { "value": "tint", "label": "Tinted background" },
+        { "value": "outline", "label": "Accent outline" },
+        { "value": "accent", "label": "Accent background" }
+      ],
+      "default": "tint"
+    },
+    {
+      "type": "select",
+      "id": "icon_style",
+      "label": "Check and cross style",
+      "options": [
+        { "value": "plain", "label": "Plain" },
+        { "value": "soft", "label": "In a tinted circle" },
+        { "value": "circle", "label": "In a solid circle" }
+      ],
+      "default": "soft"
+    },
+    {
+      "type": "select",
+      "id": "icon_color",
+      "label": "Check and cross colours",
+      "options": [
+        { "value": "accent", "label": "Accent check, muted cross" },
+        { "value": "status", "label": "Success and error colours" },
+        { "value": "text", "label": "Text colour" }
+      ],
+      "default": "accent"
+    },
+    {
+      "type": "select",
+      "id": "row_style",
+      "label": "Rows",
+      "options": [
+        { "value": "lines", "label": "Divider lines" },
+        { "value": "striped", "label": "Striped" }
+      ],
+      "default": "lines"
+    },
+    {
+      "type": "select",
+      "id": "text_align",
+      "label": "Value alignment",
+      "options": [
+        { "value": "center", "label": "Centre" },
+        { "value": "left", "label": "Left" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "range",
+      "id": "col_min",
+      "label": "Minimum value column width",
+      "min": 80,
+      "max": 200,
+      "step": 8,
+      "unit": "px",
+      "default": 104,
+      "info": "When the columns do not fit a phone screen, the first column stays in place and the values scroll sideways."
+    },
+    {
+      "type": "product",
+      "id": "rating_product",
+      "label": "Product for review ratings",
+      "info": "Rows set to \"Product review rating\" show this product's rating from your review app. Leave empty to use the product of a product page."
+    },
+    {
+      "type": "inline_richtext",
+      "id": "footnote",
+      "label": "Footnote",
+      "default": "Example: compared with other brands' product pages in [month, year]. Replace with your real sources.",
+      "info": "Say where the facts about the other column come from and when you checked them. Link the sources if you can."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "row",
+      "name": "Row",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Example: replace"
+        },
+        {
+          "type": "text",
+          "id": "note",
+          "label": "Detail under the label",
+          "info": "Optional. A short condition, for example \"on orders over $50\"."
+        },
+        { "type": "header", "content": "Your column" },
+        {
+          "type": "select",
+          "id": "ours_type",
+          "label": "Your value",
+          "options": [
+            { "value": "check", "label": "Check" },
+            { "value": "cross", "label": "Cross" },
+            { "value": "text", "label": "Text" },
+            { "value": "stars", "label": "Typed stars, with a source link" },
+            { "value": "rating", "label": "Product review rating" }
+          ],
+          "default": "text",
+          "info": "A check says your product or store offers this today. Pick it only when that is true, and use Product review rating for stars from your review app. Text left empty shows a dash."
+        },
+        {
+          "type": "text",
+          "id": "ours_text",
+          "label": "Your text",
+          "info": "Shown alone for Text, or beside a check, cross or stars. State only what your product and policies deliver."
+        },
+        {
+          "type": "range",
+          "id": "ours_rating",
+          "label": "Your typed rating",
+          "min": 0,
+          "max": 5,
+          "step": 0.5,
+          "default": 5,
+          "info": "Type the rating exactly as the linked page shows it."
+        },
+        {
+          "type": "url",
+          "id": "ours_source",
+          "label": "Your rating source link",
+          "info": "A public page that shows this exact rating. Without it, typed stars are not shown."
+        },
+        { "type": "header", "content": "Other column" },
+        {
+          "type": "select",
+          "id": "theirs_type",
+          "label": "Their value",
+          "options": [
+            { "value": "check", "label": "Check" },
+            { "value": "cross", "label": "Cross" },
+            { "value": "text", "label": "Text" },
+            { "value": "stars", "label": "Typed stars, with a source link" }
+          ],
+          "default": "text",
+          "info": "Enter only what you can prove about the other product, for example from its own listing. Text left empty shows a dash."
+        },
+        {
+          "type": "text",
+          "id": "theirs_text",
+          "label": "Their text",
+          "info": "Shown alone for Text, or beside a check, cross or stars. Unproven claims about competitors can be unlawful."
+        },
+        {
+          "type": "range",
+          "id": "theirs_rating",
+          "label": "Their typed rating",
+          "min": 0,
+          "max": 5,
+          "step": 0.5,
+          "default": 5,
+          "info": "Type the rating exactly as the linked page shows it."
+        },
+        {
+          "type": "url",
+          "id": "theirs_source",
+          "label": "Their rating source link",
+          "info": "A public page that shows this exact rating, such as the product's review page. Without it, typed stars are not shown."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Comparison table",
+      "settings": {
+        "heading": "How we <strong>compare</strong>",
+        "width": "narrow"
+      },
+      "blocks": [
+        {
+          "type": "row",
+          "settings": {
+            "label": "Example: free shipping",
+            "note": "Example: a fact from your shipping rates",
+            "ours_type": "check",
+            "theirs_type": "cross"
+          }
+        },
+        {
+          "type": "row",
+          "settings": {
+            "label": "Example: return window",
+            "ours_type": "text",
+            "ours_text": "Example: 30 days",
+            "theirs_type": "text",
+            "theirs_text": "Example: 14 days"
+          }
+        },
+        {
+          "type": "row",
+          "settings": {
+            "label": "Example: warranty",
+            "ours_type": "check",
+            "ours_text": "Example: 2 years",
+            "theirs_type": "check",
+            "theirs_text": "Example: 1 year"
+          }
+        },
+        {
+          "type": "row",
+          "settings": {
+            "label": "Example: main material",
+            "ours_type": "text",
+            "ours_text": "Example: solid oak",
+            "theirs_type": "text",
+            "theirs_text": "Example: veneer"
+          }
+        },
+        {
+          "type": "row",
+          "settings": {
+            "label": "Example: email support",
+            "ours_type": "check",
+            "theirs_type": "check"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

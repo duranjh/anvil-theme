@@ -1,6 +1,8 @@
 /* anvil-marquee.css — <anvil-marquee> strip. The JS clones [data-marquee-track] into .av-marquee__clone siblings,
    adds the .av-marquee__pause button and sets --av-marquee-duration / --av-marquee-direction. Only transform
-   animates; reduced motion and html[data-animations="off"] show one static wrapping row from the first paint. */
+   animates, and only once the element is defined (no clones and no pause button before that, so nothing slides
+   out and snaps back); reduced motion, html[data-animations="off"] and html.no-js show one static wrapping row
+   from the first paint. */
 
 anvil-marquee {
   --av-marquee-gap: var(--av-space-6);
@@ -21,8 +23,8 @@ anvil-marquee > .av-marquee__clone {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  anvil-marquee:not(.av-is-static) > [data-marquee-track],
-  anvil-marquee:not(.av-is-static) > .av-marquee__clone {
+  anvil-marquee:defined:not(.av-is-static) > [data-marquee-track],
+  anvil-marquee:defined:not(.av-is-static) > .av-marquee__clone {
     animation: av-marquee var(--av-marquee-duration, 30s) linear infinite var(--av-marquee-direction, normal);
   }
 }
@@ -36,9 +38,26 @@ anvil-marquee > .av-marquee__clone {
 /* Same specificity as the animation rule above (and later in the file), so pausing always wins. */
 anvil-marquee.av-marquee--hover:hover > :is([data-marquee-track], .av-marquee__clone),
 anvil-marquee:focus-within > :is([data-marquee-track], .av-marquee__clone),
-anvil-marquee[paused] > :is([data-marquee-track], .av-marquee__clone),
-anvil-marquee.av-is-held > :is([data-marquee-track], .av-marquee__clone) {
+anvil-marquee[paused] > :is([data-marquee-track], .av-marquee__clone) {
   animation-play-state: paused;
+}
+
+/* A strip that holds links stops under the pointer, so a link never moves away from it (DECISIONS 90). A rule of
+   its own: a browser without :has() drops only this one. */
+anvil-marquee:has(> [data-marquee-track] a):hover > :is([data-marquee-track], .av-marquee__clone) {
+  animation-play-state: paused;
+}
+
+/* Keyboard focus (not a mouse click, which must not move its target) and an editor block select stop the strip at
+   its start, so the browser can scroll the focused or selected item into view (WCAG 2.4.11); the JS resets the
+   scroll when focus leaves or the block is deselected. */
+anvil-marquee:defined.av-is-held > :is([data-marquee-track], .av-marquee__clone) {
+  animation: none;
+}
+
+/* A rule of its own: a browser without :has() drops only this one. */
+anvil-marquee:defined:has(:focus-visible) > :is([data-marquee-track], .av-marquee__clone) {
+  animation: none;
 }
 
 .av-marquee__pause {
@@ -70,12 +89,14 @@ anvil-marquee[paused] .av-marquee__ico-play {
 
 /* Static wrapping row: decided by CSS at first paint, so the strip never changes height when the script runs. */
 anvil-marquee.av-is-static,
+html.no-js anvil-marquee,
 html[data-animations="off"] anvil-marquee {
   flex-wrap: wrap;
   justify-content: center;
 }
 
 anvil-marquee.av-is-static > [data-marquee-track],
+html.no-js anvil-marquee > [data-marquee-track],
 html[data-animations="off"] anvil-marquee > [data-marquee-track] {
   flex: 1 1 100%;
   flex-wrap: wrap;

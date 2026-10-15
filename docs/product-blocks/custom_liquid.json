@@ -6,7 +6,7 @@
       "type": "liquid",
       "id": "custom_liquid",
       "label": "Custom Liquid",
-      "info": "Renders exactly as written. Do not use it for timers, stock counts, ratings or reviews that are not real; Anvil's own blocks show these from real data."
+      "info": "Renders exactly as written. Do not use it for timers, stock counts, viewer counts, ratings or reviews that are not real; Anvil's own blocks show these from real data."
     }
   ]
 }

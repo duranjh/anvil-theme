@@ -1,15 +1,199 @@
 {
   "sections": {
-    "welcome": {
-      "type": "anvil-welcome",
+    "hero": {
+      "type": "anvil-hero-slideshow",
+      "blocks": {
+        "hero_slide_1": {
+          "type": "_anvil-hero-slideshow-slide",
+          "settings": {
+            "overlay": 35
+          },
+          "blocks": {
+            "hero_slide_1_heading_1": {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: say what you <strong>sell</strong>",
+                "tag": "h1",
+                "size": "xl",
+                "align": "center"
+              }
+            },
+            "hero_slide_1_text_1": {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: one or two sentences on what shoppers get. Replace it with words that are true for your store.</p>",
+                "size": "lg",
+                "align": "center"
+              }
+            },
+            "hero_slide_1_button_1": {
+              "type": "anvil-button",
+              "settings": {
+                "label": "Shop now",
+                "url": "/collections/all",
+                "style": "primary",
+                "size": "lg",
+                "align": "center"
+              }
+            }
+          },
+          "block_order": [
+            "hero_slide_1_heading_1",
+            "hero_slide_1_text_1",
+            "hero_slide_1_button_1"
+          ]
+        },
+        "hero_slide_2": {
+          "type": "_anvil-hero-slideshow-slide",
+          "settings": {
+            "overlay": 35,
+            "position_desktop": "middle-left",
+            "position_mobile": "bottom"
+          },
+          "blocks": {
+            "hero_slide_2_heading_1": {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: a collection or a story",
+                "tag": "h2",
+                "size": "xl",
+                "align": "left"
+              }
+            },
+            "hero_slide_2_text_1": {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: point shoppers to one place. Announce a sale only when a real Shopify discount backs it.</p>",
+                "size": "lg",
+                "align": "left"
+              }
+            },
+            "hero_slide_2_button_1": {
+              "type": "anvil-button",
+              "settings": {
+                "label": "Browse the collection",
+                "url": "/collections/all",
+                "style": "secondary",
+                "size": "lg",
+                "align": "left"
+              }
+            }
+          },
+          "block_order": [
+            "hero_slide_2_heading_1",
+            "hero_slide_2_text_1",
+            "hero_slide_2_button_1"
+          ]
+        },
+        "hero_slide_3": {
+          "type": "_anvil-hero-slideshow-slide",
+          "settings": {
+            "overlay": 0,
+            "position_desktop": "bottom-right",
+            "position_mobile": "bottom",
+            "box": true,
+            "own_scheme": true,
+            "color_scheme": "scheme-1",
+            "content_width": 480
+          },
+          "blocks": {
+            "hero_slide_3_heading_1": {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: text on a panel",
+                "tag": "h2",
+                "size": "lg",
+                "align": "left"
+              }
+            },
+            "hero_slide_3_text_1": {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: the panel keeps words readable over any photo. Replace it before publishing.</p>",
+                "align": "left"
+              }
+            },
+            "hero_slide_3_button_1": {
+              "type": "anvil-button",
+              "settings": {
+                "label": "Learn more",
+                "url": "/collections/all",
+                "style": "link",
+                "align": "left"
+              }
+            }
+          },
+          "block_order": [
+            "hero_slide_3_heading_1",
+            "hero_slide_3_text_1",
+            "hero_slide_3_button_1"
+          ]
+        }
+      },
+      "block_order": [
+        "hero_slide_1",
+        "hero_slide_2",
+        "hero_slide_3"
+      ],
       "settings": {
-        "heading": "Welcome to your <strong>new store</strong>",
-        "subheading": "<p>Example subheading — replace it with what you sell and who it is for.</p>",
-        "text": "<p>Example welcome text. Add sections from the theme editor to build your homepage.</p>",
-        "button_label": "Shop all products",
-        "button_url": "/collections/all",
-        "pad_top": 96,
-        "pad_bottom": 96
+        "color_scheme": "scheme-4",
+        "width": "full",
+        "pad_top": 0,
+        "pad_bottom": 0,
+        "height_desktop": "lg",
+        "height_mobile": "md"
+      }
+    },
+    "ticker": {
+      "type": "anvil-ticker",
+      "blocks": {
+        "ticker_icon_text_1": {
+          "type": "icon_text",
+          "settings": {
+            "icon": "truck",
+            "text": "Example: free shipping over $50"
+          }
+        },
+        "ticker_text_1": {
+          "type": "text",
+          "settings": {
+            "text": "Example: <strong>replace</strong> with your own"
+          }
+        },
+        "ticker_rich_1": {
+          "type": "rich",
+          "settings": {
+            "icon": "rotate-ccw",
+            "heading": "Example: 30-day returns",
+            "text": "Example: the window in your refund policy"
+          }
+        },
+        "ticker_review_1": {
+          "type": "review",
+          "settings": {
+            "quote": "Example: replace with a real customer's words",
+            "name": "Example name"
+          }
+        },
+        "ticker_icon_text_2": {
+          "type": "icon_text",
+          "settings": {
+            "icon": "message-circle",
+            "text": "Example: replies within one business day"
+          }
+        }
+      },
+      "block_order": [
+        "ticker_icon_text_1",
+        "ticker_text_1",
+        "ticker_rich_1",
+        "ticker_review_1",
+        "ticker_icon_text_2"
+      ],
+      "settings": {
+        "width": "full",
+        "pad_top": 16,
+        "pad_bottom": 16
       }
     },
     "icon_bar": {
@@ -20,7 +204,7 @@
           "settings": {
             "icon": "truck",
             "label": "Example: free shipping over $50",
-            "caption": "Replace with the threshold from your shipping rates"
+            "caption": "Example: the threshold from your shipping rates"
           }
         },
         "returns": {
@@ -28,7 +212,7 @@
           "settings": {
             "icon": "rotate-ccw",
             "label": "Example: 30-day returns",
-            "caption": "Replace with the window in your refund policy"
+            "caption": "Example: the window in your refund policy"
           }
         },
         "secure": {
@@ -36,7 +220,7 @@
           "settings": {
             "icon": "lock",
             "label": "Example: secure checkout",
-            "caption": "Replace with what protects shoppers, in plain words"
+            "caption": "Example: what protects shoppers, in plain words"
           }
         },
         "support": {
@@ -44,7 +228,7 @@
           "settings": {
             "icon": "message-circle",
             "label": "Example: fast support",
-            "caption": "Replace with real hours, such as replies within 24 hours"
+            "caption": "Example: real hours, such as replies within 24 hours"
           }
         }
       },
@@ -59,28 +243,234 @@
         "pad_bottom": 32
       }
     },
+    "featured_collection": {
+      "type": "anvil-featured-collection",
+      "settings": {
+        "heading": "Featured <strong>products</strong>",
+        "layout": "grid",
+        "limit": 8,
+        "cols_desktop": "4"
+      }
+    },
+    "compare": {
+      "type": "anvil-compare-table",
+      "blocks": {
+        "compare_row_1": {
+          "type": "row",
+          "settings": {
+            "label": "Example: free shipping",
+            "note": "Example: a fact from your shipping rates",
+            "ours_type": "check",
+            "theirs_type": "cross"
+          }
+        },
+        "compare_row_2": {
+          "type": "row",
+          "settings": {
+            "label": "Example: return window",
+            "ours_type": "text",
+            "ours_text": "Example: 30 days",
+            "theirs_type": "text",
+            "theirs_text": "Example: 14 days"
+          }
+        },
+        "compare_row_3": {
+          "type": "row",
+          "settings": {
+            "label": "Example: warranty",
+            "ours_type": "check",
+            "ours_text": "Example: 2 years",
+            "theirs_type": "check",
+            "theirs_text": "Example: 1 year"
+          }
+        },
+        "compare_row_4": {
+          "type": "row",
+          "settings": {
+            "label": "Example: main material",
+            "ours_type": "text",
+            "ours_text": "Example: solid oak",
+            "theirs_type": "text",
+            "theirs_text": "Example: veneer"
+          }
+        },
+        "compare_row_5": {
+          "type": "row",
+          "settings": {
+            "label": "Example: email support",
+            "ours_type": "check",
+            "theirs_type": "check"
+          }
+        }
+      },
+      "block_order": [
+        "compare_row_1",
+        "compare_row_2",
+        "compare_row_3",
+        "compare_row_4",
+        "compare_row_5"
+      ],
+      "settings": {
+        "heading": "How we <strong>compare</strong>",
+        "width": "narrow",
+        "anchor": "compare"
+      }
+    },
+    "stats": {
+      "type": "anvil-stats",
+      "blocks": {
+        "stats_stat_1": {
+          "type": "stat",
+          "settings": {
+            "value": "12,500",
+            "suffix": "+",
+            "label": "Example: orders shipped — replace with your real count"
+          }
+        },
+        "stats_stat_2": {
+          "type": "stat",
+          "settings": {
+            "value": "30",
+            "suffix": "days",
+            "label": "Example: return window — match your refund policy"
+          }
+        },
+        "stats_stat_3": {
+          "type": "stat",
+          "settings": {
+            "value": "98",
+            "suffix": "%",
+            "label": "Example: orders dispatched within 48 hours — use your own data"
+          }
+        },
+        "stats_stat_4": {
+          "type": "stat",
+          "settings": {
+            "value": "15",
+            "label": "Example: countries we deliver to — list only those you ship to"
+          }
+        }
+      },
+      "block_order": [
+        "stats_stat_1",
+        "stats_stat_2",
+        "stats_stat_3",
+        "stats_stat_4"
+      ],
+      "settings": {
+        "heading": "By the <strong>numbers</strong>",
+        "footnote": "Example note: say where these figures come from and when you last checked them."
+      }
+    },
+    "testimonials": {
+      "type": "anvil-testimonials",
+      "blocks": {
+        "testimonials_card_1": {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: replace with words a real customer sent you, and ask before you publish them.</p>",
+            "name": "Example name",
+            "role": "Example: their city"
+          }
+        },
+        "testimonials_card_2": {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: a specific detail, such as what they bought and what changed for them, helps shoppers more than general praise.</p>",
+            "name": "Example name",
+            "role": "Example: what they bought"
+          }
+        },
+        "testimonials_card_3": {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: keep the customer's own words. Shorten it if you need to, but never change what they meant.</p>",
+            "name": "Example name",
+            "role": "Example: their job"
+          }
+        },
+        "testimonials_card_4": {
+          "type": "card",
+          "settings": {
+            "quote": "<p>Example: add a card image only if the customer sent you the photo or agreed to share it.</p>",
+            "name": "Example name",
+            "role": "Example: how long they have used it"
+          }
+        }
+      },
+      "block_order": [
+        "testimonials_card_1",
+        "testimonials_card_2",
+        "testimonials_card_3",
+        "testimonials_card_4"
+      ],
+      "settings": {
+        "heading": "What customers <strong>say</strong>"
+      }
+    },
+    "image_text": {
+      "type": "anvil-image-text",
+      "blocks": {
+        "image_text_eyebrow_1": {
+          "type": "eyebrow",
+          "settings": {
+            "text": "Example eyebrow"
+          }
+        },
+        "image_text_heading_1": {
+          "type": "heading",
+          "settings": {
+            "heading": "Example: say what <strong>changes</strong> for the shopper",
+            "size": "lg"
+          }
+        },
+        "image_text_text_1": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Example: describe one real benefit in two or three sentences. Only state what is true for your store.</p>"
+          }
+        },
+        "image_text_checklist_1": {
+          "type": "checklist"
+        },
+        "image_text_button_1": {
+          "type": "button",
+          "settings": {}
+        }
+      },
+      "block_order": [
+        "image_text_eyebrow_1",
+        "image_text_heading_1",
+        "image_text_text_1",
+        "image_text_checklist_1",
+        "image_text_button_1"
+      ],
+      "settings": {
+        "image_side": "right"
+      }
+    },
     "faq": {
       "type": "anvil-faq",
       "blocks": {
         "faq_1": {
           "type": "item",
           "settings": {
-            "question": "Example question — How long does delivery take?",
-            "answer": "<p>Example answer — replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
+            "question": "Example: How long does delivery take?",
+            "answer": "<p>Example: replace this with your real delivery times by region, taken from your shipping settings. Only promise what you can meet.</p>"
           }
         },
         "faq_2": {
           "type": "item",
           "settings": {
-            "question": "Example question — How much does shipping cost?",
-            "answer": "<p>Example answer — list your actual shipping rates and any free-shipping threshold exactly as they are set in your admin.</p>"
+            "question": "Example: How much does shipping cost?",
+            "answer": "<p>Example: list your actual shipping rates and any free-shipping threshold exactly as they are set in your admin.</p>"
           }
         },
         "faq_3": {
           "type": "item",
           "settings": {
-            "question": "Example question — What is your returns policy?",
-            "answer": "<p>Example answer — summarise your actual returns window and conditions here and link to your returns policy page.</p>"
+            "question": "Example: What is your returns policy?",
+            "answer": "<p>Example: summarise your actual returns window and conditions here and link to your returns policy page.</p>"
           }
         }
       },
@@ -96,11 +486,73 @@
         "json_ld": false,
         "open_first": true
       }
+    },
+    "logos": {
+      "type": "anvil-logo-list",
+      "blocks": {
+        "logos_logo_1": {
+          "type": "logo"
+        },
+        "logos_logo_2": {
+          "type": "logo"
+        },
+        "logos_logo_3": {
+          "type": "logo"
+        },
+        "logos_logo_4": {
+          "type": "logo"
+        },
+        "logos_logo_5": {
+          "type": "logo"
+        },
+        "logos_logo_6": {
+          "type": "logo"
+        }
+      },
+      "block_order": [
+        "logos_logo_1",
+        "logos_logo_2",
+        "logos_logo_3",
+        "logos_logo_4",
+        "logos_logo_5",
+        "logos_logo_6"
+      ],
+      "settings": {
+        "heading": "Example: as <strong>featured in</strong>",
+        "head_size": "sm",
+        "pad_top": 32,
+        "pad_bottom": 32
+      }
+    },
+    "newsletter": {
+      "type": "anvil-newsletter",
+      "settings": {
+        "heading": "Join the <strong>list</strong>",
+        "subheading": "<p>Example: new arrivals and restock news, about twice a month. Replace with what you really send.</p>"
+      }
+    },
+    "contact": {
+      "type": "anvil-contact-form",
+      "settings": {
+        "heading": "Questions? <strong>Write to us</strong>",
+        "subheading": "<p>Example: say how quickly you usually reply, for example within one business day.</p>",
+        "width": "narrow",
+        "anchor": "contact"
+      }
     }
   },
   "order": [
-    "welcome",
+    "hero",
+    "ticker",
     "icon_bar",
-    "faq"
+    "featured_collection",
+    "compare",
+    "stats",
+    "testimonials",
+    "image_text",
+    "faq",
+    "logos",
+    "newsletter",
+    "contact"
   ]
 }

@@ -17,7 +17,10 @@
  * [data-anvil-close] → nearest ancestor's close(). Every anvil:cart:updated that carries `sections` swaps them in.
  * Reveal: .av-reveal / .av-reveal--* get .av-is-in in view; html.av-reveal-ready is set once the observer runs, and
  * the CSS only hides reveal targets under that class, so a failed load never leaves content invisible.
- * Videos inside [data-anvil-autoplay] play (muted, controls visible) while in view and only when motion is allowed.
+ * Videos inside [data-anvil-autoplay] play (muted on the first start, controls visible) while in view and only when
+ * motion is allowed and the browser does not ask to save data; data-anvil-autoplay="mobile" limits that to phones
+ * (below 750 px). A pause the shopper makes sticks until they press play again (WCAG 2.2.2). Section modules that
+ * insert videos later register them with Anvil.media.autoplay(root), so one script decides (DECISIONS 94).
  * Editor: section:load/unload → anvil:section:load|unload; section/block select force .av-is-in, open <details>,
  * scroll into view.
  *
@@ -154,8 +157,11 @@ class Drawer extends HTMLElement {
   };
 }
 
+// open(opener): an element passed in gets aria-expanded and focus back on close; open() without one returns focus to
+// the element focused before (no aria-expanded on it); open(null) leaves focus to the caller (auto-opened dialogs).
 class Dialog extends HTMLElement {
   #opener = null;
+  #expands = false;
   #locked = false;
 
   get dialog() { return this.querySelector('dialog'); }
@@ -181,11 +187,12 @@ class Dialog extends HTMLElement {
   open(opener) {
     const dialog = this.dialog;
     if (!dialog || dialog.open) return;
-    this.#opener = opener instanceof Element ? opener : document.activeElement;
+    this.#expands = opener instanceof Element;
+    this.#opener = this.#expands ? opener : opener === null ? null : document.activeElement;
     dialog.showModal();
     lockScroll();
     this.#locked = true;
-    this.#opener?.setAttribute?.('aria-expanded', 'true');
+    if (this.#expands) opener.setAttribute('aria-expanded', 'true');
     emit('anvil:dialog:opened', { id: this.id, element: this, opener: this.#opener });
   }
 
@@ -196,8 +203,8 @@ class Dialog extends HTMLElement {
     this.#unlock();
     const opener = this.#opener;
     this.#opener = null;
-    opener?.setAttribute?.('aria-expanded', 'false');
-    if (opener?.isConnected) opener.focus({ preventScroll: true });
+    if (this.#expands) opener?.setAttribute('aria-expanded', 'false');
+    if (opener?.isConnected) opener.focus?.({ preventScroll: true });
     emit('anvil:dialog:closed', { id: this.id, element: this, opener });
   };
 
@@ -389,19 +396,40 @@ function scan(root = document) {
   document.documentElement.classList.add('av-reveal-ready');
 }
 
+// A pause the shopper makes sticks (WCAG 2.2.2): the observer's own pauses are remembered in `ownPause`, any other
+// pause sets data-anvil-user-paused until the shopper plays the video again. Only the first automatic start mutes.
 let videoIO;
+const ownPause = new WeakSet();
+const onVideoPause = ({ target: v }) => {
+  if (ownPause.delete(v)) return;
+  v.dataset.anvilUserPaused = '';
+};
+const onVideoPlay = ({ target: v }) => delete v.dataset.anvilUserPaused;
 function autoplay(root = document) {
   const list = root.querySelectorAll('[data-anvil-autoplay] video');
   if (!list.length) return;
   videoIO ||= new IntersectionObserver((entries) => {
-    for (const { target, isIntersecting } of entries) {
-      if (isIntersecting && !motionOff()) {
-        target.muted = true;
-        target.play()?.catch(() => {});
-      } else target.pause();
+    for (const { target: v, isIntersecting } of entries) {
+      const scope = v.closest('[data-anvil-autoplay]')?.dataset.anvilAutoplay;
+      const allowed = !motionOff() && !navigator.connection?.saveData && (scope !== 'mobile' || innerWidth < 750);
+      if (isIntersecting && allowed) {
+        if (v.dataset.anvilUserPaused != null) continue;
+        if (v.dataset.anvilStarted == null) {
+          v.muted = true;
+          v.dataset.anvilStarted = '';
+        }
+        v.play()?.catch(() => {});
+      } else if (!v.paused) {
+        ownPause.add(v);
+        v.pause();
+      }
     }
   }, { threshold: 0.25 });
-  for (const video of list) videoIO.observe(video);
+  for (const video of list) {
+    video.addEventListener('pause', onVideoPause);
+    video.addEventListener('play', onVideoPlay);
+    videoIO.observe(video);
+  }
 }
 
 function onTriggerClick(e) {
@@ -449,6 +477,7 @@ function onEditorEvent(e) {
 }
 
 Anvil.reveal ||= { scan };
+Anvil.media ||= { autoplay };
 
 const define = (name, cls) => customElements.get(name) || customElements.define(name, cls);
 define('anvil-drawer', Drawer);

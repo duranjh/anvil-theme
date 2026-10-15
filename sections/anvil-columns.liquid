@@ -1,0 +1,348 @@
+{%- liquid
+  assign s = section.settings
+
+  # Each column is a private theme block (blocks/_anvil-columns-column.liquid) that holds the
+  # theme's content blocks; an app block added here becomes a column of its own. The section owns
+  # the grid: columns per row, spacing, card style and vertical alignment.
+  assign col_count = section.blocks.size | at_least: 1 | at_most: 4
+  assign auto_cols = false
+  if s.cols_desktop == blank or s.cols_desktop == 'auto'
+    assign auto_cols = true
+    assign cols_desktop = col_count
+  else
+    assign cols_desktop = s.cols_desktop | plus: 0
+  endif
+  # Columns: the shared grid (.av-grid: tablets keep 1-3, 4 become 2) sets every width.
+  assign cols_mobile = s.cols_mobile | default: '1' | plus: 0 | at_most: cols_desktop
+
+  # Card surface from the shared utility (blank = no box); each column block renders the same classes.
+  capture surface
+    render 'anvil-surface', style: s.card_style
+  endcapture
+  assign surface = surface | strip
+
+  assign gap = 32
+  if s.gap != nil
+    assign gap = s.gap
+  endif
+  assign valign = s.valign | default: 'top'
+  assign block_gap = 16
+  if s.block_gap != nil
+    assign block_gap = s.block_gap
+  endif
+
+  assign grid_class = 'av-columns av-grid av-grid--c' | append: cols_desktop | append: ' av-grid--m' | append: cols_mobile
+  assign grid_class = grid_class | append: ' av-columns--v-' | append: valign
+  if surface != blank
+    assign grid_class = grid_class | append: ' av-columns--boxed'
+  endif
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-columns' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {%- if section.blocks.size == 0 -%}
+      {% render 'anvil-editor-empty', class: 'av-columns__note' %}
+    {%- endif -%}
+    {%- if auto_cols and section.blocks.size > 4 -%}
+      {%- assign over_four = 'anvil.editor.columns_over_four' | t -%}
+      {% render 'anvil-editor-empty', text: over_four, class: 'av-columns__note' %}
+    {%- endif -%}
+    <div class="{{ grid_class }}" style="--av-grid-space: {{ gap }}px; --av-columns-block-gap: {{ block_gap }}px;">
+      {% content_for 'blocks' %}
+    </div>
+  </div>
+</div>
+{% stylesheet %}
+/* Columns and gap from the shared .av-grid; column boxes from .av-surface (rendered by each column block). */
+.av-columns{align-items:stretch}
+.av-columns>*{min-width:0}
+.av-columns__col{box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-start;gap:var(--av-columns-block-gap,16px);min-width:0;border-radius:var(--av-radius-card);color:var(--av-fg)}
+.av-columns__col>*{min-width:0}
+.av-columns--v-center .av-columns__col{justify-content:center}
+.av-columns--v-bottom .av-columns__col{justify-content:flex-end}
+.av-columns--v-last .av-columns__col>:last-child{margin-top:auto}
+.av-columns--v-last .av-columns__col>:nth-last-child(1 of :not([hidden]):not(script):not(style):not(template):not(link)){margin-top:auto}
+.av-columns--boxed .av-columns__col,.av-columns__col--scheme{padding:var(--av-space-5)}
+.av-columns .av-columns__col.av-columns__col--empty{display:none;padding:0;border:0;background:none;box-shadow:none}
+.av-columns .av-columns__col:not(:has(>:not([hidden]):not(script):not(style):not(template):not(link))){display:none;padding:0;border:0;background:none;box-shadow:none}
+.av-columns__col>.av-editor-empty{margin-block:auto}
+.av-columns__note+.av-columns__note,.av-columns__note+.av-columns{margin-top:var(--av-space-5)}
+@media (min-width: 750px){
+.av-columns .av-columns__col.av-columns__col--empty{display:flex}
+.av-columns .av-columns__col:not(:has(>:not([hidden]):not(script):not(style):not(template):not(link))){display:flex}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Columns",
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Columns" },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "auto", "label": "Match item count" },
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "auto",
+      "info": "Match item count puts up to 4 columns in one row; extra columns start a new row. Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Space between columns",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "block_gap",
+      "label": "Space between blocks in a column",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "select",
+      "id": "valign",
+      "label": "Vertical alignment",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "center", "label": "Middle" },
+        { "value": "bottom", "label": "Bottom" },
+        { "value": "last", "label": "Top, last block at the bottom" }
+      ],
+      "default": "top",
+      "info": "Columns in a row share one height. \"Last block at the bottom\" lines up buttons across columns."
+    },
+    {
+      "type": "select",
+      "id": "card_style",
+      "label": "Card style",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "flat", "label": "No box" },
+        { "value": "outlined", "label": "Outlined" },
+        { "value": "tinted", "label": "Tinted" },
+        { "value": "raised", "label": "Shadow" }
+      ],
+      "default": "flat",
+      "info": "\"Same as theme cards\" copies Theme settings > Cards: its style, border width and shadow, and its colour scheme when that style is Outlined or Raised. The Outlined and Shadow choices here always show at least a 1 px border or a shadow."
+    }
+  ],
+  "blocks": [
+    { "type": "_anvil-columns-column" },
+    { "type": "@app" }
+  ],
+  "presets": [
+    {
+      "name": "Columns",
+      "settings": {
+        "heading": "Three things to <strong>know</strong>"
+      },
+      "blocks": [
+        {
+          "type": "_anvil-columns-column",
+          "blocks": [
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: what you make",
+                "tag": "h3",
+                "size": "sm"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: describe one benefit, product or step in a sentence or two. Only state things that are true for your store.</p>"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-columns-column",
+          "blocks": [
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: how it works",
+                "tag": "h3",
+                "size": "sm"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: replace it with a short, true explanation. Delivery times and guarantees must match your policies.</p>"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-columns-column",
+          "blocks": [
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example: why it matters",
+                "tag": "h3",
+                "size": "sm"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: add a third point, or delete this column. Each column can also hold images, buttons, stars and add-to-cart blocks.</p>"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Columns with images",
+      "settings": {
+        "heading": "Explore the <strong>range</strong>",
+        "valign": "last",
+        "card_style": "outlined"
+      },
+      "blocks": [
+        {
+          "type": "_anvil-columns-column",
+          "blocks": [
+            {
+              "type": "anvil-image",
+              "settings": {
+                "image_ratio": "4:5"
+              }
+            },
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example column heading",
+                "tag": "h3",
+                "size": "sm"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: replace it with a sentence about this image.</p>"
+              }
+            },
+            {
+              "type": "anvil-button",
+              "settings": {
+                "label": "Shop all products",
+                "url": "/collections/all",
+                "style": "secondary"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-columns-column",
+          "blocks": [
+            {
+              "type": "anvil-image",
+              "settings": {
+                "image_ratio": "4:5"
+              }
+            },
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example column heading",
+                "tag": "h3",
+                "size": "sm"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: replace it with a sentence about this image.</p>"
+              }
+            },
+            {
+              "type": "anvil-button",
+              "settings": {
+                "label": "Shop all products",
+                "url": "/collections/all",
+                "style": "secondary"
+              }
+            }
+          ]
+        },
+        {
+          "type": "_anvil-columns-column",
+          "blocks": [
+            {
+              "type": "anvil-image",
+              "settings": {
+                "image_ratio": "4:5"
+              }
+            },
+            {
+              "type": "anvil-heading",
+              "settings": {
+                "heading": "Example column heading",
+                "tag": "h3",
+                "size": "sm"
+              }
+            },
+            {
+              "type": "anvil-text",
+              "settings": {
+                "text": "<p>Example: replace it with a sentence about this image.</p>"
+              }
+            },
+            {
+              "type": "anvil-button",
+              "settings": {
+                "label": "Shop all products",
+                "url": "/collections/all",
+                "style": "secondary"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

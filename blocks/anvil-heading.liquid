@@ -2,7 +2,7 @@
   Theme block: a heading; <strong> words take the accent style. Pick the level that keeps the page outline (one H1 per page).
 
   Settings (id · type · values · default):
-  - heading · inline_richtext · default "Example heading — replace me"
+  - heading · inline_richtext · default "Example: your heading"
   - tag · select · h1 | h2 | h3 | h4 | p · default "h2"
   - size · select · xs | sm | md | lg | xl · default "md"
   - align · text_alignment · default "left"
@@ -40,7 +40,7 @@
   "name": "Heading",
   "tag": null,
   "settings": [
-    { "type": "inline_richtext", "id": "heading", "label": "Heading", "default": "Example heading — replace me", "info": "Bold a word to colour it with the accent" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "default": "Example: your heading", "info": "Bold a word to colour it with the accent" },
     { "type": "select", "id": "tag", "label": "Heading level", "options": [ { "value": "h1", "label": "H1 (once per page)" }, { "value": "h2", "label": "H2" }, { "value": "h3", "label": "H3" }, { "value": "h4", "label": "H4" }, { "value": "p", "label": "Paragraph (no heading level)" } ], "default": "h2", "info": "Screen readers navigate by heading level. Keep one H1 per page." },
     { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "xs", "label": "Extra small" }, { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" }, { "value": "lg", "label": "Large" }, { "value": "xl", "label": "Extra large" } ], "default": "md" },
     { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" },

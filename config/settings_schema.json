@@ -222,7 +222,7 @@
         "min": 0,
         "max": 40,
         "step": 5,
-        "default": 12,
+        "default": 10,
         "unit": "%"
       }
     ]
@@ -1455,6 +1455,7 @@
         "type": "select",
         "id": "cart_type",
         "label": "t:settings_schema.cart.settings.cart_type.label",
+        "info": "t:settings_schema.cart.settings.cart_type.info",
         "options": [
           {
             "value": "drawer",

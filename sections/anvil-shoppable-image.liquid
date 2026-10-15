@@ -1,0 +1,549 @@
+{%- liquid
+  assign s = section.settings
+
+  # Box shape. An empty image with "adapt" would draw a square placeholder as wide as the page, so the placeholder
+  # uses 16:9 until an image is picked. Dot positions are percentages of this box on every screen size.
+  assign ratio = s.image_ratio | default: 'adapt'
+  if s.image == blank and ratio == 'adapt'
+    assign ratio = '16:9'
+  endif
+
+  # Image width on desktop, as a percentage of the content width; phones always use the full width.
+  assign img_w = s.image_width | default: 100
+  assign img_widths = '375, 550, 750, 1100, 1500, 1800, 2200'
+  if s.width == 'full'
+    assign img_sizes = '(min-width: 750px) ' | append: img_w | append: 'vw, 100vw'
+  else
+    assign max_inner = settings.page_width | default: 1400
+    if s.width == 'narrow'
+      assign max_inner = settings.narrow_width | default: 800
+    endif
+    assign cap_bp = max_inner | at_least: 750
+    assign img_px = max_inner | times: img_w | divided_by: 100
+    assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: img_px | append: 'px, (min-width: 750px) ' | append: img_w | append: 'vw, 100vw'
+  endif
+
+  # Media in the first two template sections (snippets/anvil-above-fold) loads eagerly; in the first section it is
+  # the likely LCP image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+  assign media_loading = 'eager'
+  assign media_priority = false
+  if fold == 'lazy'
+    assign media_loading = 'lazy'
+  elsif fold == 'lcp'
+    assign media_priority = true
+  endif
+
+  assign pos = s.pop_position | default: 'auto'
+  assign dot_shape = s.dot_shape | default: 'number'
+  assign dot_color = s.dot_color | default: 'accent'
+  assign btn_style = s.button_style | default: 'primary'
+  assign card_scheme = 'scheme-1'
+  if s.card_scheme != blank
+    assign card_scheme = s.card_scheme.id
+  endif
+
+  assign root_class = 'av-shoppable-image av-shoppable-image--' | append: pos
+  # Dot colour, size and pulse are the hotspots component's own modifiers (assets/anvil-hotspots.css).
+  assign root_class = root_class | append: ' av-shoppable-image--dot-' | append: dot_shape
+  assign root_class = root_class | append: ' av-hotspots-dots--' | append: dot_color
+  assign root_class = root_class | append: ' av-hotspots-dots--' | append: s.dot_size
+  if s.dot_pulse
+    assign root_class = root_class | append: ' av-hotspots-dots--pulse'
+  endif
+
+  assign add_label = s.add_label | strip
+  if add_label == blank
+    assign add_label = 'anvil.product.add_to_cart' | t
+  endif
+  assign example_label = 'anvil.card.example_product' | t
+  assign close_label = 'anvil.a11y.close' | t
+  assign add_label_html = add_label | escape
+
+  # Icons are captured once and printed in every dot and card.
+  if dot_shape == 'plus'
+    capture icon_plus
+      render 'anvil-icon', name: 'plus', size: 16
+    endcapture
+  endif
+  capture icon_close
+    render 'anvil-icon', name: 'x', size: 18
+  endcapture
+
+  # Without JavaScript the dots cannot open: each dot shows a static numbered marker instead, and a numbered list of
+  # the linked products follows the image inside <noscript>. The spot loop fills the list, so both share one count.
+  assign nojs_items = ''
+  assign n = 0
+  assign needs_form = false
+-%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-shoppable-image' %}>
+  <div class="av-section__inner">
+    {% render 'anvil-section-head', section: section %}
+    {{ 'anvil-hotspots.css' | asset_url | stylesheet_tag }}
+    <div class="{{ root_class }}" style="--av-si-w: {{ img_w }}%;">
+      <anvil-hotspots class="av-shoppable-image__stage av-enhance">
+        {%- render 'anvil-media',
+          image: s.image,
+          ratio: ratio,
+          widths: img_widths,
+          sizes: img_sizes,
+          loading: media_loading,
+          priority: media_priority,
+          alt: s.alt,
+          placeholder: 'lifestyle-1',
+          class: 'av-shoppable-image__media'
+        -%}
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign b = block.settings
+            assign p = b.product
+
+            # A spot without a product (none picked yet, or a product since drafted, unpublished or deleted, which
+            # Shopify returns as blank) shows an example card in the editor only. On the storefront it is skipped, so
+            # shoppers never see a typed example price on a real item in the photo. n numbers the spots shown.
+            if p == blank and request.design_mode == false and request.visual_preview_mode == false
+              continue
+            endif
+            assign n = n | plus: 1
+
+            assign x = b.x | default: 50
+            assign y = b.y | default: 50
+            # Block ids are unique within one section only, so the ids carry the section id too.
+            assign pop_id = 'av-si-pop-' | append: section.id | append: '-' | append: block.id
+            assign form_id = 'av-si-form-' | append: section.id | append: '-' | append: block.id
+
+            # Card above the dot: always with "above", never with "below", otherwise for dots in the lower 40 %.
+            # In "side" mode (desktop) the same flag aligns the card's bottom with the dot, and dots in the right
+            # half open their card to the left.
+            assign spot_class = 'av-hotspots__spot-wrap av-shoppable-image__spot'
+            assign up = false
+            if pos == 'above'
+              assign up = true
+            elsif pos != 'below' and y > 60
+              assign up = true
+            endif
+            if up
+              assign spot_class = spot_class | append: ' av-shoppable-image__spot--up'
+            endif
+            if pos == 'side' and x > 50
+              assign spot_class = spot_class | append: ' av-shoppable-image__spot--left'
+            endif
+
+            assign spot_title = example_label
+            if p != blank
+              assign spot_title = p.title
+            endif
+
+            # What the card offers: the shared quick-buy control (snippets/anvil-quick-buy) for a product, an example
+            # card with a disabled button without one.
+            assign action = 'example'
+            if p != blank
+              if s.show_atc
+                assign action = 'buy'
+                assign needs_form = true
+              else
+                assign action = 'none'
+              endif
+
+              # No-JavaScript list item; value keeps its number equal to the dot's marker.
+              capture nojs_item
+                echo '<li class="av-shoppable-image__nojs-item" value="'
+                echo n
+                echo '"><span class="av-shoppable-image__nojs-num">'
+                echo n
+                echo '</span><a href="'
+                echo p.url
+                echo '">'
+                echo p.title | escape
+                echo '</a>'
+                if s.show_price
+                  render 'anvil-price', product: p, size: 'sm', show_badge: false
+                endif
+                echo '</li>'
+              endcapture
+              assign nojs_items = nojs_items | append: nojs_item
+            endif
+          -%}
+          <div class="{{ spot_class }}" style="--av-spot-x: {{ x }}%; --av-spot-y: {{ y }}%; --av-si-x: {{ x }};" {{ block.shopify_attributes }}>
+            <span class="av-shoppable-image__marker av-fallback-only" aria-hidden="true">{{ n }}</span>
+            <button
+              type="button"
+              class="av-shoppable-image__dot av-enhanced-only"
+              data-spot
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="{{ pop_id }}"
+              aria-label="{{ 'anvil.shoppable_image.spot_label' | t: index: n, title: spot_title }}"
+            >
+              {%- case dot_shape -%}
+                {%- when 'number' -%}
+                  <span class="av-hotspots__num" aria-hidden="true">{{ n }}</span>
+                {%- when 'plus' -%}
+                  <span class="av-hotspots__num av-shoppable-image__plus" aria-hidden="true">{{ icon_plus }}</span>
+              {%- endcase -%}
+            </button>
+            <div class="av-hotspots__pop av-shoppable-image__pop av-scheme av-scheme--{{ card_scheme }}" id="{{ pop_id }}" role="dialog" aria-labelledby="{{ pop_id }}-t" tabindex="-1" hidden>
+              <div class="av-shoppable-image__card{% if s.show_image %} av-shoppable-image__card--thumb{% endif %}">
+                <button type="button" class="av-shoppable-image__close" data-anvil-spot-close aria-label="{{ close_label | escape }}">
+                  {{- icon_close -}}
+                </button>
+                {%- if s.show_image -%}
+                  {%- if p != blank -%}
+                    {%- assign thumb = p.featured_media.preview_image | default: p.featured_image -%}
+                    <a class="av-shoppable-image__thumb" href="{{ p.url }}" tabindex="-1" aria-hidden="true">
+                      {%- if thumb != blank -%}
+                        {{ thumb | image_url: width: 216 | image_tag: widths: '72, 144, 216', sizes: '72px', loading: 'lazy', alt: '' }}
+                      {%- else -%}
+                        {{ 'product-1' | placeholder_svg_tag: 'av-shoppable-image__thumb-ph' }}
+                      {%- endif -%}
+                    </a>
+                  {%- else -%}
+                    <span class="av-shoppable-image__thumb">{{ 'product-1' | placeholder_svg_tag: 'av-shoppable-image__thumb-ph' }}</span>
+                  {%- endif -%}
+                {%- endif -%}
+                <div class="av-shoppable-image__info">
+                  {%- if p != blank -%}
+                    {%- if s.show_vendor and p.vendor != blank -%}
+                      <p class="av-shoppable-image__vendor">{{ p.vendor | escape }}</p>
+                    {%- endif -%}
+                    <p class="av-shoppable-image__title" id="{{ pop_id }}-t"><a href="{{ p.url }}">{{ p.title | escape }}</a></p>
+                    {%- if s.show_price -%}
+                      {%- render 'anvil-price', product: p, size: 'sm', show_badge: false, class: 'av-shoppable-image__price' -%}
+                    {%- endif -%}
+                  {%- else -%}
+                    <p class="av-shoppable-image__title" id="{{ pop_id }}-t">{{ example_label }}</p>
+                    {%- if s.show_price -%}
+                      <div class="av-price av-price--sm av-shoppable-image__price"><span class="av-price__current">{% render 'anvil-money', amount: 1900 %}</span></div>
+                    {%- endif -%}
+                  {%- endif -%}
+                </div>
+                {%- if action == 'buy' -%}
+                  <div class="av-shoppable-image__buy">
+                    {%- render 'anvil-quick-buy', product: p, variant_mode: s.variant_mode, label: s.add_label, style: btn_style, form_id: form_id -%}
+                  </div>
+                {%- elsif action == 'example' -%}
+                  <div class="av-shoppable-image__buy">
+                    {%- render 'anvil-button', label: add_label_html, style: btn_style, size: 'sm', full: true, disabled: true -%}
+                  </div>
+                {%- endif -%}
+              </div>
+            </div>
+          </div>
+        {%- endfor -%}
+      </anvil-hotspots>
+      {%- if nojs_items != blank -%}
+        <noscript><ol class="av-shoppable-image__nojs" role="list">{{ nojs_items }}</ol></noscript>
+      {%- endif -%}
+      {%- if section.blocks.size == 0 -%}
+        {% render 'anvil-editor-empty', class: 'av-shoppable-image__empty' %}
+      {%- endif -%}
+    </div>
+    {%- if n > 0 -%}
+      <script type="module" src="{{ 'anvil-hotspots.js' | asset_url }}"></script>
+      <script type="module" src="{{ 'anvil-shoppable-image.js' | asset_url }}"></script>
+    {%- endif -%}
+    {%- if needs_form -%}
+      <script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>
+    {%- endif -%}
+  </div>
+</div>
+{% stylesheet %}
+/* The stage is the image box. Spots, their cards and the pulse come from assets/anvil-hotspots.css; this file adds
+   the card layout, dot looks and card placement. Placement uses container units of the stage, so a card always stays
+   inside the image's width (no sideways page scroll on phones), whatever the component's own flip classes say. */
+.av-shoppable-image{display:block}
+.av-shoppable-image:has([aria-expanded="true"]){position:relative;z-index:2}
+.av-shoppable-image__stage{width:100%;margin-inline:auto;container-type:inline-size}
+/* Dots stay 22 px (half the 44 px target) inside the stage, so a dot at an edge never makes the page scroll sideways. */
+.av-shoppable-image .av-shoppable-image__spot{left:clamp(22px,var(--av-spot-x,50%),calc(100% - 22px));top:clamp(22px,var(--av-spot-y,50%),calc(100% - 22px))}
+.av-shoppable-image__spot:has([aria-expanded="true"]){z-index:3}
+.av-shoppable-image__pop{scroll-margin-block:calc(var(--av-header-h, 0px) + var(--av-space-2)) var(--av-space-2)}
+.av-shoppable-image__card{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--av-space-3);align-items:start}
+.av-shoppable-image__card--thumb{grid-template-columns:72px minmax(0,1fr)}
+.av-shoppable-image__close{position:absolute;top:var(--av-space-1);inset-inline-end:var(--av-space-1);display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:var(--av-radius-pill);background:transparent;color:inherit;cursor:pointer}
+.av-shoppable-image__close:hover{background:rgb(var(--av-fg-rgb) / 0.08)}
+.av-shoppable-image__thumb{display:block;width:72px;aspect-ratio:1 / 1;overflow:hidden;border-radius:var(--av-radius-media);background:rgb(var(--av-fg-rgb) / 0.06)}
+.av-shoppable-image__thumb img,.av-shoppable-image__thumb svg{display:block;width:100%;height:100%;object-fit:cover}
+.av-shoppable-image__info{display:flex;flex-direction:column;gap:var(--av-space-1);min-width:0;padding-inline-end:var(--av-space-6)}
+.av-shoppable-image__vendor{margin:0;font-size:var(--av-text-xs);color:var(--av-fg-muted)}
+.av-shoppable-image__title{margin:0;font-size:var(--av-text-sm);font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+.av-shoppable-image__title a{color:inherit;text-decoration:none}
+.av-shoppable-image__title a:hover{text-decoration:underline;text-underline-offset:0.15em}
+.av-shoppable-image__buy{grid-column:1 / -1;min-width:0}
+.av-shoppable-image__buy .av-field{margin:0}
+.av-shoppable-image__nojs{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--av-space-2) var(--av-space-5);margin:var(--av-space-4) 0 0;padding:0;list-style:none}
+.av-shoppable-image__nojs-item{display:flex;flex-wrap:wrap;align-items:center;gap:var(--av-space-2)}
+/* Static markers (no JavaScript, or before <anvil-hotspots> is defined) and the list numbers they match. */
+.av-shoppable-image__marker,.av-shoppable-image__nojs-num{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:var(--av-radius-pill);background:var(--av-hotspots-dot-bg,var(--av-accent));color:var(--av-hotspots-dot-fg,var(--av-on-accent));box-shadow:var(--av-shadow-sm);font-size:var(--av-text-xs);font-weight:700;line-height:1}
+.av-shoppable-image__empty{margin-top:var(--av-space-4)}
+/* Dot looks: colour, size and pulse are the component's .av-hotspots-dots--* modifiers; the plus turns into a cross
+   on an open dot. */
+.av-shoppable-image__plus{display:block}
+.av-shoppable-image [aria-expanded="true"] .av-shoppable-image__plus{rotate:45deg}
+@media (prefers-reduced-motion: no-preference){
+html:not([data-animations="off"]) .av-shoppable-image__plus{transition:rotate var(--av-dur) var(--av-ease)}
+}
+@media (min-width: 750px){
+.av-shoppable-image__stage{width:var(--av-si-w, 100%)}
+}
+/* Card placement: below the dot, or above it (--up), centred on the dot and clamped 8 px inside the stage. 22 px is
+   half of the component's 44 px dot: the dot centre's clamp (as above) and the offset between the spot wrapper's edge
+   and the dot's centre. */
+@supports (left: 1cqw){
+.av-shoppable-image .av-shoppable-image__pop.av-hotspots__pop{--av-si-pw:min(300px, calc(100cqw - 16px));--av-si-dot:clamp(22px, var(--av-si-x, 50) * 1cqw, 100cqw - 22px);width:var(--av-si-pw);top:calc(100% + var(--av-space-1));right:auto;bottom:auto;left:calc(clamp(8px, var(--av-si-dot) - var(--av-si-pw) / 2, 100cqw - var(--av-si-pw) - 8px) - var(--av-si-dot) + 22px);translate:none}
+.av-shoppable-image .av-shoppable-image__spot--up .av-shoppable-image__pop.av-hotspots__pop{top:auto;bottom:calc(100% + var(--av-space-1))}
+@media (min-width: 750px){
+.av-shoppable-image--side .av-shoppable-image__spot .av-shoppable-image__pop.av-hotspots__pop{top:0;bottom:auto;left:calc(100% + var(--av-space-1));right:auto}
+.av-shoppable-image--side .av-shoppable-image__spot--up .av-shoppable-image__pop.av-hotspots__pop{top:auto;bottom:0}
+.av-shoppable-image--side .av-shoppable-image__spot--left .av-shoppable-image__pop.av-hotspots__pop{left:auto;right:calc(100% + var(--av-space-1))}
+}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Shoppable image",
+  "max_blocks": 12,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Shoppable image" },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image",
+      "info": "Show the products as they really look, and place each dot on the product it names."
+    },
+    {
+      "type": "text",
+      "id": "alt",
+      "label": "Image description (alt text)",
+      "info": "Describe the scene for shoppers who cannot see it. Leave blank to use the image's own alt text."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" },
+        { "value": "21:9", "label": "Wide (21:9)" }
+      ],
+      "default": "adapt",
+      "info": "Dots sit at a position on the image as shown. Other shapes crop the image, so check the dots after changing it."
+    },
+    {
+      "type": "range",
+      "id": "image_width",
+      "label": "Image width on desktop",
+      "min": 30,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "info": "Phones always show the image at full width."
+    },
+    { "type": "header", "content": "Dots" },
+    {
+      "type": "select",
+      "id": "dot_shape",
+      "label": "Dot shape",
+      "options": [
+        { "value": "number", "label": "Numbers" },
+        { "value": "plus", "label": "Plus sign" },
+        { "value": "dot", "label": "Plain dot" }
+      ],
+      "default": "number"
+    },
+    {
+      "type": "select",
+      "id": "dot_color",
+      "label": "Dot colour",
+      "options": [
+        { "value": "accent", "label": "Accent colour" },
+        { "value": "light", "label": "Background colour" },
+        { "value": "dark", "label": "Text colour" },
+        { "value": "button", "label": "Button colour" }
+      ],
+      "default": "accent"
+    },
+    {
+      "type": "select",
+      "id": "dot_size",
+      "label": "Dot size",
+      "options": [
+        { "value": "sm", "label": "Small" },
+        { "value": "md", "label": "Medium" },
+        { "value": "lg", "label": "Large" }
+      ],
+      "default": "md",
+      "info": "Every size keeps a 44 px tap area."
+    },
+    {
+      "type": "checkbox",
+      "id": "dot_pulse",
+      "label": "Pulse closed dots",
+      "default": false,
+      "info": "A ring keeps pulsing around each closed dot, with no pause button, so it can distract some shoppers (WCAG 2.2.2). It never runs for shoppers who ask for reduced motion or when theme animations are off."
+    },
+    { "type": "header", "content": "Product card" },
+    {
+      "type": "select",
+      "id": "pop_position",
+      "label": "Card position",
+      "options": [
+        { "value": "auto", "label": "Below the dot, above it near the bottom" },
+        { "value": "above", "label": "Above the dot" },
+        { "value": "below", "label": "Below the dot" },
+        { "value": "side", "label": "Beside the dot (above or below on phones)" }
+      ],
+      "default": "auto",
+      "info": "Cards always stay within the width of the image."
+    },
+    {
+      "type": "color_scheme",
+      "id": "card_scheme",
+      "label": "Card colour scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_image",
+      "label": "Show product image",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_price",
+      "label": "Show price",
+      "default": true,
+      "info": "Prices and compare-at prices come from Shopify."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_atc",
+      "label": "Show add to cart button",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "variant_mode",
+      "label": "Products with options",
+      "options": [
+        { "value": "select", "label": "Variant menu in the card" },
+        { "value": "link", "label": "Link to the product page" }
+      ],
+      "default": "select"
+    },
+    {
+      "type": "text",
+      "id": "add_label",
+      "label": "Button label",
+      "info": "Leave blank for \"Add to cart\". Name the action only; prices and savings come from Shopify."
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" }
+      ],
+      "default": "primary"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "spot",
+      "name": "Hotspot",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product",
+          "info": "The card shows this product's own title, image, price and availability from Shopify."
+        },
+        {
+          "type": "range",
+          "id": "x",
+          "label": "Horizontal position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 50,
+          "info": "0 is the left edge of the image, 100 the right edge."
+        },
+        {
+          "type": "range",
+          "id": "y",
+          "label": "Vertical position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 50,
+          "info": "0 is the top edge of the image, 100 the bottom edge."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Shoppable image",
+      "settings": {
+        "heading": "Shop the <strong>look</strong>",
+        "subheading": "<p>Example: tap a dot to see each product.</p>"
+      },
+      "blocks": [
+        {
+          "type": "spot",
+          "settings": {
+            "x": 28,
+            "y": 42
+          }
+        },
+        {
+          "type": "spot",
+          "settings": {
+            "x": 56,
+            "y": 28
+          }
+        },
+        {
+          "type": "spot",
+          "settings": {
+            "x": 74,
+            "y": 68
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

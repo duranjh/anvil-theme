@@ -9,5 +9,8 @@
       "settings": {}
     }
   },
-  "order": ["items", "summary"]
+  "order": [
+    "items",
+    "summary"
+  ]
 }

@@ -1,0 +1,365 @@
+{% doc %}
+  Private theme block for sections/anvil-hero-slideshow.liquid: one slide of the hero carousel. The block root is the
+  slider's [data-slider-slide] element (tag: null); inside it a frame holds the slide's image (a separate phone image
+  is optional, served with <picture> below 750 px), an overlay, an optional link over the whole slide and the slide's
+  theme blocks (@theme, @app) in a content box placed by the position settings. The section sets the slide height
+  and the transition; this file reads section.settings.width for the image sizes. The first slide's image loads eagerly
+  with high fetch priority in the first two sections (it is usually the LCP image) and is preloaded in the first
+  section when it has no separate phone image; every other slide loads lazily. The slide link comes after the content
+  in the DOM (z-index puts it underneath), and the editor shows a note while a linked slide's link has no name. Styles
+  live in the section's stylesheet.
+
+  Settings (id · type · values · default):
+  - image · image_picker
+  - image_mobile · image_picker
+  - overlay · range · 0–90 step 5% · default 30
+  - overlay_color · select · shadow | scheme · default "shadow"
+  - position_desktop · select · top-left … bottom-right (9) · default "middle-center"
+  - position_mobile · select · top | middle | bottom · default "middle"
+  - content_width · range · 320–800 step 20px · default 560
+  - box · checkbox · default false
+  - own_scheme · checkbox · default false
+  - color_scheme · color_scheme · default "scheme-1" (shown when own_scheme is on)
+  - link · url
+  - link_name · text
+  Accepts child blocks: @theme, @app
+
+  @example
+  {"type": "_anvil-hero-slideshow-slide"}
+{% enddoc %}
+{%- liquid
+  assign b = block.settings
+
+  # This slide's place in the section (1-based): the first slide is the likely LCP image, and a link without a name
+  # falls back to "Open slide N".
+  assign slide_index = 1
+  for item in section.blocks
+    if item.id == block.id
+      assign slide_index = forloop.index
+      break
+    endif
+  endfor
+
+  # Images: the desktop image serves every screen unless a different phone image is set; a phone image on its own
+  # serves every screen too. art is true only when two different images are picked (<picture> art direction).
+  assign img_d = b.image
+  assign img_m = b.image_mobile
+  if img_d == blank
+    assign img_d = b.image_mobile
+  endif
+  assign art = false
+  if b.image != blank and b.image_mobile != blank and b.image.id != b.image_mobile.id
+    assign art = true
+  endif
+  if art == false
+    assign img_m = img_d
+  endif
+
+  # Focal points from the image picker. image_tag would write them as an inline object-position that a stylesheet
+  # cannot change per breakpoint, so the img inherits object-position from the picture, which takes the phone or
+  # desktop point from these custom properties.
+  assign fx_d = img_d.presentation.focal_point.x | default: 50
+  assign fy_d = img_d.presentation.focal_point.y | default: 50
+  assign fx_m = img_m.presentation.focal_point.x | default: 50
+  assign fy_m = img_m.presentation.focal_point.y | default: 50
+
+  # Loading: only the first slide can be the LCP image. It is eager with high fetch priority in the first two
+  # template sections (snippets/anvil-above-fold) and preloaded in the first one; the preload hint carries no media
+  # query, so it is skipped when phones get their own image.
+  assign load = 'lazy'
+  assign fetch = 'auto'
+  assign preload = false
+  if slide_index == 1
+    capture fold
+      render 'anvil-above-fold', section: section
+    endcapture
+    assign fold = fold | strip
+    if fold != 'lazy'
+      assign load = 'eager'
+      assign fetch = 'high'
+    endif
+    if fold == 'lcp' and section.index == 1 and art == false
+      assign preload = true
+    endif
+  endif
+
+  # sizes: page or narrow width caps the slide, so wide screens never fetch more than that width.
+  case section.settings.width
+    when 'full'
+      assign cap = 0
+    when 'narrow'
+      assign cap = settings.narrow_width | default: 0
+    else
+      assign cap = settings.page_width | default: 0
+  endcase
+  assign sizes_d = '100vw'
+  if cap > 0
+    assign sizes_d = '(min-width: ' | append: cap | append: 'px) ' | append: cap | append: 'px, 100vw'
+  endif
+
+  if art
+    assign m_srcset = ''
+    assign m_list = '750,1100,1500' | split: ','
+    for w in m_list
+      assign wn = w | plus: 0
+      if wn <= img_m.width
+        assign m_url = img_m | image_url: width: wn
+        assign m_srcset = m_srcset | append: m_url | append: ' ' | append: wn | append: 'w, '
+      endif
+    endfor
+    if m_srcset == ''
+      assign m_url = img_m | image_url: width: img_m.width
+      assign m_srcset = m_url | append: ' ' | append: img_m.width | append: 'w'
+    else
+      assign m_srcset = m_srcset | remove_last: ', '
+    endif
+  endif
+
+  assign ph_name = 'lifestyle-1'
+  assign ph_odd = slide_index | modulo: 2
+  if ph_odd == 0
+    assign ph_name = 'lifestyle-2'
+  endif
+
+  # Content position: nine spots on desktop, top / middle / bottom on phones (full width there).
+  assign pos_parts = b.position_desktop | default: 'middle-center' | split: '-'
+  case pos_parts[0]
+    when 'top'
+      assign v_d = 'flex-start'
+    when 'bottom'
+      assign v_d = 'flex-end'
+    else
+      assign v_d = 'center'
+  endcase
+  case pos_parts[1]
+    when 'left'
+      assign h_d = 'flex-start'
+    when 'right'
+      assign h_d = 'flex-end'
+    else
+      assign h_d = 'center'
+  endcase
+  case b.position_mobile
+    when 'top'
+      assign v_m = 'flex-start'
+    when 'bottom'
+      assign v_m = 'flex-end'
+    else
+      assign v_m = 'center'
+  endcase
+  assign box_w = b.content_width | default: 560
+
+  assign frame_class = 'av-hero-slideshow__frame'
+  if b.own_scheme and b.color_scheme != blank
+    assign frame_class = frame_class | append: ' av-scheme av-scheme--' | append: b.color_scheme.id
+  endif
+  if b.link != blank
+    assign frame_class = frame_class | append: ' av-hero-slideshow__frame--linked'
+  endif
+  assign box_class = 'av-hero-slideshow__box'
+  if b.box
+    assign box_class = box_class | append: ' av-box'
+  endif
+
+  assign overlay_a = b.overlay | default: 0 | divided_by: 100.0
+
+  # A link needs a name: the typed one, else the image's alt text, else "Open slide N". The link follows the content
+  # in the DOM, so the slide's heading comes first and gives that last fallback its context; the editor flags it.
+  assign link_name = b.link_name | strip
+  if link_name == blank
+    assign link_name = img_d.alt | strip
+  endif
+  assign link_unnamed = false
+  if link_name == blank
+    assign link_name = 'anvil.hero_slideshow.slide_link' | t: index: slide_index
+    if b.link != blank and request.design_mode
+      assign link_unnamed = true
+    endif
+  endif
+-%}
+{%- capture slide_content -%}{% content_for 'blocks' %}{%- endcapture -%}
+{%- assign slide_content = slide_content | strip -%}
+<div class="av-hero-slideshow__slide" data-slider-slide {{ block.shopify_attributes }}>
+  <div class="{{ frame_class }}" style="--av-hero-slideshow-pos-m: {{ fx_m }}% {{ fy_m }}%; --av-hero-slideshow-pos-d: {{ fx_d }}% {{ fy_d }}%; --av-hero-slideshow-v-m: {{ v_m }}; --av-hero-slideshow-v-d: {{ v_d }}; --av-hero-slideshow-h-d: {{ h_d }}; --av-hero-slideshow-box-w: {{ box_w }}px;">
+    <div class="av-hero-slideshow__media">
+      {%- if img_d != blank -%}
+        <picture class="av-hero-slideshow__picture">
+          {%- if art -%}
+            <source media="(max-width: 749px)" srcset="{{ m_srcset | escape }}" sizes="100vw" width="{{ img_m.width }}" height="{{ img_m.height }}">
+          {%- endif -%}
+          {{ img_d | image_url: width: 2200 | image_tag: widths: '750, 1100, 1500, 1800, 2200', sizes: sizes_d, loading: load, fetchpriority: fetch, preload: preload, class: 'av-hero-slideshow__img', style: 'object-position: inherit;' }}
+        </picture>
+      {%- else -%}
+        {{ ph_name | placeholder_svg_tag: 'av-hero-slideshow__placeholder' }}
+      {%- endif -%}
+    </div>
+    {%- if overlay_a > 0 -%}
+      <div class="av-overlay" style="--av-overlay-strength: {{ overlay_a }};{% if b.overlay_color == 'scheme' %} --av-overlay-rgb: var(--av-bg-rgb);{% endif %}"></div>
+    {%- endif -%}
+    {%- if slide_content != blank -%}
+      <div class="av-hero-slideshow__content">
+        <div class="{{ box_class }}">{{ slide_content }}</div>
+      </div>
+    {%- endif -%}
+    {%- if b.link != blank -%}
+      <a class="av-hero-slideshow__link" href="{{ b.link }}"><span class="av-visually-hidden">{{ link_name | escape }}</span></a>
+    {%- endif -%}
+    {%- if link_unnamed -%}
+      <p class="av-hero-slideshow__note av-example-note">{{ 'anvil.editor.slide_link_name' | t: index: slide_index }}</p>
+    {%- endif -%}
+  </div>
+</div>
+{% schema %}
+{
+  "name": "Slide",
+  "tag": null,
+  "settings": [
+    { "type": "header", "content": "Media" },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Desktop image",
+      "info": "Set a focal point in the picker to keep the subject in view when the slide crops. Keep words out of the image and write them in blocks, so phones and screen readers can read them."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "Phone image",
+      "info": "Optional. Shown below 750 px wide; the desktop image is used when this is empty."
+    },
+    {
+      "type": "range",
+      "id": "overlay",
+      "label": "Overlay opacity",
+      "min": 0,
+      "max": 90,
+      "step": 5,
+      "unit": "%",
+      "default": 30,
+      "info": "Raise it until the text reads clearly over the busiest part of the image, on phones too."
+    },
+    {
+      "type": "select",
+      "id": "overlay_color",
+      "label": "Overlay colour",
+      "options": [
+        { "value": "shadow", "label": "Theme shadow colour" },
+        { "value": "scheme", "label": "Colour scheme background" }
+      ],
+      "default": "shadow",
+      "info": "The scheme background suits text in that scheme's text colour."
+    },
+    { "type": "header", "content": "Content" },
+    {
+      "type": "select",
+      "id": "position_desktop",
+      "label": "Content position on desktop",
+      "options": [
+        { "value": "top-left", "label": "Top left" },
+        { "value": "top-center", "label": "Top centre" },
+        { "value": "top-right", "label": "Top right" },
+        { "value": "middle-left", "label": "Middle left" },
+        { "value": "middle-center", "label": "Middle centre" },
+        { "value": "middle-right", "label": "Middle right" },
+        { "value": "bottom-left", "label": "Bottom left" },
+        { "value": "bottom-center", "label": "Bottom centre" },
+        { "value": "bottom-right", "label": "Bottom right" }
+      ],
+      "default": "middle-center"
+    },
+    {
+      "type": "select",
+      "id": "position_mobile",
+      "label": "Content position on phones",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "middle", "label": "Middle" },
+        { "value": "bottom", "label": "Bottom" }
+      ],
+      "default": "middle"
+    },
+    {
+      "type": "range",
+      "id": "content_width",
+      "label": "Content width on desktop",
+      "min": 320,
+      "max": 800,
+      "step": 20,
+      "unit": "px",
+      "default": 560
+    },
+    {
+      "type": "checkbox",
+      "id": "box",
+      "label": "Show content box",
+      "default": false,
+      "info": "Puts the content on a solid panel in the slide's colour scheme, so it stays readable over any image."
+    },
+    {
+      "type": "checkbox",
+      "id": "own_scheme",
+      "label": "Use its own colour scheme",
+      "default": false,
+      "info": "Gives this slide its own text colours (and panel colours), for example dark text over a light photo."
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Slide colour scheme",
+      "default": "scheme-1",
+      "visible_if": "{{ block.settings.own_scheme }}"
+    },
+    { "type": "header", "content": "Link" },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "Slide link",
+      "info": "Makes the slide clickable around its content. Buttons and text links in the content keep their own links."
+    },
+    {
+      "type": "text",
+      "id": "link_name",
+      "label": "Link description",
+      "info": "Describe where the link goes, for example \"Shop the new collection\". Required when the image has no alt text."
+    }
+  ],
+  "blocks": [
+    { "type": "@theme" },
+    { "type": "@app" }
+  ],
+  "presets": [
+    {
+      "name": "Slide",
+      "blocks": [
+        {
+          "type": "anvil-heading",
+          "settings": {
+            "heading": "Example: say what you sell",
+            "tag": "h2",
+            "size": "xl",
+            "align": "center"
+          }
+        },
+        {
+          "type": "anvil-text",
+          "settings": {
+            "text": "<p>Example: one sentence on what shoppers find here. Only state things that are true for your store.</p>",
+            "size": "lg",
+            "align": "center"
+          }
+        },
+        {
+          "type": "anvil-button",
+          "settings": {
+            "label": "Shop now",
+            "url": "/collections/all",
+            "style": "primary",
+            "size": "lg",
+            "align": "center"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -2,9 +2,17 @@
   assign s = section.settings
 -%}
 {%- liquid
-  assign head_tag = 'h2'
-  if s.title_h1 and template.name == 'index'
-    assign head_tag = 'h1'
+  # The one H1 guard (snippets/anvil-main-heading-tag): H1 only as the first section of a template whose page has
+  # no title of its own.
+  capture head_tag
+    render 'anvil-main-heading-tag', section: section, tag: s.heading_tag
+  endcapture
+  assign head_tag = head_tag | strip
+  assign btn_style = s.button_style | default: 'primary'
+  assign btn_icon = ''
+  if btn_style == 'link_arrow'
+    assign btn_style = 'link'
+    assign btn_icon = 'arrow-right'
   endif
 -%}
 <div {% render 'anvil-section-attrs', section: section, type: 'anvil-welcome' %}>
@@ -16,44 +24,20 @@
       {%- endif -%}
       {%- if s.button_label != blank -%}
         <div class="av-welcome__actions">
-          {% render 'anvil-button', label: s.button_label, url: s.button_url, style: s.button_style, size: 'lg' %}
+          {% render 'anvil-button', label: s.button_label, url: s.button_link, style: btn_style, size: 'lg', icon: btn_icon %}
         </div>
       {%- endif -%}
     </div>
   </div>
 </div>
 {% stylesheet %}
-  .av-welcome {
-    display: flex;
-    flex-direction: column;
-    gap: var(--av-space-5);
-    align-items: center;
-    text-align: center;
-  }
-  .av-welcome--left {
-    align-items: flex-start;
-    text-align: left;
-  }
-  .av-welcome--right {
-    align-items: flex-end;
-    text-align: right;
-  }
-  .av-welcome__text {
-    max-width: 60ch;
-    font-size: var(--av-text-md);
-    line-height: 1.6;
-  }
-  .av-welcome__text p:first-child {
-    margin-top: 0;
-  }
-  .av-welcome__text p:last-child {
-    margin-bottom: 0;
-  }
-  .av-welcome__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--av-space-3);
-  }
+.av-welcome{display:flex;flex-direction:column;gap:var(--av-space-5);align-items:center;text-align:center}
+.av-welcome--left{align-items:flex-start;text-align:left}
+.av-welcome--right{align-items:flex-end;text-align:right}
+.av-welcome__text{max-width:60ch;font-size:var(--av-text-md);line-height:1.6}
+.av-welcome__text p:first-child{margin-top:0}
+.av-welcome__text p:last-child{margin-bottom:0}
+.av-welcome__actions{display:flex;flex-wrap:wrap;gap:var(--av-space-3)}
 {% endstylesheet %}
 {% schema %}
 {
@@ -76,17 +60,21 @@
     { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
     { "type": "header", "content": "Welcome" },
     {
-      "type": "checkbox",
-      "id": "title_h1",
-      "label": "Use the heading as the page title (H1) on the homepage",
-      "info": "Each page needs exactly one H1. Turn this off when another section above already carries the page title.",
-      "default": true
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading level",
+      "options": [
+        { "value": "h2", "label": "H2" },
+        { "value": "h1", "label": "H1 (main page heading)" }
+      ],
+      "default": "h1",
+      "info": "H1 only when this is the first section of a template whose page has no title of its own (not on product, collection, page, blog or article templates). Otherwise it stays H2."
     },
     {
       "type": "richtext",
       "id": "text",
       "label": "Text",
-      "default": "<p>Example welcome text — replace this with a sentence about what you sell.</p>"
+      "default": "<p>Example: replace this with a sentence about what you sell.</p>"
     },
     {
       "type": "text",
@@ -96,7 +84,7 @@
     },
     {
       "type": "url",
-      "id": "button_url",
+      "id": "button_link",
       "label": "Button link",
       "default": "/collections/all"
     },
@@ -105,9 +93,10 @@
       "id": "button_style",
       "label": "Button style",
       "options": [
-        { "value": "primary", "label": "Primary" },
-        { "value": "secondary", "label": "Secondary" },
-        { "value": "link", "label": "Text link" }
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" },
+        { "value": "link", "label": "Text link" },
+        { "value": "link_arrow", "label": "Text link with arrow" }
       ],
       "default": "primary"
     }
@@ -117,11 +106,12 @@
       "name": "Welcome",
       "settings": {
         "heading": "Welcome to your <strong>new store</strong>",
-        "subheading": "<p>Example subheading — replace it with what you sell and who it is for.</p>",
+        "subheading": "<p>Example: replace it with what you sell and who it is for.</p>",
         "pad_top": 96,
         "pad_bottom": 96
       }
     }
-  ]
+  ],
+  "disabled_on": { "groups": ["*"] }
 }
 {% endschema %}

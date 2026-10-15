@@ -1,0 +1,21 @@
+{% doc %}
+  The editor-only note for a section (or a part of one) with nothing to show (DECISIONS 87): a dashed, centred box
+  styled by .av-editor-empty in assets/anvil-base.css. Prints nothing outside the online store editor; on the
+  storefront a section with no body renders nothing at all.
+
+  @param {string} [text] - Note text, already translated (default: anvil.editor.empty_section)
+  @param {string} [class] - Extra classes
+
+  @example
+  {% render 'anvil-editor-empty' %}
+  {%- assign note = 'anvil.editor.block_empty' | t -%}{% render 'anvil-editor-empty', text: note %}
+{% enddoc %}
+{%- if request.design_mode -%}
+  {%- liquid
+    assign empty_note = text
+    if empty_note == blank
+      assign empty_note = 'anvil.editor.empty_section' | t
+    endif
+  -%}
+  <p class="av-editor-empty{% if class != blank %} {{ class }}{% endif %}">{{ empty_note }}</p>
+{%- endif -%}

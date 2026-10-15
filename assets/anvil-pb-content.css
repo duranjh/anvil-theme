@@ -246,14 +246,7 @@
   display: block;
 }
 
-/* A text-link button keeps no button padding at any size (the size classes set padding after .av-btn--link). */
-.av-pb-popup .av-btn--link,
-.av-pb-link-button .av-btn--link,
-.av-pb-scroll-buttons .av-btn--link {
-  min-height: 24px;
-  padding: 0;
-}
-
+/* Link-style buttons get their 24 px height and zero padding from anvil-base.css (.av-btn.av-btn--link). */
 .av-pb-popup .av-btn--link {
   font-size: var(--av-text-sm);
   color: inherit;

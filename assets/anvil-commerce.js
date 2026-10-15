@@ -1,6 +1,6 @@
 /**
  * anvil-commerce.js — commerce product blocks (snippets/anvil-pb-*.liquid) and the mini card.
- *   <anvil-bundle>  ticked rows + variant selects → live total of real prices (server text stands until a change);
+ *   <anvil-pb-bundle>  ticked rows + variant selects → live total of real prices (server text stands until a change);
  *     one cartAdd at a time for the ticked items; the data-anvil-bundle-current row follows anvil:variant:changed.
  *   <anvil-discount>  copy (Clipboard API → textarea → select) or apply via applyDiscount keeping the cart's codes
  *     (JS off: /discount/CODE?redirect=); toggles .av-is-applied; on an empty cart a kept code reads "saved".
@@ -276,7 +276,7 @@ class MiniCard extends HTMLElement {
   };
 }
 
-define('anvil-bundle', Bundle);
+define('anvil-pb-bundle', Bundle);
 define('anvil-discount', Discount);
 define('anvil-upsells', Upsells);
 define('anvil-mini-card', MiniCard);

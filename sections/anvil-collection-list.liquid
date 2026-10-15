@@ -1,0 +1,497 @@
+{%- liquid
+  assign s = section.settings
+
+  assign slider = false
+  if s.layout == 'slider'
+    assign slider = true
+  endif
+  assign card_layout = s.card_layout | default: 'below'
+  assign text_align = s.text_align | default: 'center'
+  assign total = section.blocks.size
+
+  assign cols_desktop = s.cols_desktop | default: '4' | plus: 0 | at_least: 1 | at_most: 6
+  assign cols_mobile = s.cols_mobile | default: '2' | plus: 0 | at_least: 1 | at_most: 2
+  # Tablets (750-989 px) follow the shared grid rule: up to 3 columns; 4 columns become 2 x 2 instead of 3 + 1.
+  assign cols_tablet = cols_desktop | at_most: 3
+  if cols_desktop == 4
+    assign cols_tablet = 2
+  endif
+
+  # Image shape: the section's own choice, or the collection card ratio from Theme settings > Cards.
+  assign ratio = s.image_ratio | default: 'theme'
+  if ratio == 'theme'
+    assign ratio = settings.collection_card_image_ratio | default: '1:1'
+  endif
+
+  # Slider peek: the theme's standard (snippets/anvil-slider-attrs) shows part of the next card on phones.
+  assign peek = 0
+  if slider and total > cols_mobile
+    assign peek = 40
+    if cols_mobile == 2
+      assign peek = 24
+    endif
+  endif
+
+  # Image sizes: the inner width is capped by the page (or narrow) width unless the section is full width.
+  if slider and peek > 0
+    assign vw_mobile = 85
+    if cols_mobile == 2
+      assign vw_mobile = 45
+    endif
+  else
+    assign vw_mobile = 100 | divided_by: cols_mobile
+  endif
+  assign vw_tablet = 100 | divided_by: cols_tablet
+  assign vw_desktop = 100 | divided_by: cols_desktop
+  if s.width == 'full'
+    assign img_sizes = '(min-width: 990px) ' | append: vw_desktop | append: 'vw, (min-width: 750px) ' | append: vw_tablet | append: 'vw, ' | append: vw_mobile | append: 'vw'
+  else
+    assign max_inner = settings.page_width | default: 1400
+    if s.width == 'narrow'
+      assign max_inner = settings.narrow_width | default: 800
+    endif
+    assign cap_bp = max_inner | at_least: 990
+    assign px_desktop = max_inner | divided_by: cols_desktop
+    assign img_sizes = '(min-width: ' | append: cap_bp | append: 'px) ' | append: px_desktop | append: 'px, (min-width: 990px) ' | append: vw_desktop | append: 'vw, (min-width: 750px) ' | append: vw_tablet | append: 'vw, ' | append: vw_mobile | append: 'vw'
+  endif
+  # Wider candidates whenever a card can pass ~350 CSS px: 3 or fewer per row on desktop,
+  # 2 per row on tablets (desktop 4 shows 2 x 2 there), or one card per row on phones.
+  assign img_widths = '300, 450, 600'
+  if cols_desktop <= 3 or cols_tablet <= 2 or cols_mobile == 1
+    assign img_widths = '300, 450, 600, 750, 900, 1100'
+  endif
+
+  # First two template sections (snippets/anvil-above-fold): the first row loads eagerly, and in the first section
+  # the first image is the likely LCP image.
+  capture fold
+    render 'anvil-above-fold', section: section
+  endcapture
+  assign fold = fold | strip
+
+  assign list_label = s.heading | strip_html | strip
+  if list_label == blank
+    assign list_label = 'anvil.collection_list.label' | t
+  endif
+  assign example_title = 'anvil.card.example_collection' | t
+
+  assign root_class = 'av-collection-list av-collection-list--' | append: card_layout
+  assign root_class = root_class | append: ' av-collection-list--m' | append: cols_mobile
+  assign root_class = root_class | append: ' av-collection-list--align-' | append: text_align
+  if card_layout == 'overlay'
+    assign overlay_pos = s.overlay_position | default: 'bottom'
+    assign root_class = root_class | append: ' av-collection-list--pos-' | append: overlay_pos
+    assign overlay_scheme = s.overlay_scheme.id | default: 'scheme-5'
+    assign body_class = 'av-collection-list__body av-scheme--' | append: overlay_scheme
+  else
+    assign frame = settings.collection_card_style | default: 'flat'
+    assign root_class = root_class | append: ' av-collection-list--frame-' | append: frame
+    assign body_class = 'av-collection-list__body'
+  endif
+  # Zoom on hover: the shared .av-hover-zoom, which moves only when the shopper allows motion and animations are on.
+  assign card_class = 'av-collection-list__card'
+  if s.hover_zoom
+    assign card_class = card_class | append: ' av-hover-zoom'
+  endif
+  # Overlay tint: the shared .av-overlay (CONVENTIONS §2) in the overlay scheme's background colour.
+  assign tint = s.overlay_strength | default: 0 | divided_by: 100.0
+
+  # Grid: a list on the shared .av-grid. Slider: <anvil-slider> (snippets/anvil-slider-attrs), which gives its slides
+  # role=group, so no list there. Tag names are variables so no element opens in one branch and closes in another.
+  assign list_class = 'av-collection-list__list'
+  if slider
+    assign wrap_tag = 'anvil-slider'
+    assign list_tag = 'div'
+    assign item_tag = 'div'
+    assign root_class = root_class | append: ' av-collection-list--slider'
+    assign arrows = 'none'
+    if s.show_arrows
+      assign arrows = 'desktop'
+    endif
+    capture wrap_attrs
+      render 'anvil-slider-attrs', count: total, per_view: cols_mobile, per_view_tablet: cols_tablet, per_view_desktop: cols_desktop, peek: 'auto', arrows: arrows, gutter: true, dots: s.show_dots, label: list_label, class: root_class
+    endcapture
+  else
+    assign wrap_tag = 'div'
+    assign list_tag = 'ul'
+    assign item_tag = 'li'
+    assign head_align = s.head_align | default: 'center'
+    assign root_class = root_class | append: ' av-collection-list--grid av-collection-list--row-' | append: head_align
+    assign wrap_attrs = 'class="' | append: root_class | append: '"'
+    assign list_class = list_class | append: ' av-grid av-grid--flex av-grid--c' | append: cols_desktop | append: ' av-grid--m' | append: cols_mobile
+  endif
+
+  assign view_label = s.view_all_label | strip | escape
+  if view_label == blank
+    assign view_label = 'anvil.collection_list.view_all' | t
+  endif
+  # View all look (only link_arrow draws the arrow).
+  assign view_style = s.view_all_style | default: 'secondary'
+  assign view_icon = ''
+  if view_style == 'link_arrow'
+    assign view_style = 'link'
+    assign view_icon = 'arrow-right'
+  endif
+-%}
+{%- comment -%} Zero blocks: shoppers get nothing (no lone heading); the editor keeps the section and a note. {%- endcomment -%}
+{%- if total > 0 or request.design_mode -%}
+<div {% render 'anvil-section-attrs', section: section, type: 'anvil-collection-list' %}>
+  <div class="av-section__inner">
+    {%- if total > 0 -%}
+      {% render 'anvil-section-head', section: section, fallback: list_label %}
+      {%- if slider -%}
+        {{ 'anvil-slider.css' | asset_url | stylesheet_tag }}
+      {%- endif -%}
+      <{{ wrap_tag }} {{ wrap_attrs }}>
+        <{{ list_tag }} class="{{ list_class }}"{% if slider %} data-slider-track{% else %} role="list"{% endif %}>
+          {%- for block in section.blocks -%}
+            {%- liquid
+              assign b = block.settings
+              assign c = b.collection
+
+              assign card_title = b.title | strip
+              if card_title == blank and c != blank
+                assign card_title = c.title
+              endif
+              if card_title == blank
+                assign card_title = example_title
+              endif
+
+              assign card_image = b.image
+              if card_image == blank and c != blank
+                assign card_image = c.featured_image
+              endif
+
+              assign count_text = ''
+              if s.show_count and c != blank
+                assign count_text = 'anvil.collection.product_count' | t: count: c.all_products_count
+              endif
+
+              assign img_loading = 'lazy'
+              assign img_priority = false
+              if fold != 'lazy' and forloop.index <= cols_desktop
+                assign img_loading = 'eager'
+              endif
+              if fold == 'lcp' and forloop.first
+                assign img_priority = true
+              endif
+              assign ph_index = forloop.index0 | modulo: 6 | plus: 1
+              assign ph_name = 'collection-' | append: ph_index
+            -%}
+            <{{ item_tag }} class="av-collection-list__item"{% if slider %} data-slider-slide{% endif %} {{ block.shopify_attributes }}>
+              <div class="{{ card_class }}">
+                {%- render 'anvil-media', image: card_image, ratio: ratio, widths: img_widths, sizes: img_sizes, loading: img_loading, priority: img_priority, placeholder: ph_name, class: 'av-collection-list__media' -%}
+                <div class="{{ body_class }}">
+                  {%- if card_layout == 'overlay' -%}
+                    <span class="av-overlay av-collection-list__tint" style="--av-overlay-strength: {{ tint }}; --av-overlay-rgb: var(--av-bg-rgb);"></span>
+                  {%- endif -%}
+                  <h3 class="av-collection-list__title">
+                    {%- if c != blank -%}
+                      <a class="av-collection-list__link" href="{{ c.url }}">{{ card_title | escape }}</a>
+                    {%- else -%}
+                      {{ card_title | escape }}
+                    {%- endif -%}
+                  </h3>
+                  {%- if count_text != blank -%}
+                    <p class="av-collection-list__count">{{ count_text }}</p>
+                  {%- endif -%}
+                  {%- if c == blank and request.design_mode -%}
+                    <p class="av-collection-list__count av-example-note">{{ 'anvil.collection_list.choose_collection' | t }}</p>
+                  {%- endif -%}
+                </div>
+              </div>
+            </{{ item_tag }}>
+          {%- endfor -%}
+        </{{ list_tag }}>
+        {%- if slider and s.show_dots -%}
+          <div class="av-slider__dots" data-slider-dots></div>
+        {%- endif -%}
+      </{{ wrap_tag }}>
+      {%- if slider -%}
+        <script type="module" src="{{ 'anvil-slider.js' | asset_url }}"></script>
+      {%- endif -%}
+      {%- if s.show_view_all -%}
+        <div class="av-collection-list__more av-collection-list__more--{{ s.head_align | default: 'center' }}">
+          {%- render 'anvil-button', label: view_label, url: routes.collections_url, style: view_style, size: 'md', icon: view_icon -%}
+        </div>
+      {%- endif -%}
+    {%- else -%}
+      {% render 'anvil-section-head', section: section %}
+      {% render 'anvil-editor-empty' %}
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
+{% stylesheet %}
+/* Grid columns and gap from the shared .av-grid; the slider from <anvil-slider> (snippets/anvil-slider-attrs); zoom
+   on hover from the shared .av-hover-zoom. */
+.av-collection-list{--av-collection-list-pad:var(--av-space-4);--av-slider-gap:var(--av-grid-space,var(--av-grid-gap))}
+.av-collection-list--m2{--av-grid-space:var(--av-space-3);--av-collection-list-pad:var(--av-space-3)}
+.av-collection-list__list{padding:0;list-style:none}
+.av-collection-list--row-center .av-collection-list__list{justify-content:center}
+.av-collection-list--row-right .av-collection-list__list{justify-content:flex-end}
+.av-collection-list__item{display:flex;min-width:0;margin:0}
+.av-collection-list__card{position:relative;display:flex;flex:1;flex-direction:column;min-width:0;color:var(--av-fg)}
+.av-collection-list__body{display:flex;flex-direction:column;gap:var(--av-space-1);min-width:0;padding-top:var(--av-space-3)}
+.av-collection-list .av-collection-list__title{margin:0;font-size:var(--av-text-md);line-height:1.25;overflow-wrap:anywhere}
+.av-collection-list__link{color:inherit;text-decoration:none}
+/* The title link covers the whole card; its focus ring is drawn on the card, inside the edge so a scrolling track cannot clip it. */
+.av-collection-list__link::after{content:"";position:absolute;inset:0;z-index:1;border-radius:var(--av-radius-card)}
+.av-collection-list__link:focus-visible{outline:2px solid transparent}
+/* Two-tone ring (accent, then scheme background inside it): one band always contrasts with the photo. */
+.av-collection-list__link:focus-visible::after{outline:2px solid var(--av-accent);outline-offset:-2px;box-shadow:inset 0 0 0 4px var(--av-bg)}
+.av-collection-list__card:hover .av-collection-list__link{text-decoration:underline;text-decoration-thickness:0.06em;text-underline-offset:0.15em}
+.av-collection-list__count{margin:0;font-size:var(--av-text-sm);color:var(--av-fg-muted)}
+.av-collection-list--align-center .av-collection-list__body{text-align:center}
+.av-collection-list--align-right .av-collection-list__body{text-align:right}
+/* Image with title below: the card frame follows Theme settings > Cards > Collection cards. */
+.av-collection-list--frame-outlined .av-collection-list__card,.av-collection-list--frame-raised .av-collection-list__card{padding:var(--av-space-3);border-radius:var(--av-radius-card);background:var(--av-bg)}
+.av-collection-list--frame-outlined .av-collection-list__card{border:max(1px,var(--av-border-w-card)) solid var(--av-border)}
+.av-collection-list--frame-raised .av-collection-list__card{box-shadow:var(--av-shadow-card)}
+.av-collection-list--frame-raised.av-collection-list--slider > [data-slider-track]{padding-block:var(--av-space-1) var(--av-space-4)}
+/* Title over the image: overlay scheme text on the shared .av-overlay tint. Cards do not stretch, so the body stays on the photo. */
+.av-collection-list--overlay .av-collection-list__item{align-items:flex-start}
+.av-collection-list--overlay .av-collection-list__body{position:absolute;inset:0;isolation:isolate;justify-content:flex-end;padding:var(--av-collection-list-pad);border-radius:var(--av-radius-media);color:var(--av-fg)}
+.av-collection-list__tint{z-index:-1;border-radius:inherit}
+/* Bottom: full tint behind the text (lowest 40 %), clear by 90 %. Centre keeps the even tint. */
+.av-collection-list--pos-bottom .av-collection-list__tint{background:linear-gradient(to top,rgb(var(--av-overlay-rgb) / var(--av-overlay-strength)) 0,rgb(var(--av-overlay-rgb) / var(--av-overlay-strength)) 40%,rgb(var(--av-overlay-rgb) / 0) 90%)}
+.av-collection-list--overlay.av-collection-list--pos-center .av-collection-list__body{justify-content:center}
+.av-collection-list--overlay .av-collection-list__link::after{border-radius:var(--av-radius-media)}
+.av-collection-list--overlay .av-collection-list__count{color:inherit}
+.av-collection-list__more{display:flex;justify-content:center;margin-top:var(--av-space-6)}
+.av-collection-list__more--left{justify-content:flex-start}
+.av-collection-list__more--right{justify-content:flex-end}
+@media (min-width: 750px){
+.av-collection-list,.av-collection-list--m2{--av-grid-space:initial;--av-collection-list-pad:var(--av-space-5)}
+.av-collection-list--overlay .av-collection-list__title{font-size:var(--av-text-lg)}
+}
+{% endstylesheet %}
+{% schema %}
+{
+  "name": "Collection list",
+  "max_blocks": 12,
+  "disabled_on": { "groups": ["header", "custom.overlay"] },
+  "settings": [
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "info": "Bold a word to colour it with the accent" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading" },
+    { "type": "text_alignment", "id": "head_align", "label": "Heading alignment", "default": "center" },
+    { "type": "select", "id": "head_size", "label": "Heading size", "options": [ {"value":"xs","label":"Extra small"}, {"value":"sm","label":"Small"}, {"value":"md","label":"Medium"}, {"value":"lg","label":"Large"}, {"value":"xl","label":"Extra large"} ], "default": "lg" },
+    { "type": "select", "id": "accent_style", "label": "Accent style for bold words", "options": [ {"value":"color","label":"Accent colour"}, {"value":"underline","label":"Underline"}, {"value":"highlight","label":"Highlight"}, {"value":"gradient","label":"Gradient"} ], "default": "color" },
+    { "type": "header", "content": "Layout" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Colour scheme", "default": "scheme-1" },
+    { "type": "select", "id": "width", "label": "Width", "options": [ {"value":"page","label":"Page width"}, {"value":"narrow","label":"Narrow"}, {"value":"full","label":"Full width"} ], "default": "page" },
+    { "type": "range", "id": "pad_top", "label": "Top padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "select", "id": "pad_mobile", "label": "Padding on phones", "options": [ {"value":"same","label":"Same as desktop"}, {"value":"compact","label":"Compact"}, {"value":"none","label":"None"} ], "default": "compact" },
+    { "type": "select", "id": "reveal", "label": "Animate on scroll", "options": [ {"value":"none","label":"Off"}, {"value":"fade-up","label":"Fade up"}, {"value":"fade","label":"Fade"}, {"value":"zoom","label":"Zoom"} ], "default": "none" },
+    { "type": "select", "id": "show_on", "label": "Show on", "options": [ {"value":"all","label":"All devices"}, {"value":"mobile","label":"Phones only"}, {"value":"desktop","label":"Desktop only"} ], "default": "all" },
+    { "type": "text", "id": "anchor", "label": "Anchor id", "info": "Letters, numbers and hyphens. Link to this section with #your-id" },
+    { "type": "header", "content": "Collection list" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "grid", "label": "Grid" },
+        { "value": "slider", "label": "Slider" }
+      ],
+      "default": "grid",
+      "info": "Slider puts the cards in one row that shoppers swipe or scroll through."
+    },
+    {
+      "type": "select",
+      "id": "cols_desktop",
+      "label": "Columns on desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" },
+        { "value": "5", "label": "5" },
+        { "value": "6", "label": "6" }
+      ],
+      "default": "4",
+      "info": "In a slider this is the number in view. Tablets show up to 3; 4 columns become 2."
+    },
+    {
+      "type": "select",
+      "id": "cols_mobile",
+      "label": "Columns on phones",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "2",
+      "info": "In a slider this is the number in view."
+    },
+    {
+      "type": "select",
+      "id": "card_layout",
+      "label": "Card layout",
+      "options": [
+        { "value": "below", "label": "Image with title below" },
+        { "value": "overlay", "label": "Title over the image" }
+      ],
+      "default": "below",
+      "info": "The frame of the image-with-title-below card follows Theme settings > Cards > Collection cards."
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "theme", "label": "Same as theme cards" },
+        { "value": "adapt", "label": "Original" },
+        { "value": "1:1", "label": "Square (1:1)" },
+        { "value": "4:5", "label": "Portrait (4:5)" },
+        { "value": "3:4", "label": "Portrait (3:4)" },
+        { "value": "16:9", "label": "Landscape (16:9)" }
+      ],
+      "default": "theme",
+      "info": "\"Same as theme cards\" uses the image shape set for collection cards in Theme settings > Cards."
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_align",
+      "label": "Text alignment",
+      "default": "center"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_count",
+      "label": "Show product count",
+      "default": false,
+      "info": "Shopify counts the products in each collection; there is no number to type in."
+    },
+    {
+      "type": "checkbox",
+      "id": "hover_zoom",
+      "label": "Zoom images on hover",
+      "default": true,
+      "info": "Only when animations are on in Theme settings and the shopper has not asked for reduced motion."
+    },
+    {
+      "type": "header",
+      "content": "Title over the image",
+      "visible_if": "{{ section.settings.card_layout == 'overlay' }}"
+    },
+    {
+      "type": "select",
+      "id": "overlay_position",
+      "visible_if": "{{ section.settings.card_layout == 'overlay' }}",
+      "label": "Title position",
+      "options": [
+        { "value": "bottom", "label": "Bottom" },
+        { "value": "center", "label": "Centre" }
+      ],
+      "default": "bottom"
+    },
+    {
+      "type": "color_scheme",
+      "id": "overlay_scheme",
+      "visible_if": "{{ section.settings.card_layout == 'overlay' }}",
+      "label": "Title colour scheme",
+      "default": "scheme-5",
+      "info": "The title uses this scheme's text colour on a tint of its background colour."
+    },
+    {
+      "type": "range",
+      "id": "overlay_strength",
+      "visible_if": "{{ section.settings.card_layout == 'overlay' }}",
+      "label": "Tint strength",
+      "min": 0,
+      "max": 90,
+      "step": 5,
+      "unit": "%",
+      "default": 65,
+      "info": "Raise it until every title is easy to read on its image."
+    },
+    {
+      "type": "header",
+      "content": "Slider",
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true,
+      "visible_if": "{{ section.settings.layout == 'slider' }}",
+      "info": "On tablets and desktops, beside the row while it scrolls. Phones swipe."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dots",
+      "label": "Show dots",
+      "default": true,
+      "visible_if": "{{ section.settings.layout == 'slider' }}"
+    },
+    { "type": "header", "content": "View all button" },
+    {
+      "type": "checkbox",
+      "id": "show_view_all",
+      "label": "Show \"View all\" button",
+      "default": true,
+      "info": "Links to the page that lists all your collections."
+    },
+    {
+      "type": "text",
+      "id": "view_all_label",
+      "visible_if": "{{ section.settings.show_view_all }}",
+      "label": "Button label",
+      "default": "View all"
+    },
+    {
+      "type": "select",
+      "id": "view_all_style",
+      "label": "Button style",
+      "options": [
+        { "value": "primary", "label": "Solid button" },
+        { "value": "secondary", "label": "Outline button" },
+        { "value": "link", "label": "Text link" },
+        { "value": "link_arrow", "label": "Text link with arrow" }
+      ],
+      "default": "secondary",
+      "visible_if": "{{ section.settings.show_view_all }}"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "collection",
+      "name": "Collection",
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Collection"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Custom image",
+          "info": "Replaces the collection's own image. Upload only images you are entitled to use."
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Custom title",
+          "info": "Leave blank to use the collection's name. A name such as Best sellers should match how the collection is really built."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Collection list",
+      "settings": {
+        "heading": "Shop by <strong>collection</strong>"
+      },
+      "blocks": [
+        { "type": "collection" },
+        { "type": "collection" },
+        { "type": "collection" },
+        { "type": "collection" }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,96 @@
+{% doc %}
+  The quick-buy control under a product in Product videos and Shoppable image (DECISIONS 96): one product form that
+  works without JavaScript and adds through the cart drawer once assets/anvil-product.js enhances it.
+  - A single-variant product gets a hidden variant id and an add button.
+  - A product with options gets a variant menu (every variant with its price through anvil-money; sold-out ones
+    cannot be chosen) and an add button, or, with variant_mode 'link', a "Choose options" link to its page.
+  - A subscription-only product always links to its page; a sold-out product shows a disabled "Sold out" button.
+  The product title follows every button for screen readers, so several "Add to cart" buttons read apart. The
+  section loads assets/anvil-product.js once when any card renders a form.
+
+  @param {object} product - The product
+  @param {string} [variant_mode] - select | link (default select)
+  @param {string} [label] - Add button text, raw (default: the translated "Add to cart")
+  @param {string} [style] - Button style: primary | secondary (default primary)
+  @param {string} form_id - Unique form id
+  @param {string} [class] - Extra classes on the wrapper
+
+  @example
+  {% render 'anvil-quick-buy', product: p, variant_mode: s.variant_mode, label: s.add_label, style: s.button_style, form_id: 'av-pv-' | append: block.id %}
+{% enddoc %}
+{%- liquid
+  assign qb_style = style | default: 'primary'
+  assign qb_label = label | strip
+  if qb_label == blank
+    assign qb_label = 'anvil.product.add_to_cart' | t
+  else
+    assign qb_label = qb_label | escape
+  endif
+  assign qb_title = product.title | escape
+
+  # On the product's own page ?variant= can select a sold-out variant; a disabled selected option would leave the
+  # form without an id, so the form opens on the first variant that can be bought.
+  assign qb_variant = product.selected_or_first_available_variant
+  if qb_variant.available == false and product.first_available_variant
+    assign qb_variant = product.first_available_variant
+  endif
+  assign qb_single = false
+  if product.has_only_default_variant or product.variants.size == 1
+    assign qb_single = true
+  endif
+  if product.available == false
+    assign qb_action = 'sold_out'
+  elsif product.requires_selling_plan
+    assign qb_action = 'link'
+  elsif qb_single
+    assign qb_action = 'add'
+  elsif variant_mode == 'link'
+    assign qb_action = 'link'
+  else
+    assign qb_action = 'select'
+  endif
+-%}
+<div class="av-quick-buy{% if class != blank %} {{ class }}{% endif %}">
+  {%- case qb_action -%}
+    {%- when 'add', 'select' -%}
+      <anvil-product-form class="av-quick-buy__pf" form-id="{{ form_id }}">
+        {%- form 'product', product, id: form_id, class: 'av-quick-buy__form' -%}
+          {%- if qb_action == 'select' -%}
+            <div class="av-field">
+              <label class="av-visually-hidden" for="{{ form_id }}-id">{{ 'anvil.product.choose_variant' | t }}: {{ qb_title }}</label>
+              <div class="av-field__select av-dropdown av-dropdown--{{ settings.dropdown_style }}">
+                <select class="av-field__input" id="{{ form_id }}-id" name="id">
+                  {%- for item in product.variants -%}
+                    {%- capture qb_price -%}{%- render 'anvil-money', amount: item.price -%}{%- endcapture -%}
+                    <option value="{{ item.id }}"{% if item.id == qb_variant.id %} selected{% endif %}{% unless item.available %} disabled{% endunless %}>
+                      {{- item.title | escape }} — {{ qb_price | strip_html | strip -}}
+                      {%- unless item.available %} — {{ 'anvil.product.sold_out' | t }}{% endunless -%}
+                    </option>
+                  {%- endfor -%}
+                </select>
+              </div>
+            </div>
+          {%- else -%}
+            <input type="hidden" name="id" value="{{ qb_variant.id }}">
+          {%- endif -%}
+          <button type="submit" name="add" class="av-btn av-btn--{{ qb_style }} av-btn--sm av-btn--full">
+            <span class="av-btn__label" data-anvil-bind="add_label">{{ qb_label }}</span>
+            <span class="av-visually-hidden">: {{ qb_title }}</span>
+          </button>
+          <div class="av-form-message av-form-message--error av-quick-buy__error" role="alert" data-anvil-form-error></div>
+          <p class="av-visually-hidden" role="status" data-anvil-form-status></p>
+        {%- endform -%}
+      </anvil-product-form>
+    {%- when 'link' -%}
+      {%- capture qb_link -%}{{ 'anvil.product.choose_options' | t }}<span class="av-visually-hidden">: {{ qb_title }}</span>{%- endcapture -%}
+      {%- render 'anvil-button', label: qb_link, url: product.url, style: qb_style, size: 'sm', full: true -%}
+    {%- else -%}
+      {%- capture qb_sold -%}{{ 'anvil.product.sold_out' | t }}<span class="av-visually-hidden">: {{ qb_title }}</span>{%- endcapture -%}
+      {%- render 'anvil-button', label: qb_sold, style: 'secondary', size: 'sm', full: true, disabled: true -%}
+  {%- endcase -%}
+</div>
+{% stylesheet %}
+.av-quick-buy,.av-quick-buy__pf{display:block;min-width:0}
+.av-quick-buy__form{display:grid;gap:var(--av-space-2)}
+.av-quick-buy .av-quick-buy__error{font-size:var(--av-text-xs)}
+{% endstylesheet %}

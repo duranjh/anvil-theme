@@ -1,5 +1,5 @@
 {% doc %}
-  Theme block: add-to-cart for one product (the picked one, else closest.product). Single-variant products get a form that works without JavaScript; products with options link to the product page.
+  Theme block: add-to-cart for one product (the picked one, else closest.product). Single-variant products get a form that works without JavaScript and loads assets/anvil-product.js (<anvil-product-form form-id> adds through the cart drawer); products with options link to the product page.
 
   Settings (id · type · values · default):
   - product · product
@@ -33,7 +33,7 @@
       {%- if s.show_price -%}
         {%- render 'anvil-price', variant: v, size: 'md', class: 'av-atc__price' -%}
       {%- endif -%}
-      <anvil-product-form>
+      <anvil-product-form form-id="{{ form_id }}">
         {%- form 'product', p, id: form_id, class: 'av-atc__form' -%}
           <input type="hidden" name="id" value="{{ v.id }}">
           <input type="hidden" name="quantity" value="1">
@@ -45,6 +45,7 @@
           <p class="av-atc__status" role="status" aria-live="polite" data-anvil-form-status></p>
         {%- endform -%}
       </anvil-product-form>
+      <script type="module" src="{{ 'anvil-product.js' | asset_url }}"></script>
     {%- else -%}
       {%- if s.show_price -%}
         {%- render 'anvil-price', product: p, size: 'md', class: 'av-atc__price' -%}
@@ -77,7 +78,7 @@
     { "type": "text", "id": "label", "label": "Button label", "default": "Add to cart" },
     { "type": "text", "id": "sold_out_label", "label": "Sold-out label", "default": "Sold out" },
     { "type": "text", "id": "options_label", "label": "Label when the product has options", "default": "Choose options", "info": "Products with several variants link to the product page so the shopper picks a variant." },
-    { "type": "select", "id": "style", "label": "Style", "options": [ { "value": "primary", "label": "Primary" }, { "value": "secondary", "label": "Secondary" } ], "default": "primary" },
+    { "type": "select", "id": "style", "label": "Style", "options": [ { "value": "primary", "label": "Solid button" }, { "value": "secondary", "label": "Outline button" } ], "default": "primary" },
     { "type": "select", "id": "size", "label": "Size", "options": [ { "value": "sm", "label": "Small" }, { "value": "md", "label": "Medium" }, { "value": "lg", "label": "Large" } ], "default": "md" },
     { "type": "checkbox", "id": "full", "label": "Full width", "default": true },
     { "type": "text_alignment", "id": "align", "label": "Alignment", "default": "left" }

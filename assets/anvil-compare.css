@@ -8,12 +8,12 @@ anvil-compare {
   aspect-ratio: var(--av-compare-ratio, 4 / 3);
   overflow: hidden;
   border-radius: var(--av-radius-media);
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
   user-select: none;
 }
 
 anvil-compare[vertical] {
-  touch-action: pan-x;
+  touch-action: pan-x pinch-zoom;
 }
 
 .av-compare__media {
