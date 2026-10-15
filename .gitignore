@@ -5,3 +5,8 @@ dev/
 *.zip
 .DS_Store
 docs/STATUS.local.md
+
+# full prompt texts are reproducible from git; only the manifest (and fix-pass notes) are committed
+docs/agent-prompts/*.md
+!docs/agent-prompts/MANIFEST.md
+!docs/agent-prompts/2026-*.md
